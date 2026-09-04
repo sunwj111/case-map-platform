@@ -1,0 +1,1278 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>功能点地图 · 领域全景 L2（报价域）</title>
+  <style>
+    :root {
+      --bg: #f0f4f8;
+      --card: #fff;
+      --line: #e2e8f0;
+      --text: #0f172a;
+      --muted: #64748b;
+      --blue: #2563eb;
+      --blue-soft: #eff6ff;
+      --green: #16a34a;
+      --red: #dc2626;
+      --orange: #d97706;
+      --shadow: 0 1px 3px rgba(15,23,42,.06), 0 8px 24px rgba(15,23,42,.06);
+      --radius: 12px;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: "PingFang SC", "Microsoft YaHei", sans-serif; font-size: 13px; line-height: 1.5; color: var(--text); background: var(--bg); }
+    .app { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+    .sider { background: #fff; border-right: 1px solid var(--line); padding: 16px 12px; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+    .sider h2 { font-size: 14px; margin: 0 0 4px; }
+    .sider .sub { font-size: 11px; color: var(--muted); margin-bottom: 14px; }
+    .feat-item {
+      display: block; width: 100%; text-align: left; border: 1px solid var(--line); border-radius: 10px;
+      padding: 10px; margin-bottom: 8px; background: #fafbfc; cursor: pointer; transition: .15s;
+    }
+    .feat-item:hover { border-color: #93c5fd; background: #f8fbff; }
+    .feat-item.active { border-color: var(--blue); background: var(--blue-soft); box-shadow: 0 0 0 1px rgba(37,99,235,.15); }
+    .feat-item .name { font-weight: 650; }
+    .feat-item .meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .main { padding: 16px 20px 32px; min-width: 0; }
+    .topbar {
+      display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;
+      margin-bottom: 14px; flex-wrap: wrap;
+    }
+    .topbar h1 { font-size: 20px; margin: 0 0 4px; }
+    .topbar .guide { color: var(--muted); font-size: 12px; max-width: 640px; }
+    .crumb { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+    .crumb strong { color: var(--text); }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .btn {
+      border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 7px 12px;
+      cursor: pointer; font-size: 12px; color: var(--text);
+    }
+    .btn:hover { border-color: #93c5fd; background: #f8fbff; }
+    .btn.primary { background: var(--blue); border-color: var(--blue); color: #fff; }
+    .btn.primary:hover { background: #1d4ed8; }
+    .mode-toggle { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+    .mode-toggle button { border: 0; background: #fff; padding: 7px 12px; cursor: pointer; font-size: 12px; }
+    .mode-toggle button.active { background: var(--blue-soft); color: var(--blue); font-weight: 650; }
+    .search-bar {
+      background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+      padding: 12px; margin-bottom: 12px; box-shadow: var(--shadow);
+    }
+    .search-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .search-row select, .search-row input {
+      border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; font-size: 12px;
+    }
+    .search-row input { flex: 1; min-width: 200px; }
+    .hint { font-size: 12px; color: var(--muted); margin-top: 8px; }
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 12px; align-items: start; }
+    .layout-main { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+    .layout-aside { display: flex; flex-direction: column; gap: 12px; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+    .card.pad { padding: 12px 14px; }
+    .section-hd {
+      display: flex; justify-content: space-between; align-items: center; gap: 8px;
+      margin-bottom: 10px; font-weight: 650;
+    }
+    .section-hd .sub { font-weight: 400; font-size: 11px; color: var(--muted); }
+    .mod-tag {
+      font-size: 10px; font-weight: 650; color: #6366f1; background: #eef2ff;
+      border: 1px solid #c7d2fe; border-radius: 4px; padding: 1px 6px; margin-right: 6px;
+    }
+    .biz-row {
+      display: grid;
+      grid-template-columns: 168px 18px repeat(5, minmax(0, 1fr));
+      gap: 8px; align-items: stretch;
+    }
+    .spine { display: flex; flex-direction: column; gap: 8px; }
+    .spine-node { border: 1px solid var(--line); border-radius: 10px; padding: 10px; background: #f8fafc; }
+    .spine-node.core { border-color: #93c5fd; background: var(--blue-soft); }
+    .spine-node .k { font-size: 11px; color: var(--muted); }
+    .spine-node .v { font-weight: 700; margin-top: 2px; line-height: 1.3; }
+    .spine-node.core .v { color: var(--blue); font-size: 15px; }
+    .flow-arrow { display: flex; align-items: center; justify-content: center; color: #93c5fd; font-size: 18px; font-weight: 700; }
+    .col-box { border: 1px solid var(--line); border-radius: 10px; padding: 8px; background: #fff; min-height: 200px; }
+    .col-box--scene { border-top: 3px solid #8b5cf6; background: linear-gradient(180deg, #faf5ff 0%, #fff 40%); }
+    .col-box--case { border-top: 3px solid #2563eb; background: linear-gradient(180deg, #eff6ff 0%, #fff 40%); }
+    .col-box--script { border-top: 3px solid #16a34a; background: linear-gradient(180deg, #ecfdf5 0%, #fff 40%); }
+    .col-box--data { border-top: 3px solid #0891b2; background: linear-gradient(180deg, #ecfeff 0%, #fff 40%); }
+    .col-box--exec { border-top: 3px solid #d97706; background: linear-gradient(180deg, #fff7ed 0%, #fff 40%); }
+    .col-hd { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px dashed var(--line); }
+    .col-hd strong { font-size: 12px; display: flex; align-items: center; gap: 6px; }
+    .col-icon {
+      width: 22px; height: 22px; border-radius: 6px; display: inline-grid; place-items: center;
+      font-size: 10px; font-weight: 800; color: #fff; flex-shrink: 0;
+    }
+    .col-icon.scene { background: #8b5cf6; }
+    .col-icon.case { background: #2563eb; }
+    .col-icon.script { background: #16a34a; }
+    .col-icon.data { background: #0891b2; }
+    .col-icon.exec { background: #d97706; }
+    .asset-legend {
+      display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; padding: 8px 10px;
+      background: #f8fafc; border: 1px solid var(--line); border-radius: 8px;
+    }
+    .asset-legend-item { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); }
+    .asset-legend-item i {
+      width: 16px; height: 16px; border-radius: 4px; display: inline-grid; place-items: center;
+      font-size: 9px; font-weight: 800; color: #fff; font-style: normal;
+    }
+    .asset-node {
+      display: flex; gap: 8px; align-items: flex-start;
+      border: 1px solid var(--line); border-radius: 8px; padding: 7px 8px; margin-bottom: 6px;
+      background: #fff; cursor: pointer; transition: .12s; position: relative; overflow: hidden;
+    }
+    .asset-node::before {
+      content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    }
+    .asset-node:hover, .asset-node.active { box-shadow: 0 0 0 2px rgba(37,99,235,.08); }
+    .asset-node.highlight { box-shadow: 0 0 0 2px rgba(245,158,11,.25); }
+    .asset-node .asset-badge {
+      width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center;
+      font-size: 10px; font-weight: 800; flex-shrink: 0; color: #fff;
+    }
+    .asset-node .asset-body { min-width: 0; flex: 1; }
+    .asset-node .asset-kind { font-size: 10px; font-weight: 650; letter-spacing: .2px; }
+    .asset-node .asset-title { font-weight: 600; font-size: 12px; margin-top: 1px; line-height: 1.35; }
+    .asset-node .asset-meta { font-size: 10px; color: var(--muted); margin-top: 2px; }
+    .asset-node--scene { border-color: #ddd6fe; }
+    .asset-node--scene::before { background: #8b5cf6; }
+    .asset-node--scene .asset-badge { background: #8b5cf6; }
+    .asset-node--scene .asset-kind { color: #7c3aed; }
+    .asset-node--scene.gap { border-style: dashed; background: #faf5ff; }
+    .asset-node--scene.active { border-color: #7c3aed; background: #f5f3ff; box-shadow: 0 0 0 2px rgba(124,58,237,.15); }
+    .scene-case-list {
+      margin-top: 8px; padding-top: 8px; border-top: 1px dashed #ddd6fe; text-align: left;
+    }
+    .scene-case-item {
+      display: flex; align-items: flex-start; gap: 6px; padding: 5px 0; font-size: 10px;
+      border-bottom: 1px solid #f3e8ff; cursor: pointer;
+    }
+    .scene-case-item:last-child { border-bottom: 0; }
+    .scene-case-item:hover { color: var(--blue); }
+    .scene-case-item .scene-case-id { color: var(--muted); flex-shrink: 0; }
+    .scene-case-item .scene-case-name { flex: 1; line-height: 1.35; }
+    .scene-case-empty { font-size: 10px; color: var(--muted); margin-top: 6px; }
+    .asset-node--case { border-color: #bfdbfe; }
+    .asset-node--case::before { background: #2563eb; }
+    .asset-node--case .asset-badge { background: #2563eb; }
+    .asset-node--case .asset-kind { color: #1d4ed8; }
+    .asset-node--case.active { border-color: #2563eb; background: #eff6ff; }
+    .asset-node--case .priority-p0 { color: #dc2626; font-weight: 700; }
+    .asset-node--case .priority-p1 { color: #d97706; font-weight: 700; }
+    .asset-node--script { border-color: #bbf7d0; cursor: default; }
+    .asset-node--script::before { background: #16a34a; }
+    .asset-node--script .asset-badge { background: #16a34a; font-family: ui-monospace, monospace; }
+    .asset-node--script .asset-kind { color: #15803d; }
+    .asset-node--script .asset-title { font-family: ui-monospace, monospace; font-size: 11px; }
+    .asset-node--data { border-color: #a5f3fc; cursor: default; }
+    .asset-node--data::before { background: #0891b2; }
+    .asset-node--data .asset-badge { background: #0891b2; }
+    .asset-node--data .asset-kind { color: #0e7490; }
+    .asset-node--exec { border-color: #fed7aa; cursor: default; }
+    .asset-node--exec::before { background: #d97706; }
+    .asset-node--exec .asset-badge { background: #d97706; }
+    .asset-node--exec .asset-kind { color: #c2410c; }
+    .exec-marks { display: flex; gap: 4px; margin-top: 4px; }
+    .exec-dot {
+      width: 18px; height: 18px; border-radius: 4px; display: grid; place-items: center;
+      font-size: 11px; font-weight: 700;
+    }
+    .exec-dot.pass { background: #dcfce7; color: #16a34a; }
+    .exec-dot.fail { background: #fee2e2; color: #dc2626; }
+    .asset-chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      margin: 0 4px 6px 0; padding: 4px 8px 4px 4px; border-radius: 8px;
+      font-size: 11px; border: 1px solid var(--line); background: #fff;
+    }
+    .asset-chip .chip-icon {
+      width: 20px; height: 20px; border-radius: 5px; display: grid; place-items: center;
+      font-size: 9px; font-weight: 800; color: #fff; flex-shrink: 0;
+    }
+    .asset-chip--rule { border-color: #fde68a; background: #fffbeb; }
+    .asset-chip--rule .chip-icon { background: #d97706; }
+    .asset-chip--defect { border-color: #fecaca; background: #fef2f2; }
+    .asset-chip--defect .chip-icon { background: #dc2626; }
+    .asset-chip--api { border-color: #bfdbfe; background: #eff6ff; cursor: pointer; }
+    .asset-chip--api .chip-icon { background: #2563eb; }
+    .asset-chip--api:hover { background: #dbeafe; }
+    .asset-chip--service .chip-icon { background: #475569; }
+    .asset-chip--node .chip-icon { background: #6366f1; }
+    .asset-chip--table .chip-icon { background: #64748b; }
+    .tech-box { border: 1px dashed #dbe3ef; border-radius: 8px; padding: 8px; background: #fcfdff; min-height: 100px; }
+    .tech-box h4 {
+      margin: 0 0 8px; font-size: 11px; color: var(--muted);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .tech-box h4 .tech-icon {
+      width: 18px; height: 18px; border-radius: 4px; display: inline-grid; place-items: center;
+      font-size: 9px; font-weight: 800; color: #fff;
+    }
+    .tech-box--service { border-color: #cbd5e1; background: #f8fafc; }
+    .tech-box--service .tech-icon { background: #475569; }
+    .tech-box--node { border-color: #c7d2fe; background: #eef2ff; }
+    .tech-box--node .tech-icon { background: #6366f1; }
+    .tech-box--api { border-color: #bfdbfe; background: #eff6ff; }
+    .tech-box--api .tech-icon { background: #2563eb; }
+    .tech-box--table { border-color: #a5f3fc; background: #ecfeff; }
+    .tech-box--table .tech-icon { background: #0891b2; }
+    .node {
+      border: 1px solid var(--line); border-radius: 8px; padding: 7px 8px; margin-bottom: 6px;
+      background: #fff; cursor: pointer; transition: .12s;
+    }
+    .node:hover, .node.active { border-color: #93c5fd; box-shadow: 0 0 0 2px rgba(37,99,235,.08); }
+    .node.highlight { border-color: var(--orange); background: #fffbeb; }
+    .node.gap { border-style: dashed; opacity: .85; }
+    .node .nid { font-size: 10px; color: var(--muted); }
+    .node .ntitle { font-weight: 600; font-size: 12px; margin-top: 1px; }
+    .bottom-row { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 12px; }
+    .risk-block { margin-bottom: 10px; }
+    .risk-block .k { font-size: 11px; color: var(--muted); margin-bottom: 6px; font-weight: 650; }
+    .tech-flow { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+    .tech-box h4 { margin: 0 0 6px; font-size: 11px; color: var(--muted); }
+    .chip {
+      display: inline-block; margin: 0 4px 4px 0; padding: 2px 7px; border-radius: 6px;
+      background: #f1f5f9; border: 1px solid var(--line); font-size: 11px; cursor: default;
+    }
+    .chip.clickable { cursor: pointer; background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
+    .chip.clickable:hover { background: #dbeafe; }
+    .tag {
+      display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 11px; margin-right: 4px;
+      border: 1px solid var(--line); background: #f8fafc;
+    }
+    .tag.red { background: #fef2f2; color: var(--red); border-color: #fecaca; }
+    .tag.blue { background: var(--blue-soft); color: var(--blue); border-color: #bfdbfe; }
+    .tag.orange { background: #fff7ed; color: var(--orange); border-color: #fed7aa; }
+    .tag.green { background: #ecfdf5; color: var(--green); border-color: #bbf7d0; }
+    .donut-wrap { display: flex; gap: 12px; align-items: center; }
+    .donut {
+      width: 80px; height: 80px; border-radius: 50%; position: relative; flex-shrink: 0;
+      background: conic-gradient(#ef4444 0 28%, #f59e0b 28% 71%, #3b82f6 71% 90%, #94a3b8 90% 100%);
+    }
+    .donut-inner {
+      position: absolute; inset: 14px; border-radius: 50%; background: #fff;
+      display: grid; place-items: center; font-weight: 700; font-size: 16px;
+    }
+    .meta-row { display: flex; justify-content: space-between; margin: 6px 0; color: var(--muted); font-size: 12px; }
+    .bar { height: 6px; border-radius: 999px; background: #e2e8f0; overflow: hidden; margin-top: 4px; }
+    .bar i { display: block; height: 100%; background: var(--blue); border-radius: 999px; }
+    .consume-item { border: 1px solid var(--line); border-radius: 8px; padding: 8px; margin-bottom: 6px; background: #fafbfc; }
+    .consume-item strong { display: block; font-size: 12px; }
+    .consume-item span { font-size: 11px; color: var(--muted); }
+    .neighbor { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .neighbor button {
+      border: 1px dashed #93c5fd; background: #f8fbff; border-radius: 6px; padding: 4px 8px;
+      font-size: 11px; cursor: pointer; color: var(--blue);
+    }
+    .neighbor button:hover { background: var(--blue-soft); }
+    .toast {
+      position: fixed; bottom: 24px; right: 24px; background: #0f172a; color: #fff;
+      padding: 10px 16px; border-radius: 10px; font-size: 12px; opacity: 0; pointer-events: none;
+      transition: opacity .2s; z-index: 100;
+    }
+    .toast.show { opacity: 1; }
+    .graph-view { display: none; min-height: 560px; position: relative; }
+    .graph-view.active { display: block; }
+    .layout-view.hidden { display: none; }
+    .panorama-toolbar {
+      display: flex; justify-content: space-between; align-items: center; gap: 12px;
+      flex-wrap: wrap; margin-bottom: 10px;
+    }
+    .panorama-stats { display: flex; gap: 10px; flex-wrap: wrap; }
+    .panorama-stat {
+      font-size: 11px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); background: #fff;
+    }
+    .panorama-stat strong { margin-left: 4px; }
+    .panorama-stat.covered strong { color: var(--green); }
+    .panorama-stat.partial strong { color: var(--orange); }
+    .panorama-stat.gap strong { color: var(--red); }
+    .panorama-legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11px; color: var(--muted); }
+    .panorama-legend span { display: inline-flex; align-items: center; gap: 5px; }
+    .panorama-legend i {
+      width: 10px; height: 10px; border-radius: 50%; display: inline-block; font-style: normal;
+    }
+    .panorama-stage {
+      position: relative; height: 520px; border: 1px solid var(--line); border-radius: var(--radius);
+      background: linear-gradient(180deg, #f8fbff 0%, #eef2f7 100%);
+      overflow: hidden; cursor: grab; user-select: none;
+    }
+    .panorama-stage.dragging { cursor: grabbing; }
+    .panorama-inner {
+      position: absolute; left: 0; top: 0; width: 1280px; height: 400px;
+      transform-origin: 0 0;
+    }
+    #panoramaNodes {
+      position: absolute; left: 0; top: 0; width: 1280px; height: 400px; z-index: 3;
+    }
+    .panorama-edges {
+      position: absolute; left: 0; top: 0; width: 1280px; height: 400px; pointer-events: none;
+    }
+    .panorama-edges path { fill: none; stroke-width: 2; }
+    .panorama-edges path.main { stroke: #94a3b8; }
+    .panorama-edges path.branch { stroke: #cbd5e1; stroke-dasharray: 6 4; }
+    .panorama-edges path.weak { stroke: #e2e8f0; stroke-dasharray: 3 4; }
+    .panorama-edges path.highlight { stroke: #2563eb; stroke-width: 3; }
+    .panorama-node {
+      position: absolute; width: 132px; border-radius: 12px; padding: 10px 10px 8px;
+      background: #fff; border: 2px solid var(--line); box-shadow: var(--shadow);
+      cursor: pointer; transition: box-shadow .15s, border-color .15s, transform .15s; z-index: 2;
+    }
+    .panorama-node:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(15,23,42,.12); }
+    .panorama-node.selected { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37,99,235,.2); }
+    .panorama-node.dimmed { opacity: .35; }
+    .panorama-node.covered { border-color: #86efac; background: linear-gradient(180deg, #f0fdf4, #fff); }
+    .panorama-node.partial { border-color: #fcd34d; background: linear-gradient(180deg, #fffbeb, #fff); }
+    .panorama-node.gap { border-color: #fca5a5; background: linear-gradient(180deg, #fef2f2, #fff); border-style: dashed; }
+    .panorama-node .pn-status {
+      font-size: 9px; font-weight: 700; letter-spacing: .02em; margin-bottom: 4px;
+    }
+    .panorama-node.covered .pn-status { color: var(--green); }
+    .panorama-node.partial .pn-status { color: var(--orange); }
+    .panorama-node.gap .pn-status { color: var(--red); }
+    .panorama-node .pn-name { font-weight: 700; font-size: 12px; line-height: 1.35; }
+    .panorama-node .pn-meta { font-size: 10px; color: var(--muted); margin-top: 6px; display: flex; justify-content: space-between; }
+    .panorama-node .pn-risk { font-size: 9px; padding: 1px 5px; border-radius: 4px; background: #f1f5f9; }
+    .panorama-node .pn-risk.high { background: #fee2e2; color: #b91c1c; }
+    .panorama-zoom-ctrl {
+      position: absolute; right: 12px; bottom: 12px; display: flex; gap: 4px; z-index: 5;
+    }
+    .panorama-zoom-ctrl button {
+      width: 32px; height: 32px; border: 1px solid var(--line); border-radius: 8px;
+      background: #fff; cursor: pointer; font-size: 16px; line-height: 1;
+    }
+    .panorama-zoom-ctrl button:hover { border-color: #93c5fd; background: #f8fbff; }
+    .panorama-drawer {
+      margin-top: 12px; padding: 14px; border: 1px solid var(--line); border-radius: var(--radius);
+      background: #fff; display: none;
+    }
+    .panorama-drawer.show { display: block; }
+    .panorama-drawer h3 { margin: 0 0 8px; font-size: 15px; }
+    .panorama-drawer .drawer-meta { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+    .panorama-drawer .drawer-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .panorama-drawer .feature-link {
+      display: block; width: 100%; text-align: left; border: 1px solid var(--line); border-radius: 8px;
+      padding: 8px 10px; margin-bottom: 6px; background: #fafbfc; cursor: pointer; font-size: 12px;
+    }
+    .panorama-drawer .feature-link:hover { border-color: #93c5fd; background: var(--blue-soft); }
+    .graph-canvas {
+      position: relative; min-height: 480px; border: 1px solid var(--line); border-radius: var(--radius);
+      background: radial-gradient(ellipse 60% 50% at 50% 45%, rgba(37,99,235,.07), transparent 70%),
+        linear-gradient(180deg, #f8fbff, #f0f4f8);
+      overflow: hidden;
+    }
+    .graph-hub {
+      position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%);
+      width: 140px; height: 140px; border-radius: 50%; border: 2px solid #93c5fd;
+      background: radial-gradient(circle at 35% 30%, #fff, var(--blue-soft));
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; padding: 12px; box-shadow: 0 0 0 10px rgba(37,99,235,.08);
+      z-index: 2;
+    }
+    .graph-hub .hub-k { font-size: 10px; color: var(--blue); font-weight: 650; }
+    .graph-hub .hub-n { font-size: 14px; font-weight: 750; margin-top: 4px; }
+    .graph-orbit {
+      position: absolute; border: 1px dashed #cbd5e1; border-radius: 50%;
+      left: 50%; top: 42%; transform: translate(-50%, -50%); pointer-events: none;
+    }
+    .graph-node {
+      position: absolute; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px;
+      background: rgba(255,255,255,.95); font-size: 11px; max-width: 120px; text-align: center;
+      box-shadow: var(--shadow); cursor: pointer; z-index: 1;
+    }
+    .graph-node:hover { border-color: #93c5fd; }
+    .graph-node--scene { border-color: #c4b5fd; background: #faf5ff; }
+    .graph-node--case { border-color: #93c5fd; background: #eff6ff; }
+    .graph-node--api { border-color: #86efac; background: #ecfdf5; }
+    .graph-node--rule { border-color: #fde68a; background: #fffbeb; }
+    .graph-node .gn-kind { color: var(--muted); font-size: 10px; }
+    .graph-node .gn-title { font-weight: 650; margin-top: 2px; }
+    .asset-hits { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--line); display: none; }
+    .asset-hits.show { display: block; }
+    .hit-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #f1f5f9; font-size: 12px; }
+    @media (max-width: 1200px) {
+      .app { grid-template-columns: 1fr; }
+      .sider { position: relative; height: auto; }
+      .layout { grid-template-columns: 1fr; }
+      .biz-row, .bottom-row, .tech-flow { grid-template-columns: 1fr; }
+      .flow-arrow { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sider">
+      <h2>功能点列表</h2>
+      <div class="sub">M8 平台入口 · 报价域</div>
+      <div id="featureList"></div>
+      <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--line)">
+        <a href="./index.html" style="font-size:12px;color:var(--blue)">← 返回原型入口</a>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="crumb" id="crumb">家装 / 报价 / 金额计算与汇总 / <strong>数量价汇总</strong></div>
+      <div class="topbar">
+        <div>
+          <h1>用例地图 · <span id="pageTitle">数量价汇总</span></h1>
+          <p class="guide">以功能点为中枢，串联业务场景、用例资产、技术映射与质量度量（M1~M8 模块原型）。</p>
+        </div>
+        <div class="actions">
+          <div class="mode-toggle">
+            <button type="button" id="btnLayoutMode">布局模式</button>
+            <button type="button" id="btnGraphMode" class="active">领域全景</button>
+          </div>
+          <button class="btn" type="button" id="btnImpact">影响分析</button>
+          <button class="btn primary" type="button" id="btnRegression">生成回归包</button>
+        </div>
+      </div>
+
+      <div class="search-bar" id="searchBar" style="display:none">
+        <div class="search-row">
+          <select id="searchType">
+            <option value="case">用例名称</option>
+            <option value="scene">业务场景</option>
+            <option value="api">接口</option>
+            <option value="all">综合</option>
+          </select>
+          <input id="searchInput" placeholder="地图内搜索：用例名、场景、接口…" />
+          <button class="btn primary" type="button" id="btnSearch">搜索</button>
+          <button class="btn" type="button" id="btnSearchClear">清空</button>
+        </div>
+        <div class="hint" id="searchHint">M6 地图检索 · 当前功能点：数量价汇总</div>
+        <div class="asset-hits" id="assetHits">
+          <div class="section-hd" style="margin-bottom:6px"><span>正式资产库命中</span><span class="tag blue" id="hitCount">0</span></div>
+          <div id="hitList"></div>
+        </div>
+      </div>
+
+      <div class="layout layout-view hidden" id="layoutView">
+        <div class="layout-main">
+          <div class="card pad">
+            <div class="section-hd">
+              <span><span class="mod-tag">M2</span>业务视角</span>
+              <span class="sub">域 → 流程 → 功能点 → 场景 → 用例 → 脚本 / 数据 / 执行</span>
+            </div>
+              <div class="asset-legend">
+                <span class="asset-legend-item"><i style="background:#8b5cf6">SC</i>场景</span>
+                <span class="asset-legend-item"><i style="background:#2563eb">TC</i>用例</span>
+                <span class="asset-legend-item"><i style="background:#16a34a">JS</i>脚本</span>
+                <span class="asset-legend-item"><i style="background:#0891b2">DT</i>数据</span>
+                <span class="asset-legend-item"><i style="background:#d97706">EX</i>执行</span>
+                <span class="asset-legend-item"><i style="background:#d97706">R</i>规则</span>
+                <span class="asset-legend-item"><i style="background:#dc2626">BG</i>缺陷</span>
+                <span class="asset-legend-item"><i style="background:#2563eb">API</i>接口</span>
+              </div>
+              <div class="biz-row" id="bizRow">
+                <div class="spine" id="spineBox"></div>
+                <div class="flow-arrow">→</div>
+                <div class="col-box col-box--scene">
+                  <div class="col-hd"><strong><span class="col-icon scene">SC</span>业务场景</strong><span class="tag" id="sceneCountTag">0</span></div>
+                  <div id="sceneCol"></div>
+                </div>
+                <div class="col-box col-box--case">
+                  <div class="col-hd"><strong><span class="col-icon case">TC</span>测试用例</strong><span class="tag" id="caseCountTag">0</span></div>
+                  <div id="caseCol"></div>
+                </div>
+                <div class="col-box col-box--script">
+                  <div class="col-hd"><strong><span class="col-icon script">JS</span>自动化脚本</strong></div>
+                  <div id="scriptCol"></div>
+                </div>
+                <div class="col-box col-box--data">
+                  <div class="col-hd"><strong><span class="col-icon data">DT</span>测试数据</strong></div>
+                  <div id="dataCol"></div>
+                </div>
+                <div class="col-box col-box--exec">
+                  <div class="col-hd"><strong><span class="col-icon exec">EX</span>执行历史</strong></div>
+                  <div id="execCol"></div>
+                </div>
+              </div>
+          </div>
+
+          <div class="bottom-row">
+            <div class="card pad">
+              <div class="section-hd"><span><span class="mod-tag">M5</span>关联关系与风险</span></div>
+              <div class="risk-block"><div class="k">业务规则</div><div id="ruleBox"></div></div>
+              <div class="risk-block"><div class="k">历史缺陷</div><div id="bugBox"></div></div>
+              <div class="risk-block"><div class="k">标签 / 风险</div><div id="riskTagBox"></div></div>
+            </div>
+            <div class="card pad">
+              <div class="section-hd">
+                <span><span class="mod-tag">M3</span>技术映射</span>
+                <span class="tag blue" id="techSource">—</span>
+              </div>
+              <div class="tech-flow" id="techFlow"></div>
+              <div class="hint" id="techHint" style="margin-top:8px"></div>
+            </div>
+          </div>
+        </div>
+
+        <aside class="layout-aside">
+          <div class="card pad">
+            <div class="section-hd"><span><span class="mod-tag">M4</span>功能点总览</span></div>
+            <div class="donut-wrap">
+              <div class="donut" id="donut"><div class="donut-inner" id="donutNum">0</div></div>
+              <div class="muted" id="priorityLegend" style="font-size:11px">—</div>
+            </div>
+            <div class="meta-row"><span>关联用例</span><strong id="linkedCount">0</strong></div>
+            <div class="meta-row"><span>自动化覆盖</span><strong id="autoRate">0%</strong></div>
+            <div class="bar"><i id="autoBar" style="width:0%"></i></div>
+            <div class="meta-row"><span>近 30 天缺陷</span><strong id="bugCount" style="color:var(--red)">0</strong></div>
+            <div class="meta-row"><span>缺口场景</span><strong id="gapCount">0</strong></div>
+            <div class="meta-row" style="font-size:11px;padding-top:8px;border-top:1px solid var(--line)">
+              <span id="ownerInfo">—</span><span id="updatedAt">—</span>
+            </div>
+          </div>
+          <div class="card pad">
+            <div class="section-hd"><span><span class="mod-tag">M8</span>被哪些平台使用</span></div>
+            <div id="consumerBox"></div>
+          </div>
+        </aside>
+      </div>
+
+      <div class="graph-view active" id="graphView">
+        <div class="card pad" style="margin-bottom:8px">
+          <div class="panorama-toolbar">
+            <div>
+              <span class="mod-tag">M9</span>
+              <strong id="panoramaTitle">家装报价 · 领域全景图</strong>
+              <span class="sub" style="margin-left:8px;color:var(--muted);font-size:11px" id="panoramaUpdated">更新于 —</span>
+            </div>
+            <div class="panorama-stats" id="panoramaStats"></div>
+          </div>
+          <div class="panorama-legend" style="margin-top:10px">
+            <span><i style="background:#22c55e"></i>已覆盖</span>
+            <span><i style="background:#f59e0b"></i>部分覆盖</span>
+            <span><i style="background:#ef4444"></i>缺口</span>
+            <span style="margin-left:8px">— 实线主流程 · 虚线分支</span>
+          </div>
+        </div>
+        <div class="panorama-stage" id="panoramaStage">
+          <div class="panorama-inner" id="panoramaInner">
+            <svg class="panorama-edges" id="panoramaEdges" viewBox="0 0 1280 400" preserveAspectRatio="none"></svg>
+            <div id="panoramaNodes"></div>
+          </div>
+          <div class="panorama-zoom-ctrl">
+            <button type="button" id="btnZoomOut" title="缩小">−</button>
+            <button type="button" id="btnZoomReset" title="重置">◎</button>
+            <button type="button" id="btnZoomIn" title="放大">+</button>
+          </div>
+        </div>
+        <div class="panorama-drawer" id="panoramaDrawer">
+          <h3 id="drawerTitle">—</h3>
+          <div class="drawer-meta" id="drawerMeta">—</div>
+          <div id="drawerFeatures"></div>
+          <div class="drawer-actions">
+            <button class="btn primary" type="button" id="btnDrawerOpenMap" style="display:none">进入功能点地图</button>
+            <button class="btn" type="button" id="btnDrawerRegression">生成节点回归包</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+  <div class="toast" id="toast"></div>
+
+  <script src="./data/domain_panorama.js"></script>
+  <script src="./data/feature_map_samples.js"></script>
+  <script>
+    const state = {
+      featureKey: '家装/报价/金额计算与汇总/数量价汇总',
+      mode: 'panorama',
+      selectedCaseId: null,
+      selectedScenarioId: null,
+      searchKeyword: '',
+      panoramaSelectedId: null,
+      panoramaZoom: 0.85,
+      panoramaPanX: 24,
+      panoramaPanY: 48,
+      panoramaDragging: false,
+      panoramaDragStart: null
+    };
+
+    const COVERAGE_LABEL = { covered: '已覆盖', partial: '部分覆盖', gap: '缺口' };
+    const NODE_W = 132;
+    const NODE_H = 88;
+
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2600);
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function getMap() {
+      return (window.__FEATURE_MAP_SAMPLES__ || {})[state.featureKey] || null;
+    }
+
+    function renderFeatureList() {
+      const list = window.__FEATURE_MAP_INDEX__ || [];
+      document.getElementById('featureList').innerHTML = list.map((item) =>
+        '<button type="button" class="feat-item' + (item.featureKey === state.featureKey ? ' active' : '') +
+        '" data-key="' + escapeHtml(item.featureKey) + '">' +
+        '<div class="name">' + escapeHtml(item.featureName) + '</div>' +
+        '<div class="meta">' + escapeHtml(item.sceneName) + ' · ' + item.caseCount + ' 条 · 风险' + item.risk + '</div></button>'
+      ).join('');
+      document.querySelectorAll('.feat-item').forEach((button) => {
+        button.addEventListener('click', () => {
+          state.featureKey = button.getAttribute('data-key');
+          state.selectedCaseId = null;
+          state.selectedScenarioId = null;
+          state.searchKeyword = '';
+          document.getElementById('searchInput').value = '';
+          renderAll();
+        });
+      });
+    }
+
+    function tagHtml(label, level) {
+      const cls = level === 'high' ? 'red' : level === 'medium' ? 'orange' : 'blue';
+      return '<span class="tag ' + cls + '">' + escapeHtml(label) + '</span>';
+    }
+
+    function assetNodeHtml(options) {
+      const type = options.type;
+      const badge = options.badge;
+      const kind = options.kind;
+      const title = options.title;
+      const meta = options.meta || '';
+      const extraClass = options.extraClass || '';
+      const hidden = options.hidden ? ' style="display:none"' : '';
+      const bodyExtra = options.bodyExtra || '';
+      return '<div class="asset-node asset-node--' + type + extraClass + '" data-type="' + type + '"' +
+        (options.dataAttrs || '') + hidden + '>' +
+        '<div class="asset-badge">' + escapeHtml(badge) + '</div>' +
+        '<div class="asset-body">' +
+        '<div class="asset-kind">' + kind + '</div>' +
+        '<div class="asset-title">' + escapeHtml(title) + '</div>' +
+        (meta ? '<div class="asset-meta">' + meta + '</div>' : '') +
+        bodyExtra +
+        '</div></div>';
+    }
+
+    function assetChipHtml(type, icon, text, extraAttrs) {
+      return '<span class="asset-chip asset-chip--' + type + '"' + (extraAttrs || '') + '>' +
+        '<span class="chip-icon">' + escapeHtml(icon) + '</span>' +
+        '<span class="chip-text">' + escapeHtml(text) + '</span></span>';
+    }
+
+    function priorityClass(priority) {
+      if (priority === 'P0') return 'priority-p0';
+      if (priority === 'P1') return 'priority-p1';
+      return '';
+    }
+
+    function renderSpine(map) {
+      const spine = map.spine;
+      document.getElementById('pageTitle').textContent = spine.featureName;
+      document.getElementById('crumb').innerHTML =
+        escapeHtml(spine.domain) + ' / ' + escapeHtml(spine.app) + ' / ' +
+        escapeHtml(spine.sceneName) + ' / <strong>' + escapeHtml(spine.featureName) + '</strong>';
+      const valueTags = (spine.valueTags || []).map((label) => tagHtml(label, 'high')).join('');
+      const neighbors = (spine.neighborFeatures || []).map((item) =>
+        '<button type="button" data-key="' + escapeHtml(item.featureKey) + '">' + escapeHtml(item.featureName) + '</button>'
+      ).join('');
+      document.getElementById('spineBox').innerHTML =
+        '<div class="spine-node"><div class="k">业务域</div><div class="v">' + escapeHtml(spine.domain) + '</div></div>' +
+        '<div class="spine-node"><div class="k">系统 / 流程</div><div class="v">' + escapeHtml(spine.app) + ' · ' + escapeHtml(spine.processName) + '</div></div>' +
+        '<div class="spine-node core"><div class="k">核心功能点</div><div class="v">' + escapeHtml(spine.featureName) + '</div></div>' +
+        '<div class="spine-node"><div class="k">业务场景</div><div class="v">' + escapeHtml(spine.sceneName) + '</div></div>' +
+        '<div>' + valueTags + '</div>' +
+        (neighbors ? '<div class="neighbor">' + neighbors + '</div>' : '');
+      document.querySelectorAll('.neighbor button').forEach((button) => {
+        button.addEventListener('click', () => {
+          state.featureKey = button.getAttribute('data-key');
+          state.selectedCaseId = null;
+          state.selectedScenarioId = null;
+          renderAll();
+        });
+      });
+    }
+
+    function matchSearch(text) {
+      if (!state.searchKeyword) return true;
+      return String(text || '').toLowerCase().includes(state.searchKeyword);
+    }
+
+    function getCasesForScenario(business, scenario) {
+      return (business.cases || []).filter((caseItem) =>
+        caseItem.testScenario === scenario.name || caseItem.testScenarioId === scenario.id
+      );
+    }
+
+    function renderSceneCaseList(cases, map) {
+      if (!cases.length) {
+        return '<div class="scene-case-empty">该场景下暂无用例</div>';
+      }
+      return '<div class="scene-case-list">' + cases.map((caseItem) =>
+        '<div class="scene-case-item" data-case-id="' + escapeHtml(caseItem.id) + '" role="button" tabindex="0">' +
+        '<span class="scene-case-id">' + escapeHtml(caseItem.id) + '</span>' +
+        '<span class="scene-case-name">' + escapeHtml(caseItem.name) + '</span>' +
+        '<span class="' + priorityClass(caseItem.priority) + '">' + escapeHtml(caseItem.priority) + '</span></div>'
+      ).join('') + '</div>';
+    }
+
+    function renderBusiness(map) {
+      const business = map.businessView;
+      document.getElementById('sceneCountTag').textContent = String((business.scenarios || []).length);
+      document.getElementById('caseCountTag').textContent = String((business.cases || []).length) + ' 条';
+
+      document.getElementById('sceneCol').innerHTML = (business.scenarios || []).map((item) => {
+        const statusText = item.coverageStatus === 'gap' ? '缺口场景' : item.coverageStatus === 'partial' ? '部分覆盖' : '已覆盖';
+        const linkedCases = getCasesForScenario(business, item);
+        const caseCount = linkedCases.length || item.caseCount || 0;
+        const isSelected = state.selectedScenarioId === item.id;
+        return assetNodeHtml({
+          type: 'scene',
+          badge: 'SC',
+          kind: statusText,
+          title: item.name,
+          meta: item.id + ' · ' + caseCount + ' 条用例',
+          extraClass: (item.coverageStatus === 'gap' ? ' gap' : '') + ' scene-node' + (isSelected ? ' active' : ''),
+          hidden: !matchSearch(item.name),
+          dataAttrs: ' data-id="' + escapeHtml(item.id) + '" data-scenario-name="' + escapeHtml(item.name) + '"',
+          bodyExtra: isSelected ? renderSceneCaseList(linkedCases, map) : ''
+        });
+      }).join('') || '<div class="hint">暂无场景</div>';
+
+      document.getElementById('caseCol').innerHTML = (business.cases || []).map((item) => {
+        const review = item.confidence < 80 ? ' · 待抽检' : '';
+        const priorityLabel = '<span class="' + priorityClass(item.priority) + '">' + escapeHtml(item.priority) + '</span>';
+        const selectedScenario = (business.scenarios || []).find((scenario) => scenario.id === state.selectedScenarioId);
+        const scenarioFiltered = selectedScenario && item.testScenario !== selectedScenario.name;
+        const hiddenBySearch = !matchSearch(item.name + ' ' + item.testScenario + ' ' + item.api);
+        const hidden = hiddenBySearch || scenarioFiltered;
+        return assetNodeHtml({
+          type: 'case',
+          badge: 'TC',
+          kind: '测试用例 · ' + escapeHtml(item.testScenario || '—'),
+          title: item.name,
+          meta: item.id + ' · ' + priorityLabel + review,
+          extraClass: (state.selectedCaseId === item.id ? ' active' : '') + ' case-node',
+          hidden: hidden,
+          dataAttrs: ' data-id="' + escapeHtml(item.id) + '" data-api="' + escapeHtml(item.api || '') + '" data-scenario="' + escapeHtml(item.testScenario || '') + '"'
+        });
+      }).join('') || '<div class="hint">暂无用例</div>';
+
+      document.getElementById('scriptCol').innerHTML = (business.scripts || []).map((item) =>
+        assetNodeHtml({
+          type: 'script',
+          badge: 'JS',
+          kind: item.type + ' · ' + (item.status === 'executable' ? '可执行' : item.status),
+          title: item.name,
+          meta: '关联 ' + escapeHtml(item.linkedCaseId || '—')
+        })
+      ).join('') || '<div class="hint">暂无脚本</div>';
+
+      document.getElementById('dataCol').innerHTML = (business.dataTemplates || []).map((item) =>
+        assetNodeHtml({
+          type: 'data',
+          badge: 'DT',
+          kind: '数据模板',
+          title: item.name,
+          meta: item.id + ' · 场景 ' + escapeHtml(item.linkedScenarioId || '—')
+        })
+      ).join('') || '<div class="hint">暂无数据模板</div>';
+
+      document.getElementById('execCol').innerHTML = (business.executions || []).map((item) => {
+        const dots = (item.results || []).map((result) =>
+          '<span class="exec-dot ' + (result === 'pass' ? 'pass' : 'fail') + '">' + (result === 'pass' ? '✓' : '×') + '</span>'
+        ).join('');
+        return assetNodeHtml({
+          type: 'exec',
+          badge: 'EX',
+          kind: item.label,
+          title: '执行结果',
+          meta: '最近 ' + escapeHtml(item.lastRunAt || '—'),
+          bodyExtra: '<div class="exec-marks">' + dots + '</div>'
+        });
+      }).join('') || '<div class="hint">暂无执行记录</div>';
+
+      document.querySelectorAll('.case-node').forEach((node) => {
+        node.addEventListener('click', () => {
+          state.selectedCaseId = node.getAttribute('data-id');
+          renderBusiness(map);
+          highlightPath(map);
+        });
+      });
+
+      document.querySelectorAll('.scene-node').forEach((node) => {
+        node.addEventListener('click', (event) => {
+          if (event.target.closest('.scene-case-item')) return;
+          const scenarioId = node.getAttribute('data-id');
+          state.selectedScenarioId = state.selectedScenarioId === scenarioId ? null : scenarioId;
+          state.selectedCaseId = null;
+          renderBusiness(map);
+          highlightPath(map);
+        });
+      });
+
+      document.querySelectorAll('.scene-case-item').forEach((item) => {
+        item.addEventListener('click', (event) => {
+          event.stopPropagation();
+          state.selectedCaseId = item.getAttribute('data-case-id');
+          renderBusiness(map);
+          highlightPath(map);
+        });
+      });
+
+      const selectedScenario = (business.scenarios || []).find((item) => item.id === state.selectedScenarioId);
+      const visibleCaseCount = selectedScenario
+        ? getCasesForScenario(business, selectedScenario).length
+        : (business.cases || []).length;
+      document.getElementById('caseCountTag').textContent = visibleCaseCount + ' 条' +
+        (selectedScenario ? ('（' + selectedScenario.name + '）') : '');
+    }
+
+    function highlightPath(map) {
+      const selected = (map.businessView.cases || []).find((item) => item.id === state.selectedCaseId);
+      document.querySelectorAll('.asset-node').forEach((node) => node.classList.remove('highlight'));
+      document.querySelectorAll('.asset-chip').forEach((chip) => chip.classList.remove('highlight'));
+      if (state.selectedScenarioId && !selected) {
+        document.querySelectorAll('.scene-node[data-id="' + state.selectedScenarioId + '"]').forEach((node) => {
+          node.classList.add('highlight');
+        });
+        return;
+      }
+      if (!selected) return;
+      document.querySelectorAll('.case-node[data-id="' + selected.id + '"]').forEach((node) => node.classList.add('highlight'));
+      document.querySelectorAll('.scene-node').forEach((node) => {
+        if (node.textContent.includes(selected.testScenario)) node.classList.add('highlight');
+      });
+      const api = selected.api || '';
+      document.querySelectorAll('.asset-chip--api').forEach((chip) => {
+        if (api && chip.textContent.includes(api.replace('POST ', ''))) {
+          chip.style.outline = '2px solid #f59e0b';
+        } else {
+          chip.style.outline = '';
+        }
+      });
+    }
+
+    function renderRisk(map) {
+      const risk = map.riskView;
+      document.getElementById('ruleBox').innerHTML = (risk.rules || []).map((item) =>
+        assetChipHtml('rule', 'R', item.id + ' ' + item.name)
+      ).join('') || assetChipHtml('rule', 'R', '待校准');
+      document.getElementById('bugBox').innerHTML = (risk.defects || []).length
+        ? risk.defects.map((item) => assetChipHtml('defect', 'BG', item.id + ' ' + item.title)).join('')
+        : assetChipHtml('defect', 'BG', '近 30 天无缺陷');
+      document.getElementById('riskTagBox').innerHTML = (risk.tags || []).map((item) => tagHtml(item.label, item.level)).join('');
+    }
+
+    function renderTech(map) {
+      const tech = map.techView;
+      document.getElementById('techSource').textContent = tech.source || '—';
+      document.getElementById('techHint').textContent = '技术资产按类型分色：服务 / 节点 / 接口 / 表消息';
+      const boxes = [
+        {
+          cls: 'service', icon: 'SVC', title: '关联应用',
+          html: (tech.services || []).map((item) => assetChipHtml('service', 'S', item.name)).join('')
+        },
+        {
+          cls: 'node', icon: 'ND', title: '流程节点',
+          html: (tech.flowNodes || []).map((item) => assetChipHtml('node', 'ND', item.name)).join('')
+        },
+        {
+          cls: 'api', icon: 'API', title: '关联接口',
+          html: (tech.apis || []).map((item) =>
+            '<span class="asset-chip asset-chip--api" data-api="' + escapeHtml(item.label) + '">' +
+            '<span class="chip-icon">API</span><span class="chip-text">' + escapeHtml(item.label) +
+            (item.relation ? (' · ' + escapeHtml(item.relation)) : '') + '</span></span>'
+          ).join('')
+        },
+        {
+          cls: 'table', icon: 'DB', title: '数据表 / 消息',
+          html: (tech.tables || []).map((item) => assetChipHtml('table', 'DB', item)).join('') +
+            (tech.messages || []).map((item) => assetChipHtml('table', 'MQ', item)).join('')
+        }
+      ];
+      document.getElementById('techFlow').innerHTML = boxes.map((box) =>
+        '<div class="tech-box tech-box--' + box.cls + '"><h4><span class="tech-icon">' + box.icon + '</span>' +
+        box.title + '</h4>' + (box.html || '<span class="chip">暂无</span>') + '</div>'
+      ).join('');
+      document.querySelectorAll('.asset-chip--api').forEach((chip) => {
+        chip.addEventListener('click', () => showToast('M7 影响分析：接口「' + chip.getAttribute('data-api') + '」关联 ' + map.summary.linkedCaseCount + ' 条用例'));
+      });
+    }
+
+    function renderSummary(map) {
+      const summary = map.summary;
+      const priority = summary.priorityDistribution || {};
+      document.getElementById('donutNum').textContent = String(summary.linkedCaseCount || 0);
+      document.getElementById('priorityLegend').innerHTML =
+        'P0 ' + Math.round((priority.P0Rate || 0) * 100) + '%<br>P1 ' + Math.round((priority.P1Rate || 0) * 100) +
+        '%<br>P2 ' + Math.round((priority.P2Rate || 0) * 100) + '%<br>P3 ' + Math.round((priority.P3Rate || 0) * 100) + '%';
+      document.getElementById('linkedCount').textContent = String(summary.linkedCaseCount || 0);
+      const auto = Math.round((summary.automationCoverage || 0) * 100);
+      document.getElementById('autoRate').textContent = auto + '%';
+      document.getElementById('autoBar').style.width = auto + '%';
+      document.getElementById('bugCount').textContent = String(summary.defectCount30d || 0);
+      document.getElementById('gapCount').textContent = String(summary.gapCount || 0);
+      document.getElementById('ownerInfo').textContent = '负责人 · ' + (map.meta.qualityOwner || '—');
+      document.getElementById('updatedAt').textContent = map.meta.updatedAt || '—';
+      const donut = document.getElementById('donut');
+      const p0 = Math.round((priority.P0Rate || 0.28) * 100);
+      const p1 = Math.round((priority.P1Rate || 0.43) * 100);
+      const p2 = Math.round((priority.P2Rate || 0.19) * 100);
+      donut.style.background = 'conic-gradient(#ef4444 0 ' + p0 + '%, #f59e0b ' + p0 + '% ' + (p0 + p1) +
+        '%, #3b82f6 ' + (p0 + p1) + '% ' + (p0 + p1 + p2) + '%, #94a3b8 ' + (p0 + p1 + p2) + '% 100%)';
+    }
+
+    function renderConsumers(map) {
+      document.getElementById('consumerBox').innerHTML = (map.consumers || []).map((item) =>
+        '<div class="consume-item"><strong>' + escapeHtml(item.platform) + '</strong><span>' + escapeHtml(item.usage) + '</span></div>'
+      ).join('');
+    }
+
+    function renderGraph(map) {
+      renderPanorama(map);
+    }
+
+    function getPanorama() {
+      return window.__DOMAIN_PANORAMA__ || { nodes: [], edges: [], summary: {} };
+    }
+
+    function getNodeCenter(node) {
+      return { x: node.x + NODE_W / 2, y: node.y + NODE_H / 2 };
+    }
+
+    function buildEdgePath(fromNode, toNode) {
+      const fromCenter = getNodeCenter(fromNode);
+      const toCenter = getNodeCenter(toNode);
+      let fromPoint;
+      let toPoint;
+      if (Math.abs(toCenter.y - fromCenter.y) < 30) {
+        fromPoint = { x: fromNode.x + NODE_W, y: fromCenter.y };
+        toPoint = { x: toNode.x, y: toCenter.y };
+      } else if (toCenter.y > fromCenter.y) {
+        fromPoint = { x: fromCenter.x, y: fromNode.y + NODE_H };
+        toPoint = { x: toCenter.x, y: toNode.y };
+      } else {
+        fromPoint = fromCenter;
+        toPoint = toCenter;
+      }
+      const deltaX = toPoint.x - fromPoint.x;
+      const deltaY = toPoint.y - fromPoint.y;
+      if (Math.abs(deltaY) < 20) {
+        const midX = fromPoint.x + deltaX * 0.5;
+        return 'M' + fromPoint.x + ' ' + fromPoint.y + ' C' + midX + ' ' + fromPoint.y + ',' +
+          midX + ' ' + toPoint.y + ',' + toPoint.x + ' ' + toPoint.y;
+      }
+      const midY = fromPoint.y + deltaY * 0.5;
+      return 'M' + fromPoint.x + ' ' + fromPoint.y +
+        ' C' + fromPoint.x + ' ' + midY + ',' + toPoint.x + ' ' + midY + ',' + toPoint.x + ' ' + toPoint.y;
+    }
+
+    function applyPanoramaTransform() {
+      const inner = document.getElementById('panoramaInner');
+      inner.style.transform = 'translate(' + state.panoramaPanX + 'px,' + state.panoramaPanY + 'px) scale(' + state.panoramaZoom + ')';
+    }
+
+    function renderPanoramaStats(panorama) {
+      const summary = panorama.summary || {};
+      document.getElementById('panoramaTitle').textContent = panorama.displayName + ' · 领域全景图';
+      document.getElementById('panoramaUpdated').textContent = '更新于 ' + (panorama.updatedAt || '—');
+      document.getElementById('panoramaStats').innerHTML =
+        '<span class="panorama-stat covered">已覆盖 <strong>' + (summary.coveredCount || 0) + '</strong></span>' +
+        '<span class="panorama-stat partial">部分覆盖 <strong>' + (summary.partialCount || 0) + '</strong></span>' +
+        '<span class="panorama-stat gap">缺口 <strong>' + (summary.gapCount || 0) + '</strong></span>' +
+        '<span class="panorama-stat">用例 <strong>' + (summary.totalCases || 0) + '</strong></span>' +
+        '<span class="panorama-stat">自动化 <strong>' + Math.round((summary.automationRate || 0) * 100) + '%</strong></span>';
+    }
+
+    function renderPanoramaEdges(panorama, nodeMap, selectedId) {
+      const relatedIds = new Set();
+      if (selectedId) {
+        relatedIds.add(selectedId);
+        (panorama.edges || []).forEach((edge) => {
+          if (edge.from === selectedId) relatedIds.add(edge.to);
+          if (edge.to === selectedId) relatedIds.add(edge.from);
+        });
+      }
+      const svg = document.getElementById('panoramaEdges');
+      const paths = (panorama.edges || []).map((edge) => {
+        const fromNode = nodeMap[edge.from];
+        const toNode = nodeMap[edge.to];
+        if (!fromNode || !toNode) return '';
+        const pathData = buildEdgePath(fromNode, toNode);
+        const isHighlight = selectedId && (edge.from === selectedId || edge.to === selectedId);
+        const edgeClass = isHighlight ? 'highlight' : (edge.type || 'main');
+        return '<path class="' + edgeClass + '" d="' + pathData + '" data-from="' + edge.from + '" data-to="' + edge.to + '"></path>';
+      }).join('');
+      const defs = '<defs><marker id="arrowMain" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">' +
+        '<path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8"></path></marker></defs>';
+      svg.innerHTML = defs + paths;
+      svg.querySelectorAll('path').forEach((path) => {
+        if (path.classList.contains('highlight')) {
+          path.setAttribute('marker-end', 'url(#arrowMain)');
+        }
+      });
+    }
+
+    function renderPanoramaNodes(panorama, nodeMap) {
+      const selectedId = state.panoramaSelectedId;
+      const relatedIds = new Set();
+      if (selectedId) {
+        relatedIds.add(selectedId);
+        (panorama.edges || []).forEach((edge) => {
+          if (edge.from === selectedId) relatedIds.add(edge.to);
+          if (edge.to === selectedId) relatedIds.add(edge.from);
+        });
+      }
+      document.getElementById('panoramaNodes').innerHTML = (panorama.nodes || []).map((node) => {
+        const isSelected = selectedId === node.id;
+        const isDimmed = selectedId && !relatedIds.has(node.id);
+        const riskClass = node.risk === '高' ? 'high' : '';
+        return '<div class="panorama-node ' + node.coverage + (isSelected ? ' selected' : '') + (isDimmed ? ' dimmed' : '') + '"' +
+          ' data-id="' + escapeHtml(node.id) + '" style="left:' + node.x + 'px;top:' + node.y + 'px">' +
+          '<div class="pn-status">' + COVERAGE_LABEL[node.coverage] + '</div>' +
+          '<div class="pn-name">' + escapeHtml(node.shortName || node.name) + '</div>' +
+          '<div class="pn-meta"><span>' + node.caseCount + ' 条用例</span>' +
+          '<span class="pn-risk ' + riskClass + '">风险' + escapeHtml(node.risk) + '</span></div></div>';
+      }).join('');
+      document.querySelectorAll('.panorama-node').forEach((element) => {
+        element.addEventListener('click', (event) => {
+          event.stopPropagation();
+          const nodeId = element.getAttribute('data-id');
+          state.panoramaSelectedId = state.panoramaSelectedId === nodeId ? null : nodeId;
+          renderPanorama(getMap());
+        });
+      });
+    }
+
+    function renderPanoramaDrawer(panorama, nodeMap) {
+      const drawer = document.getElementById('panoramaDrawer');
+      const selectedId = state.panoramaSelectedId;
+      if (!selectedId || !nodeMap[selectedId]) {
+        drawer.classList.remove('show');
+        return;
+      }
+      const node = nodeMap[selectedId];
+      drawer.classList.add('show');
+      document.getElementById('drawerTitle').textContent = node.name;
+      document.getElementById('drawerMeta').innerHTML =
+        COVERAGE_LABEL[node.coverage] + ' · ' + node.caseCount + ' 条用例 · ' +
+        node.featureCount + ' 个功能点' +
+        (node.gapCount ? (' · <span style="color:var(--red)">' + node.gapCount + ' 处缺口</span>') : '');
+      const featureKeys = node.featureKeys || [];
+      const samples = window.__FEATURE_MAP_SAMPLES__ || {};
+      const featureHtml = featureKeys.length
+        ? featureKeys.map((featureKey) => {
+          const sample = samples[featureKey];
+          const name = sample ? sample.spine.featureName : featureKey.split('/').pop();
+          return '<button type="button" class="feature-link" data-key="' + escapeHtml(featureKey) + '">' +
+            '进入功能点地图 · ' + escapeHtml(name) + '</button>';
+        }).join('')
+        : '<div class="hint">该流程节点暂无已建模功能点地图，可在评审入库后挂载。</div>';
+      document.getElementById('drawerFeatures').innerHTML = featureHtml;
+      const openMapBtn = document.getElementById('btnDrawerOpenMap');
+      if (featureKeys.length === 1) {
+        openMapBtn.style.display = '';
+        openMapBtn.setAttribute('data-key', featureKeys[0]);
+      } else {
+        openMapBtn.style.display = 'none';
+      }
+      document.querySelectorAll('.feature-link').forEach((button) => {
+        button.addEventListener('click', () => {
+          state.featureKey = button.getAttribute('data-key');
+          state.selectedCaseId = null;
+          state.selectedScenarioId = null;
+          state.mode = 'layout';
+          document.getElementById('btnLayoutMode').classList.add('active');
+          document.getElementById('btnGraphMode').classList.remove('active');
+          document.getElementById('layoutView').classList.remove('hidden');
+          document.getElementById('graphView').classList.remove('active');
+          renderAll();
+          showToast('已切换到功能点地图 · ' + state.featureKey.split('/').pop());
+        });
+      });
+    }
+
+    function renderPanorama(map) {
+      const panorama = getPanorama();
+      const nodeMap = {};
+      (panorama.nodes || []).forEach((node) => { nodeMap[node.id] = node; });
+      renderPanoramaStats(panorama);
+      renderPanoramaEdges(panorama, nodeMap, state.panoramaSelectedId);
+      renderPanoramaNodes(panorama, nodeMap);
+      renderPanoramaDrawer(panorama, nodeMap);
+      applyPanoramaTransform();
+    }
+
+    function initPanoramaInteraction() {
+      const stage = document.getElementById('panoramaStage');
+      stage.addEventListener('mousedown', (event) => {
+        if (event.target.closest('.panorama-node') || event.target.closest('.panorama-zoom-ctrl')) return;
+        state.panoramaDragging = true;
+        state.panoramaDragStart = { x: event.clientX - state.panoramaPanX, y: event.clientY - state.panoramaPanY };
+        stage.classList.add('dragging');
+      });
+      window.addEventListener('mousemove', (event) => {
+        if (!state.panoramaDragging || !state.panoramaDragStart) return;
+        state.panoramaPanX = event.clientX - state.panoramaDragStart.x;
+        state.panoramaPanY = event.clientY - state.panoramaDragStart.y;
+        applyPanoramaTransform();
+      });
+      window.addEventListener('mouseup', () => {
+        state.panoramaDragging = false;
+        state.panoramaDragStart = null;
+        stage.classList.remove('dragging');
+      });
+      stage.addEventListener('wheel', (event) => {
+        event.preventDefault();
+        const delta = event.deltaY > 0 ? -0.06 : 0.06;
+        state.panoramaZoom = Math.min(1.4, Math.max(0.45, state.panoramaZoom + delta));
+        applyPanoramaTransform();
+      }, { passive: false });
+      document.getElementById('btnZoomIn').addEventListener('click', () => {
+        state.panoramaZoom = Math.min(1.4, state.panoramaZoom + 0.1);
+        applyPanoramaTransform();
+      });
+      document.getElementById('btnZoomOut').addEventListener('click', () => {
+        state.panoramaZoom = Math.max(0.45, state.panoramaZoom - 0.1);
+        applyPanoramaTransform();
+      });
+      document.getElementById('btnZoomReset').addEventListener('click', () => {
+        state.panoramaZoom = 0.85;
+        state.panoramaPanX = 24;
+        state.panoramaPanY = 48;
+        applyPanoramaTransform();
+      });
+      document.getElementById('btnDrawerOpenMap').addEventListener('click', () => {
+        const featureKey = document.getElementById('btnDrawerOpenMap').getAttribute('data-key');
+        if (!featureKey) return;
+        state.featureKey = featureKey;
+        state.selectedCaseId = null;
+        state.mode = 'layout';
+        document.getElementById('btnLayoutMode').classList.add('active');
+        document.getElementById('btnGraphMode').classList.remove('active');
+        document.getElementById('layoutView').classList.remove('hidden');
+        document.getElementById('graphView').classList.remove('active');
+        renderAll();
+      });
+      document.getElementById('btnDrawerRegression').addEventListener('click', () => {
+        const panorama = getPanorama();
+        const node = (panorama.nodes || []).find((item) => item.id === state.panoramaSelectedId);
+        if (!node) return;
+        showToast('M7 已按节点「' + node.shortName + '」生成回归包 · ' + node.caseCount + ' 条用例');
+      });
+      stage.addEventListener('click', (event) => {
+        if (event.target === stage || event.target.id === 'panoramaInner' || event.target.id === 'panoramaEdges') {
+          state.panoramaSelectedId = null;
+          renderPanorama(getMap());
+        }
+      });
+    }
+
+    function runSearch() {
+      state.searchKeyword = (document.getElementById('searchInput').value || '').trim().toLowerCase();
+      const map = getMap();
+      if (!map) return;
+      renderBusiness(map);
+      const business = map.businessView;
+      let hitCount = 0;
+      (business.cases || []).forEach((item) => {
+        const text = (item.name + ' ' + item.testScenario + ' ' + item.api).toLowerCase();
+        if (!state.searchKeyword || text.includes(state.searchKeyword)) hitCount += 1;
+      });
+      document.getElementById('searchHint').textContent = state.searchKeyword
+        ? ('M6 搜索「' + state.searchKeyword + '」· 用例命中 ' + hitCount + ' 条')
+        : ('M6 地图检索 · 当前功能点：' + map.spine.featureName);
+      const hitsCard = document.getElementById('assetHits');
+      const hitList = document.getElementById('hitList');
+      if (!state.searchKeyword) {
+        hitsCard.classList.remove('show');
+        return;
+      }
+      const hits = (business.cases || []).filter((item) =>
+        (item.name + ' ' + item.testScenario).toLowerCase().includes(state.searchKeyword)
+      ).slice(0, 5);
+      document.getElementById('hitCount').textContent = String(hits.length);
+      hitList.innerHTML = hits.length
+        ? hits.map((item) => '<div class="hit-row"><span>' + escapeHtml(item.id + ' ' + item.name) + '</span><button class="btn" type="button">查看</button></div>').join('')
+        : '<div class="hint">正式资产库暂无更多命中</div>';
+      hitsCard.classList.add('show');
+    }
+
+    function activatePanoramaMode() {
+      state.mode = 'panorama';
+      document.getElementById('btnGraphMode').classList.add('active');
+      document.getElementById('btnLayoutMode').classList.remove('active');
+      document.getElementById('layoutView').classList.add('hidden');
+      document.getElementById('graphView').classList.add('active');
+      document.getElementById('searchBar').style.display = 'none';
+    }
+
+    function activateLayoutMode() {
+      state.mode = 'layout';
+      document.getElementById('btnLayoutMode').classList.add('active');
+      document.getElementById('btnGraphMode').classList.remove('active');
+      document.getElementById('layoutView').classList.remove('hidden');
+      document.getElementById('graphView').classList.remove('active');
+      document.getElementById('searchBar').style.display = '';
+    }
+
+    function renderAll() {
+      const map = getMap();
+      if (!map) {
+        showToast('未找到功能点地图数据');
+        return;
+      }
+      renderFeatureList();
+      renderSpine(map);
+      renderBusiness(map);
+      renderRisk(map);
+      renderTech(map);
+      renderSummary(map);
+      renderConsumers(map);
+      renderGraph(map);
+      highlightPath(map);
+      runSearch();
+    }
+
+    document.getElementById('btnLayoutMode').addEventListener('click', () => {
+      activateLayoutMode();
+    });
+    document.getElementById('btnGraphMode').addEventListener('click', () => {
+      activatePanoramaMode();
+      const panorama = getPanorama();
+      const currentNode = (panorama.nodes || []).find((node) =>
+        (node.featureKeys || []).includes(state.featureKey)
+      );
+      if (currentNode) state.panoramaSelectedId = currentNode.id;
+      renderPanorama(getMap());
+    });
+    document.getElementById('btnSearch').addEventListener('click', runSearch);
+    document.getElementById('btnSearchClear').addEventListener('click', () => {
+      document.getElementById('searchInput').value = '';
+      state.searchKeyword = '';
+      runSearch();
+    });
+    document.getElementById('searchInput').addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') runSearch();
+    });
+    document.getElementById('btnRegression').addEventListener('click', () => {
+      const map = getMap();
+      showToast('M7 已按「' + map.spine.featureName + '」生成回归包 · ' + map.summary.linkedCaseCount + ' 条用例');
+    });
+    document.getElementById('btnImpact').addEventListener('click', () => {
+      const map = getMap();
+      const api = (map.techView.apis || [])[0];
+      showToast('M7 影响分析：' + (api ? api.label : '接口') + ' → ' + map.spine.featureName);
+    });
+
+    initPanoramaInteraction();
+    if (location.search.indexOf('mode=layout') >= 0) {
+      activateLayoutMode();
+    } else {
+      activatePanoramaMode();
+    }
+    renderAll();
+  </script>
+</body>
+</html>

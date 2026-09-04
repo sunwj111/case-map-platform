@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>用例地图 · 关键字筛选工具</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <style>
+    :root {
+      --bg: #f3f1ec;
+      --panel: #fffdf9;
+      --ink: #1c1917;
+      --muted: #78716c;
+      --line: #e7e0d6;
+      --accent: #0f766e;
+      --accent-soft: #ccfbf1;
+      --warn: #b45309;
+      --danger: #b91c1c;
+      --chip: #f5f0e8;
+      --shadow: 0 1px 0 rgba(28,25,23,.04), 0 8px 24px rgba(28,25,23,.06);
+      --font: "IBM Plex Sans", "PingFang SC", "Noto Sans SC", sans-serif;
+      --mono: "IBM Plex Mono", "SF Mono", ui-monospace, monospace;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 500px at 10% -10%, #d9f2ee 0%, transparent 55%),
+        radial-gradient(900px 400px at 100% 0%, #f3e7d3 0%, transparent 50%),
+        var(--bg);
+      font: 14px/1.5 var(--font);
+    }
+    header {
+      position: sticky; top: 0; z-index: 20;
+      display: flex; gap: 16px; align-items: center; justify-content: space-between;
+      padding: 14px 22px;
+      background: rgba(255,253,249,.92);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--line);
+    }
+    header h1 { margin: 0; font-size: 17px; letter-spacing: .02em; }
+    header p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
+    .header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    main {
+      display: grid;
+      grid-template-columns: 320px 1fr 360px;
+      gap: 14px;
+      padding: 14px 22px 40px;
+      min-height: calc(100vh - 68px);
+    }
+    @media (max-width: 1100px) {
+      main { grid-template-columns: 1fr; }
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    .panel-hd {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    }
+    .panel-hd strong { font-size: 13px; }
+    .panel-bd { padding: 12px 14px; overflow: auto; flex: 1; }
+    label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+    input[type="text"], textarea, select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px 10px;
+      background: #fff;
+      color: var(--ink);
+      font: inherit;
+    }
+    textarea { min-height: 110px; resize: vertical; font-family: var(--mono); font-size: 12px; }
+    .btn {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      border-radius: 8px;
+      padding: 7px 12px;
+      font: inherit;
+      cursor: pointer;
+    }
+    .btn:hover { border-color: #c4b8a8; }
+    .btn.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .btn.primary:hover { filter: brightness(1.05); }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    .hint { color: var(--muted); font-size: 12px; margin-top: 6px; }
+    .stat-row {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px;
+    }
+    .stat {
+      background: #faf7f2; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px;
+    }
+    .stat .n { font-size: 18px; font-weight: 650; }
+    .stat .l { font-size: 11px; color: var(--muted); }
+    .node-list { display: flex; flex-direction: column; gap: 6px; }
+    .node-item {
+      text-align: left; width: 100%;
+      border: 1px solid var(--line); background: #fff; border-radius: 8px;
+      padding: 8px 10px; cursor: pointer;
+    }
+    .node-item.active { border-color: var(--accent); background: var(--accent-soft); }
+    .node-item .title { font-weight: 600; font-size: 13px; }
+    .node-item .meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .candidate-toolbar {
+      display: flex; gap: 8px; align-items: center; margin-bottom: 10px; flex-wrap: wrap;
+    }
+    .candidate-toolbar input { flex: 1; min-width: 160px; }
+    .cand-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .cand-table th, .cand-table td {
+      border-bottom: 1px solid var(--line); padding: 7px 6px; text-align: left; vertical-align: middle;
+    }
+    .cand-table th { color: var(--muted); font-weight: 500; font-size: 11px; }
+    .cand-table tr:hover td { background: #faf7f2; }
+    .tag {
+      display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 999px;
+      background: var(--chip); color: var(--muted); border: 1px solid var(--line);
+    }
+    .tag.src-功能点 { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+    .tag.src-用例名 { background: #fff7ed; color: #c2410c; border-color: #fed7aa; }
+    .tag.src-菜单 { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+    .tag.src-手工 { background: #f5f3ff; color: #6d28d9; border-color: #ddd6fe; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; min-height: 36px; }
+    .chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: var(--accent-soft); color: #115e59;
+      border: 1px solid #99f6e4; border-radius: 999px;
+      padding: 3px 8px 3px 10px; font-size: 12px;
+    }
+    .chip button {
+      border: 0; background: transparent; color: #0f766e; cursor: pointer; padding: 0 2px; font-size: 14px; line-height: 1;
+    }
+    .coverage {
+      margin-top: 10px; padding: 8px 10px; border-radius: 8px;
+      background: #faf7f2; border: 1px solid var(--line); font-size: 12px;
+    }
+    .coverage.warn { border-color: #fbbf24; background: #fffbeb; color: var(--warn); }
+    .coverage.ok { border-color: #6ee7b7; background: #ecfdf5; color: #047857; }
+    details.help {
+      margin: 0 22px 0; padding: 10px 14px; background: rgba(255,253,249,.8);
+      border: 1px solid var(--line); border-radius: 10px;
+    }
+    details.help summary { cursor: pointer; font-weight: 600; }
+    details.help ol { margin: 8px 0 0; padding-left: 18px; color: var(--muted); font-size: 13px; }
+    .empty { color: var(--muted); font-size: 13px; padding: 18px 4px; }
+    .danger-text { color: var(--danger); font-size: 12px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>用例地图 · 关键字筛选工具</h1>
+      <p>输入：节点骨架 + 历史用例 / 菜单 → 产出：各节点 keywords，可导出给领域配置</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn" type="button" id="btnLoadSample">加载报价示例</button>
+      <button class="btn" type="button" id="btnExportCsv">导出 CSV</button>
+      <button class="btn primary" type="button" id="btnExportJson">导出 flowNodes JSON</button>
+    </div>
+  </header>
+
+  <details class="help" open>
+    <summary>给测试同学怎么用（约 10 分钟）</summary>
+    <ol>
+      <li>左侧粘贴<strong>节点骨架</strong>（每行：节点名｜说明｜风险），或上传节点 JSON。</li>
+      <li>上传历史用例 Excel，或 <strong>XMind</strong>（自下而上识别：步骤/预期 → 优先级 → 用例名 → 功能点），可选再贴菜单文案。</li>
+      <li>点「抽取候选」；中间列表按<strong>功能点、用例名称</strong>生成候选并按频次排序。点选节点后挂载关键字。</li>
+      <li>可手工补词；看右侧覆盖率。满意后导出 JSON，发给平台侧写入 <code>configs/领域.json</code>。</li>
+    </ol>
+  </details>
+
+  <main>
+    <section class="panel">
+      <div class="panel-hd"><strong>① 输入</strong></div>
+      <div class="panel-bd">
+        <label>领域编码 / 显示名</label>
+        <div class="row">
+          <input type="text" id="domainCode" placeholder="measurement" />
+          <input type="text" id="displayName" placeholder="量房领域" />
+        </div>
+
+        <label style="margin-top:12px">节点骨架（每行：节点名｜说明｜风险）</label>
+        <textarea id="nodesText" placeholder="量房任务创建｜创建量房任务并关联房源｜高&#10;量房预约｜预约上门时间｜高&#10;量房审核｜审核量房结果｜中"></textarea>
+        <div class="row">
+          <input type="file" id="nodesFile" accept=".json,.txt,.csv" />
+        </div>
+        <div class="hint">也支持上传仅含 flowNodes 的 JSON。</div>
+
+        <label style="margin-top:12px">历史用例（Excel / CSV / XMind）</label>
+        <input type="file" id="casesFile" accept=".xlsx,.xls,.csv,.xmind" />
+        <div class="hint" id="casesHint">尚未导入用例。XMind 自下而上：步骤/预期 → 优先级 → 用例名 → 功能点。</div>
+
+        <label style="margin-top:12px">菜单 / 模块文案（可选，一行一项）</label>
+        <textarea id="menuText" placeholder="任务列表&#10;预约管理&#10;审核中心"></textarea>
+
+        <div class="row" style="margin-top:12px">
+          <button class="btn primary" type="button" id="btnExtract">抽取候选</button>
+          <button class="btn" type="button" id="btnApplyNodes">仅刷新节点</button>
+        </div>
+        <div class="hint" id="extractMsg"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-hd">
+        <strong>② 候选关键字</strong>
+        <span class="tag" id="candCount">0</span>
+      </div>
+      <div class="panel-bd">
+        <div class="stat-row">
+          <div class="stat"><div class="n" id="statCases">0</div><div class="l">用例条数</div></div>
+          <div class="stat"><div class="n" id="statCand">0</div><div class="l">候选词</div></div>
+          <div class="stat"><div class="n" id="statAssigned">0</div><div class="l">已挂载词</div></div>
+        </div>
+        <div class="candidate-toolbar">
+          <input type="text" id="candFilter" placeholder="过滤候选…" />
+          <select id="candSource">
+            <option value="all">全部来源</option>
+            <option value="功能点">功能点</option>
+            <option value="用例名">用例名</option>
+            <option value="菜单">菜单</option>
+          </select>
+          <button class="btn" type="button" id="btnAddSelected" disabled>挂到当前节点</button>
+        </div>
+        <div id="candEmpty" class="empty">先抽取候选后，在这里勾选并挂到左侧当前节点。</div>
+        <table class="cand-table" id="candTable" style="display:none">
+          <thead>
+            <tr>
+              <th style="width:28px"><input type="checkbox" id="candCheckAll" /></th>
+              <th>关键字</th>
+              <th>来源</th>
+              <th>频次</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="candBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-hd"><strong>③ 节点挂载</strong></div>
+      <div class="panel-bd">
+        <div class="node-list" id="nodeList"></div>
+        <div id="nodeEmpty" class="empty">先粘贴或导入节点骨架。</div>
+
+        <div id="activeNodePanel" style="display:none;margin-top:14px">
+          <label>当前节点已挂关键字</label>
+          <div class="chips" id="activeChips"></div>
+          <div class="row" style="margin-top:8px">
+            <input type="text" id="manualKw" placeholder="手工补词，回车添加" />
+            <button class="btn" type="button" id="btnAddManual">添加</button>
+          </div>
+          <div class="coverage" id="coverageBox">覆盖率将在挂词后计算。</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const STOP_WORDS = new Set([
+      '的', '了', '和', '与', '或', '及', '在', '是', '为', '到', '后', '时', '中', '等', '一个', '进行',
+      '可以', '需要', '如果', '是否', '正确', '校验', '检查', '测试', '用例', '功能', '页面', '点击',
+      '显示', '成功', '失败', '异常', '默认', '全部', '其他', '相关', '对应', '能够', '应该'
+    ]);
+
+    const state = {
+      domain: 'measurement',
+      displayName: '量房领域',
+      nodes: [],
+      activeNodeIndex: -1,
+      cases: [],
+      candidates: [],
+      selectedCandidateKeys: new Set()
+    };
+
+    const SAMPLE_NODES = [
+      { node: '报价触发与报价单生成', description: '外部系统或管家端发起报价，生成报价单主记录。', risk: '高', keywords: [] },
+      { node: '报价场景识别与价格来源', description: '识别报价场景并决定价格来源。', risk: '高', keywords: [] },
+      { node: '金额计算与汇总', description: '计算总价、含税、去利润、分组汇总。', risk: '高', keywords: [] },
+      { node: '造价提交与审核', description: '提交、审核通过/拒绝/取消。', risk: '高', keywords: [] },
+      { node: '生命周期与外部联动', description: '失效、作废、库存预占与释放。', risk: '高', keywords: [] },
+      { node: '前端展示与金额明细', description: '金额明细弹窗与端上展示。', risk: '中', keywords: [] }
+    ];
+
+    const SAMPLE_CASE_TEXTS = [
+      { name: '合计金额校验正确', feature: '金额明细弹窗' },
+      { name: '智能tab下的金额的校验正确', feature: '金额明细弹窗' },
+      { name: '提交审核后状态变为待审核', feature: '提交审核' },
+      { name: '审核拒绝后可编辑重新提交', feature: '审核拒绝回退' },
+      { name: '含税金额计算正确', feature: '数量价汇总' },
+      { name: '去利润价计算正确', feature: '去利润价计算' },
+      { name: '场景SFBJ映射目录价', feature: '场景价格来源映射' },
+      { name: '报价单生成成功', feature: '报价单生成' },
+      { name: '审核通过后库存预占', feature: '库存预占与失效' },
+      { name: '时效到期自动失效', feature: '库存预占与失效' }
+    ];
+
+    function $(id) { return document.getElementById(id); }
+
+    function normalizeText(value) {
+      return String(value || '').trim();
+    }
+
+    function parseNodesText(text) {
+      const lines = String(text || '').split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+      return lines.map((line) => {
+        const parts = line.split(/[｜|]/);
+        return {
+          node: normalizeText(parts[0]),
+          description: normalizeText(parts[1] || ''),
+          risk: normalizeText(parts[2] || '中') || '中',
+          keywords: []
+        };
+      }).filter((item) => item.node);
+    }
+
+    function mergeNodeKeywords(previousNodes, nextNodes) {
+      const previousMap = new Map(previousNodes.map((item) => [item.node, item.keywords || []]));
+      return nextNodes.map((item) => ({
+        ...item,
+        keywords: [...(previousMap.get(item.node) || item.keywords || [])]
+      }));
+    }
+
+    function applyNodesFromText() {
+      const parsed = parseNodesText($('nodesText').value);
+      state.nodes = mergeNodeKeywords(state.nodes, parsed);
+      state.domain = normalizeText($('domainCode').value) || state.domain;
+      state.displayName = normalizeText($('displayName').value) || state.displayName;
+      if (state.activeNodeIndex >= state.nodes.length) state.activeNodeIndex = state.nodes.length - 1;
+      if (state.activeNodeIndex < 0 && state.nodes.length) state.activeNodeIndex = 0;
+      renderNodes();
+      renderStats();
+      renderCoverage();
+    }
+
+    function guessColumn(headers, aliases) {
+      const lower = headers.map((header) => String(header || '').toLowerCase());
+      for (const alias of aliases) {
+        const index = lower.findIndex((header) => header === alias || header.includes(alias));
+        if (index >= 0) return headers[index];
+      }
+      return null;
+    }
+
+    function recordsFromSheet(workbook) {
+      const firstSheet = workbook.SheetNames[0];
+      const rows = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheet], { defval: '' });
+      if (!rows.length) return [];
+      const headers = Object.keys(rows[0]);
+      const nameCol = guessColumn(headers, ['casename', '用例名称', '用例名', 'title', '名称']);
+      const featureCol = guessColumn(headers, ['function_point', '功能点', '模块', '功能']);
+      const stepCol = guessColumn(headers, ['step', '步骤', '操作步骤']);
+      const expectedCol = guessColumn(headers, ['expected_results', '预期结果', '预期']);
+      return rows.map((row) => ({
+        name: normalizeText(nameCol ? row[nameCol] : ''),
+        feature: normalizeText(featureCol ? row[featureCol] : ''),
+        step: normalizeText(stepCol ? row[stepCol] : ''),
+        expected: normalizeText(expectedCol ? row[expectedCol] : '')
+      })).filter((item) => item.name || item.feature);
+    }
+
+    function topicTitle(topic) {
+      if (!topic) return '';
+      if (typeof topic.title === 'string') return normalizeText(topic.title);
+      if (topic.title && typeof topic.title === 'object') {
+        return normalizeText(topic.title.text || topic.title.content || '');
+      }
+      return normalizeText(topic.title || '');
+    }
+
+    function topicChildren(topic) {
+      if (!topic) return [];
+      if (Array.isArray(topic.children)) return topic.children;
+      if (topic.children && Array.isArray(topic.children.attached)) return topic.children.attached;
+      if (topic.children && Array.isArray(topic.children.topics)) return topic.children.topics;
+      return [];
+    }
+
+    function buildJsonTopicNode(topic) {
+      return {
+        title: topicTitle(topic),
+        children: topicChildren(topic).map(buildJsonTopicNode)
+      };
+    }
+
+    function isStepExpectedTitle(title) {
+      const text = normalizeText(title);
+      if (!text) return false;
+      if (/^(步骤|预期|前置|前提|操作步骤)\s*[:：]/.test(text)) return true;
+      if (/步骤\s*[:：]/.test(text) && /预期\s*[:：]/.test(text)) return true;
+      return false;
+    }
+
+    function isPriorityTitle(title) {
+      const text = normalizeText(title);
+      if (!text) return false;
+      if (/^(p|P)[0-4]$/.test(text)) return true;
+      if (/^P[0-4]$/i.test(text)) return true;
+      if (/^(优先级|priority)\s*[:：]?\s*(p|P)?[0-4]$/i.test(text)) return true;
+      if (/^(高|中|低)(优先)?$/.test(text)) return true;
+      return false;
+    }
+
+    function splitStepExpected(text) {
+      const raw = normalizeText(text).replace(/\r/g, '');
+      let step = '';
+      let expected = '';
+      const stepMatch = raw.match(/步骤\s*[:：]\s*([\s\S]*?)(?=预期\s*[:：]|$)/);
+      const expectedMatch = raw.match(/预期\s*[:：]\s*([\s\S]*?)$/);
+      if (stepMatch) step = normalizeText(stepMatch[1]);
+      if (expectedMatch) expected = normalizeText(expectedMatch[1]);
+      if (!step && !expected) {
+        if (/^步骤\s*[:：]/.test(raw)) step = normalizeText(raw.replace(/^步骤\s*[:：]\s*/, ''));
+        else if (/^预期\s*[:：]/.test(raw)) expected = normalizeText(raw.replace(/^预期\s*[:：]\s*/, ''));
+        else step = raw;
+      }
+      return { step, expected };
+    }
+
+    function collectDetailTexts(node) {
+      const steps = [];
+      const expecteds = [];
+      (node.children || []).forEach((child) => {
+        if ((child.children || []).length) return;
+        const parts = splitStepExpected(child.title);
+        if (parts.step) steps.push(parts.step);
+        if (parts.expected) expecteds.push(parts.expected);
+        if (!parts.step && !parts.expected && isStepExpectedTitle(child.title)) {
+          steps.push(normalizeText(child.title));
+        }
+      });
+      // 单个节点同时写了步骤+预期
+      if (!steps.length && !expecteds.length && isStepExpectedTitle(node.title)) {
+        const parts = splitStepExpected(node.title);
+        if (parts.step) steps.push(parts.step);
+        if (parts.expected) expecteds.push(parts.expected);
+      }
+      return {
+        step: steps.join('\n'),
+        expected: expecteds.join('\n')
+      };
+    }
+
+    function isDetailParent(node) {
+      const children = node.children || [];
+      if (!children.length) return isStepExpectedTitle(node.title);
+      const detailLeaves = children.filter((child) => {
+        const childEmpty = !(child.children || []).length;
+        return childEmpty && isStepExpectedTitle(child.title);
+      });
+      if (!detailLeaves.length) return false;
+      // 子节点以步骤/预期为主，则本节点是「优先级」或直接挂步骤的用例层
+      return detailLeaves.length >= Math.ceil(children.length * 0.5);
+    }
+
+    function recordsFromTopicTree(root) {
+      const out = [];
+      let usedBottomUp = false;
+
+      function walk(node, ancestors) {
+        if (!node) return;
+        const path = node.title ? ancestors.concat([node.title]) : ancestors.slice();
+        const children = node.children || [];
+
+        if (isDetailParent(node)) {
+          usedBottomUp = true;
+          const details = collectDetailTexts(node);
+          let priority = '';
+          let caseName = '';
+          let feature = '';
+          let scenePath = [];
+
+          // 自下而上：步骤/预期 → 优先级 → 用例名 → 功能点 → 场景/系统
+          if (isPriorityTitle(node.title)) {
+            priority = node.title;
+            caseName = ancestors.length ? ancestors[ancestors.length - 1] : '';
+            feature = ancestors.length >= 2 ? ancestors[ancestors.length - 2] : '';
+            scenePath = ancestors.slice(0, Math.max(0, ancestors.length - 2));
+          } else {
+            // 无独立优先级节点时：本层视为用例名
+            caseName = node.title || (ancestors.length ? ancestors[ancestors.length - 1] : '');
+            feature = ancestors.length ? ancestors[ancestors.length - 1] : '';
+            scenePath = ancestors.slice(0, Math.max(0, ancestors.length - 1));
+          }
+
+          if (caseName || details.step || details.expected) {
+            out.push({
+              name: caseName || details.step || '未命名用例',
+              feature: feature,
+              step: details.step,
+              expected: details.expected,
+              path: scenePath.concat([feature, caseName].filter(Boolean)).join(' / '),
+              level: priority
+            });
+          }
+          // 步骤/预期层不再向下当用例
+          return;
+        }
+
+        children.forEach((child) => walk(child, path));
+      }
+
+      walk(root, []);
+
+      if (usedBottomUp && out.length) return out;
+
+      // 回退：普通导图，叶子=用例名，父节点=功能点
+      const fallback = [];
+      function walkLeaf(node, ancestors) {
+        if (!node) return;
+        const path = node.title ? ancestors.concat([node.title]) : ancestors.slice();
+        const children = node.children || [];
+        if (!children.length) {
+          if (!node.title) return;
+          fallback.push({
+            name: node.title,
+            feature: ancestors.length ? ancestors[ancestors.length - 1] : '',
+            step: path.join(' / '),
+            expected: '',
+            path: path.join(' / '),
+            level: ''
+          });
+          return;
+        }
+        children.forEach((child) => walkLeaf(child, path));
+      }
+      walkLeaf(root, []);
+      return fallback;
+    }
+
+    function recordsFromXmindJson(raw) {
+      const sheets = Array.isArray(raw) ? raw : (raw.sheets || raw.Sheet || []);
+      const list = Array.isArray(sheets) ? sheets : [raw];
+      const out = [];
+      list.forEach((sheet) => {
+        const rootRaw = sheet.rootTopic || sheet.root || sheet.topic || sheet;
+        if (!rootRaw) return;
+        const root = buildJsonTopicNode(rootRaw);
+        out.push.apply(out, recordsFromTopicTree(root));
+      });
+      return out;
+    }
+
+    function recordsFromXmindXml(xmlText) {
+      const doc = new DOMParser().parseFromString(xmlText, 'application/xml');
+
+      function directChildTopics(topicEl) {
+        const result = [];
+        Array.from(topicEl.children || []).forEach((child) => {
+          if (!child.tagName || child.tagName.toLowerCase() !== 'children') return;
+          Array.from(child.children || []).forEach((topicsWrap) => {
+            if (!topicsWrap.tagName || topicsWrap.tagName.toLowerCase() !== 'topics') return;
+            Array.from(topicsWrap.children || []).forEach((maybeTopic) => {
+              if (maybeTopic.tagName && maybeTopic.tagName.toLowerCase() === 'topic') {
+                result.push(maybeTopic);
+              }
+            });
+          });
+        });
+        return result;
+      }
+
+      function buildXmlTopicNode(topicEl) {
+        if (!topicEl) return null;
+        const titleNodes = Array.from(topicEl.children || []).filter((el) => el.tagName && el.tagName.toLowerCase() === 'title');
+        return {
+          title: normalizeText(titleNodes[0] ? titleNodes[0].textContent : ''),
+          children: directChildTopics(topicEl).map(buildXmlTopicNode).filter(Boolean)
+        };
+      }
+
+      const out = [];
+      const sheets = Array.from(doc.getElementsByTagName('sheet'));
+      if (sheets.length) {
+        sheets.forEach((sheet) => {
+          const rootEl = Array.from(sheet.children || []).find((el) => el.tagName && el.tagName.toLowerCase() === 'topic');
+          const root = buildXmlTopicNode(rootEl);
+          if (root) out.push.apply(out, recordsFromTopicTree(root));
+        });
+      } else {
+        const root = buildXmlTopicNode(doc.getElementsByTagName('topic')[0]);
+        if (root) out.push.apply(out, recordsFromTopicTree(root));
+      }
+      return out;
+    }
+
+    async function recordsFromXmindFile(buffer) {
+      if (typeof JSZip === 'undefined') {
+        throw new Error('JSZip 未加载，无法解析 XMind');
+      }
+      const zip = await JSZip.loadAsync(buffer);
+      const names = Object.keys(zip.files);
+      const jsonEntry = names.find((name) => /(^|\/)content\.json$/i.test(name));
+      if (jsonEntry) {
+        const text = await zip.file(jsonEntry).async('string');
+        const records = recordsFromXmindJson(JSON.parse(text));
+        if (records.length) return records;
+      }
+      const xmlEntry = names.find((name) => /(^|\/)content\.xml$/i.test(name));
+      if (xmlEntry) {
+        const text = await zip.file(xmlEntry).async('string');
+        const records = recordsFromXmindXml(text);
+        if (records.length) return records;
+      }
+      throw new Error('未找到可解析的 content.json / content.xml（请确认是 .xmind 导图文件）');
+    }
+
+    function splitSegments(text) {
+      return String(text || '')
+        .split(/[\s,，。；;：:、|/\\（）()【】\[\]<>《》\-—－_+]+/)
+        .map((part) => part.trim())
+        .filter(Boolean);
+    }
+
+    function isUsefulToken(token, opts) {
+      const options = opts || {};
+      const maxLen = options.maxLen || 24;
+      if (!token) return false;
+      if (STOP_WORDS.has(token)) return false;
+      if (/^\d+(\.\d+)?$/.test(token)) return false;
+      if (token.length < 2) return false;
+      if (token.length > maxLen) return false;
+      return true;
+    }
+
+    function addCandidate(bucket, term, source, weight, opts) {
+      const keyword = normalizeText(term);
+      if (!isUsefulToken(keyword, opts)) return;
+      const key = keyword + '::' + source;
+      if (!bucket.has(key)) {
+        bucket.set(key, { keyword, source, count: 0 });
+      }
+      bucket.get(key).count += weight;
+    }
+
+    function extractNameParts(caseName) {
+      const text = normalizeText(caseName);
+      if (!text) return [];
+      const parts = [];
+      // 整句用例名（较短时保留，便于直接挂载）
+      if (text.length <= 40) parts.push(text);
+      // 按 - / 等切开：合同模板正确-增益3.0-心舍3.0-新收
+      for (const segment of splitSegments(text)) {
+        parts.push(segment);
+        // 去掉末尾「正确/成功/失败」等弱后缀再贡献一版
+        const trimmed = segment.replace(/(正确|成功|失败|校验|检查|验证)$/g, '');
+        if (trimmed && trimmed !== segment) parts.push(trimmed);
+      }
+      return parts;
+    }
+
+    function extractCandidates() {
+      applyNodesFromText();
+      const bucket = new Map();
+      const menuLines = String($('menuText').value || '').split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+
+      // 候选主来源：功能点 + 用例名称（步骤/预期/上层路径不进候选，避免噪音）
+      for (const caseItem of state.cases) {
+        const feature = normalizeText(caseItem.feature);
+        if (feature) {
+          addCandidate(bucket, feature, '功能点', 8, { maxLen: 40 });
+          for (const segment of splitSegments(feature)) {
+            addCandidate(bucket, segment, '功能点', 4);
+          }
+        }
+
+        const caseName = normalizeText(caseItem.name);
+        if (caseName) {
+          for (const part of extractNameParts(caseName)) {
+            const weight = part === caseName ? 5 : 3;
+            addCandidate(bucket, part, '用例名', weight, { maxLen: 40 });
+          }
+        }
+      }
+
+      for (const line of menuLines) {
+        addCandidate(bucket, line, '菜单', 4, { maxLen: 40 });
+        for (const segment of splitSegments(line)) addCandidate(bucket, segment, '菜单', 2);
+      }
+
+      state.candidates = Array.from(bucket.values())
+        .filter((item) => item.count >= 1)
+        .sort((left, right) => right.count - left.count || left.keyword.localeCompare(right.keyword, 'zh'));
+      state.selectedCandidateKeys.clear();
+      $('extractMsg').textContent = '已抽取 ' + state.candidates.length + ' 个候选（主要来自功能点、用例名称）。';
+      renderCandidates();
+      renderStats();
+      renderCoverage();
+    }
+
+    function assignedKeywordSet() {
+      const set = new Set();
+      for (const node of state.nodes) {
+        for (const keyword of node.keywords || []) set.add(keyword);
+      }
+      return set;
+    }
+
+    function activeNode() {
+      if (state.activeNodeIndex < 0) return null;
+      return state.nodes[state.activeNodeIndex] || null;
+    }
+
+    function addKeywordsToActive(keywords, sourceLabel) {
+      const node = activeNode();
+      if (!node) {
+        $('extractMsg').textContent = '请先在右侧选择一个节点。';
+        return;
+      }
+      const existing = new Set(node.keywords);
+      let added = 0;
+      for (const keyword of keywords) {
+        const cleaned = normalizeText(keyword);
+        if (!cleaned || existing.has(cleaned)) continue;
+        existing.add(cleaned);
+        node.keywords.push(cleaned);
+        added += 1;
+        if (sourceLabel === '手工') {
+          state.candidates.unshift({ keyword: cleaned, source: '手工', count: 1 });
+        }
+      }
+      renderNodes();
+      renderActiveChips();
+      renderCandidates();
+      renderStats();
+      renderCoverage();
+      $('extractMsg').textContent = '已向「' + node.node + '」添加 ' + added + ' 个词。';
+    }
+
+    function removeKeywordFromActive(keyword) {
+      const node = activeNode();
+      if (!node) return;
+      node.keywords = node.keywords.filter((item) => item !== keyword);
+      renderNodes();
+      renderActiveChips();
+      renderStats();
+      renderCoverage();
+    }
+
+    function caseMatchesAny(caseItem, keywords) {
+      const blob = [caseItem.name, caseItem.feature].join(' ').toLowerCase();
+      return keywords.some((keyword) => blob.includes(String(keyword).toLowerCase()));
+    }
+
+    function renderCoverage() {
+      const box = $('coverageBox');
+      if (!state.cases.length) {
+        box.className = 'coverage';
+        box.textContent = '未导入用例时，不做覆盖估算；仍可导出节点关键词。';
+        return;
+      }
+      const allKeywords = Array.from(assignedKeywordSet());
+      if (!allKeywords.length) {
+        box.className = 'coverage warn';
+        box.textContent = '尚未挂载任何关键字。';
+        return;
+      }
+      const hitCount = state.cases.filter((caseItem) => caseMatchesAny(caseItem, allKeywords)).length;
+      const ratio = Math.round((hitCount / state.cases.length) * 100);
+      const node = activeNode();
+      let nodeText = '';
+      if (node && node.keywords.length) {
+        const nodeHit = state.cases.filter((caseItem) => caseMatchesAny(caseItem, node.keywords)).length;
+        nodeText = '当前节点命中约 ' + nodeHit + ' 条。';
+      }
+      box.className = 'coverage ' + (ratio >= 40 ? 'ok' : 'warn');
+      box.textContent = '全部已挂词大致覆盖用例 ' + hitCount + '/' + state.cases.length + '（约 ' + ratio + '%）。' + nodeText +
+        '（粗估：用例名/功能点中包含关键词即算命中）';
+    }
+
+    function renderStats() {
+      $('statCases').textContent = String(state.cases.length);
+      $('statCand').textContent = String(state.candidates.length);
+      $('statAssigned').textContent = String(assignedKeywordSet().size);
+      $('candCount').textContent = String(state.candidates.length);
+    }
+
+    function renderNodes() {
+      const list = $('nodeList');
+      const empty = $('nodeEmpty');
+      list.innerHTML = '';
+      if (!state.nodes.length) {
+        empty.style.display = 'block';
+        $('activeNodePanel').style.display = 'none';
+        return;
+      }
+      empty.style.display = 'none';
+      state.nodes.forEach((node, index) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'node-item' + (index === state.activeNodeIndex ? ' active' : '');
+        button.innerHTML =
+          '<div class="title">' + escapeHtml(node.node) + '</div>' +
+          '<div class="meta">' + escapeHtml(node.risk || '中') + ' · 已挂 ' + (node.keywords || []).length + ' 词' +
+          (node.description ? ' · ' + escapeHtml(node.description) : '') + '</div>';
+        button.addEventListener('click', () => {
+          state.activeNodeIndex = index;
+          renderNodes();
+          renderActiveChips();
+          renderCoverage();
+          $('btnAddSelected').disabled = false;
+        });
+        list.appendChild(button);
+      });
+      $('activeNodePanel').style.display = state.activeNodeIndex >= 0 ? 'block' : 'none';
+      $('btnAddSelected').disabled = state.activeNodeIndex < 0;
+      renderActiveChips();
+    }
+
+    function renderActiveChips() {
+      const node = activeNode();
+      const box = $('activeChips');
+      box.innerHTML = '';
+      if (!node) return;
+      if (!node.keywords.length) {
+        box.innerHTML = '<span class="empty">暂无关键字，从中间候选挂入或手工添加。</span>';
+        return;
+      }
+      node.keywords.forEach((keyword) => {
+        const chip = document.createElement('span');
+        chip.className = 'chip';
+        chip.innerHTML = escapeHtml(keyword) + '<button type="button" title="移除">×</button>';
+        chip.querySelector('button').addEventListener('click', () => removeKeywordFromActive(keyword));
+        box.appendChild(chip);
+      });
+    }
+
+    function filteredCandidates() {
+      const keywordFilter = normalizeText($('candFilter').value).toLowerCase();
+      const sourceFilter = $('candSource').value;
+      const assigned = assignedKeywordSet();
+      return state.candidates.filter((item) => {
+        if (sourceFilter !== 'all' && item.source !== sourceFilter) return false;
+        if (keywordFilter && !item.keyword.toLowerCase().includes(keywordFilter)) return false;
+        if (assigned.has(item.keyword)) return false;
+        return true;
+      });
+    }
+
+    function renderCandidates() {
+      const rows = filteredCandidates();
+      const table = $('candTable');
+      const empty = $('candEmpty');
+      const body = $('candBody');
+      body.innerHTML = '';
+      if (!state.candidates.length) {
+        table.style.display = 'none';
+        empty.style.display = 'block';
+        empty.textContent = '先抽取候选后，在这里勾选并挂到左侧当前节点。';
+        return;
+      }
+      if (!rows.length) {
+        table.style.display = 'none';
+        empty.style.display = 'block';
+        empty.textContent = '没有匹配的候选（可能已全部挂载或被过滤）。';
+        return;
+      }
+      empty.style.display = 'none';
+      table.style.display = 'table';
+      rows.slice(0, 300).forEach((item) => {
+        const key = item.keyword + '::' + item.source;
+        const tr = document.createElement('tr');
+        tr.innerHTML =
+          '<td><input type="checkbox" data-key="' + escapeAttr(key) + '"' + (state.selectedCandidateKeys.has(key) ? ' checked' : '') + ' /></td>' +
+          '<td>' + escapeHtml(item.keyword) + '</td>' +
+          '<td><span class="tag src-' + escapeAttr(item.source) + '">' + escapeHtml(item.source) + '</span></td>' +
+          '<td>' + item.count + '</td>' +
+          '<td><button class="btn" type="button" data-one="' + escapeAttr(item.keyword) + '">挂入</button></td>';
+        body.appendChild(tr);
+      });
+      body.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
+        checkbox.addEventListener('change', () => {
+          const key = checkbox.getAttribute('data-key');
+          if (checkbox.checked) state.selectedCandidateKeys.add(key);
+          else state.selectedCandidateKeys.delete(key);
+        });
+      });
+      body.querySelectorAll('button[data-one]').forEach((button) => {
+        button.addEventListener('click', () => addKeywordsToActive([button.getAttribute('data-one')], '候选'));
+      });
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function escapeAttr(value) {
+      return escapeHtml(value).replace(/'/g, '&#39;');
+    }
+
+    function buildExportPayload() {
+      return {
+        domain: state.domain,
+        displayName: state.displayName,
+        flowNodes: state.nodes.map((node) => ({
+          node: node.node,
+          description: node.description || '',
+          risk: node.risk || '中',
+          keywords: [...(node.keywords || [])]
+        }))
+      };
+    }
+
+    function downloadText(filename, content, mime) {
+      const blob = new Blob([content], { type: mime || 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = filename;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function exportJson() {
+      applyNodesFromText();
+      const payload = buildExportPayload();
+      if (!payload.flowNodes.length) {
+        alert('没有可导出的节点。');
+        return;
+      }
+      const filename = (payload.domain || 'domain') + '_flowNodes_keywords.json';
+      downloadText(filename, JSON.stringify(payload, null, 2), 'application/json;charset=utf-8');
+    }
+
+    function exportCsv() {
+      applyNodesFromText();
+      const lines = [['domain', 'displayName', 'node', 'description', 'risk', 'keyword']];
+      for (const node of state.nodes) {
+        const keywords = node.keywords.length ? node.keywords : [''];
+        for (const keyword of keywords) {
+          lines.push([
+            state.domain,
+            state.displayName,
+            node.node,
+            node.description || '',
+            node.risk || '',
+            keyword
+          ].map((cell) => '"' + String(cell).replace(/"/g, '""') + '"').join(','));
+        }
+      }
+      downloadText((state.domain || 'domain') + '_keywords.csv', lines.join('\n'), 'text/csv;charset=utf-8');
+    }
+
+    function loadSample() {
+      state.domain = 'quote';
+      state.displayName = '家装报价领域';
+      $('domainCode').value = state.domain;
+      $('displayName').value = state.displayName;
+      state.nodes = SAMPLE_NODES.map((node) => ({ ...node, keywords: [] }));
+      $('nodesText').value = state.nodes.map((node) => [node.node, node.description, node.risk].join('｜')).join('\n');
+      state.cases = SAMPLE_CASE_TEXTS.map((item) => ({ name: item.name, feature: item.feature, step: '', expected: '' }));
+      $('menuText').value = ['金额明细', '提交审核', '审核中心', '报价单', '场景价源'].join('\n');
+      $('casesHint').textContent = '已加载报价示意用例 ' + state.cases.length + ' 条（非全量）。';
+      state.activeNodeIndex = 0;
+      extractCandidates();
+      renderNodes();
+    }
+
+    $('btnApplyNodes').addEventListener('click', () => {
+      applyNodesFromText();
+      $('extractMsg').textContent = '节点已刷新，已挂关键词按同名节点保留。';
+    });
+    $('btnExtract').addEventListener('click', extractCandidates);
+    $('btnAddSelected').addEventListener('click', () => {
+      const keywords = [];
+      for (const key of state.selectedCandidateKeys) {
+        const keyword = key.split('::')[0];
+        keywords.push(keyword);
+      }
+      addKeywordsToActive(keywords, '候选');
+      state.selectedCandidateKeys.clear();
+      renderCandidates();
+    });
+    $('btnAddManual').addEventListener('click', () => {
+      addKeywordsToActive([$('manualKw').value], '手工');
+      $('manualKw').value = '';
+    });
+    $('manualKw').addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        addKeywordsToActive([$('manualKw').value], '手工');
+        $('manualKw').value = '';
+      }
+    });
+    $('candFilter').addEventListener('input', renderCandidates);
+    $('candSource').addEventListener('change', renderCandidates);
+    $('candCheckAll').addEventListener('change', (event) => {
+      const checked = event.target.checked;
+      filteredCandidates().slice(0, 300).forEach((item) => {
+        const key = item.keyword + '::' + item.source;
+        if (checked) state.selectedCandidateKeys.add(key);
+        else state.selectedCandidateKeys.delete(key);
+      });
+      renderCandidates();
+    });
+    $('btnExportJson').addEventListener('click', exportJson);
+    $('btnExportCsv').addEventListener('click', exportCsv);
+    $('btnLoadSample').addEventListener('click', loadSample);
+
+    $('casesFile').addEventListener('change', async (event) => {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      try {
+        const buffer = await file.arrayBuffer();
+        let sourceLabel = 'Excel';
+        if (/\.xmind$/i.test(file.name)) {
+          state.cases = await recordsFromXmindFile(buffer);
+          sourceLabel = 'XMind';
+        } else if (/\.csv$/i.test(file.name)) {
+          const text = new TextDecoder('utf-8').decode(buffer);
+          const workbook = XLSX.read(text, { type: 'string' });
+          state.cases = recordsFromSheet(workbook);
+          sourceLabel = 'CSV';
+        } else {
+          const workbook = XLSX.read(buffer, { type: 'array' });
+          state.cases = recordsFromSheet(workbook);
+        }
+        $('casesHint').textContent = '已从 ' + sourceLabel + ' 导入 ' + state.cases.length + ' 条' +
+          (sourceLabel === 'XMind' ? '（自下而上：步骤/预期→优先级→用例名→功能点）。' : '（用例名/功能点等列）。');
+        renderStats();
+      } catch (error) {
+        $('casesHint').innerHTML = '<span class="danger-text">解析失败：' + escapeHtml(error.message || String(error)) + '</span>';
+      }
+    });
+
+    $('nodesFile').addEventListener('change', async (event) => {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      const text = await file.text();
+      try {
+        if (/\.json$/i.test(file.name)) {
+          const data = JSON.parse(text);
+          const flowNodes = Array.isArray(data) ? data : (data.flowNodes || []);
+          state.nodes = flowNodes.map((item) => ({
+            node: item.node || item.name || '',
+            description: item.description || '',
+            risk: item.risk || '中',
+            keywords: Array.isArray(item.keywords) ? [...item.keywords] : []
+          })).filter((item) => item.node);
+          if (data.domain) {
+            state.domain = data.domain;
+            $('domainCode').value = data.domain;
+          }
+          if (data.displayName) {
+            state.displayName = data.displayName;
+            $('displayName').value = data.displayName;
+          }
+          $('nodesText').value = state.nodes.map((node) => [node.node, node.description, node.risk].join('｜')).join('\n');
+        } else {
+          $('nodesText').value = text;
+          applyNodesFromText();
+        }
+        state.activeNodeIndex = state.nodes.length ? 0 : -1;
+        renderNodes();
+        renderStats();
+      } catch (error) {
+        $('extractMsg').innerHTML = '<span class="danger-text">节点文件解析失败：' + escapeHtml(error.message || String(error)) + '</span>';
+      }
+    });
+
+    $('domainCode').value = state.domain;
+    $('displayName').value = state.displayName;
+    renderNodes();
+    renderStats();
+  </script>
+</body>
+</html>

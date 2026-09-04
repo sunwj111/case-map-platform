@@ -1,0 +1,15 @@
+方法,本接口路径,下游系统,下游接口或资源,调用方式,同步异步,强弱,关联流程节点,来源,确认状态
+GET,/costAudit/findList,资产增益,ArchiveAdaptor.batchQueryDesignCode,HTTP,同步,强,造价提交与审核,造价审核接口&上下游清单&数据库.md,待确认
+GET,/costAudit/findList,AI房源品质,HouseQualityAdaptor.batchGradeByOppIdsAndSource,HTTP,同步,强,造价提交与审核,造价审核接口&上下游清单&数据库.md,待确认
+GET,/costAudit/findList,品质评级,QualityRatingAdaptor.getBeforeOrderBatch,HTTP,同步,强,造价提交与审核,造价审核接口&上下游清单&数据库.md,待确认
+GET,/costAudit/findList,立峰,LfOrderInfoAdaptor.hasStandardPremiumScene,HTTP,同步,弱,造价提交与审核,造价审核接口&上下游清单&数据库.md,待确认
+GET,/costAudit/findList,人员,PersonAdaptor.getPersonInfo,HTTP,同步,弱,造价提交与审核,造价审核接口&上下游清单&数据库.md,待确认
+POST,/costAudit/transform,企微,TRANSFORM_MSG 通知新审核人,异步消息,异步,弱,造价提交与审核,造价审核接口&上下游清单&数据库.md,待确认
+RPC,checkDesignCost,品质评级,改前评级必须 COMPLETED,HTTP,同步,强,造价提交与审核,造价审核接口&上下游清单&数据库.md,待确认
+RPC,checkDesignCost,AI房源品质,评级须审核通过,HTTP,同步,强,造价提交与审核,造价审核接口&上下游清单&数据库.md,待确认
+RPC,checkDesignCost,MQ,designCostExchange 状态变更,MQ,异步,强,生命周期与外部联动,造价审核接口&上下游清单&数据库.md,待确认
+RPC,checkDesignCost,库存,DesignLockStockEvent 预占库存,EventBus,异步,强,生命周期与外部联动,造价审核接口&上下游清单&数据库.md,待确认
+RPC,checkDesignCost,评价,EvaluateAdaptor.evaluateCreate,HTTP,异步,弱,造价提交与审核,造价审核接口&上下游清单&数据库.md,待确认
+RPC,checkDesignCost,Foxy,30天延迟作废消息,延迟队列,异步,弱,生命周期与外部联动,造价审核接口&上下游清单&数据库.md,待确认
+RPC,checkDesignCost,鲁班,LuBanForestClient.getCostAuditInfo,HTTP,同步,弱,造价提交与审核,造价审核接口&上下游清单&数据库.md,待确认
+GET,/costAudit/*,hddp-admin,审核PC页面入口,HTTP,同步,强,造价提交与审核,造价审核接口&上下游清单&数据库.md,待确认

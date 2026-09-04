@@ -1,0 +1,20 @@
+方法,本接口路径,下游系统,下游接口或资源,调用方式,同步异步,强弱,关联流程节点,来源,确认状态
+POST,/quotation/offer,BOM,Dubbo BomOuterRpcService.findBomParams,Dubbo,同步,强,报价触发与报价单生成,接口清单-下游依赖,待确认
+POST,/quotation/offer,BOM,Dubbo BomOuterRpcService.findBomStructureAddStandSignAndStock,Dubbo,同步,强,物料处理与自动带出,接口清单-下游依赖,待确认
+POST,/quotation/offer,房源,HTTP HouseInfoAdaptor.findHouseInfo,HTTP,同步,强,报价场景识别与价格来源,接口清单-下游依赖,待确认
+POST,/quotation/offer,人员,HTTP PersonAdaptor.getPersonInfo,HTTP,同步,弱,报价触发与报价单生成,接口清单-下游依赖,待确认
+POST,/quotation/offer,报价库,MongoDB quotations.saveQuotation,DB,同步,强,报价触发与报价单生成,接口清单-下游依赖,待确认
+POST,/quotation/offer,造价库,MySQL jz_design_cost.saveDesignCost,DB,同步,强,造价单生成与明细落库,接口清单-下游依赖,待确认
+POST,/quotation/offer,实勘审核,initQuotationsReview,本地,同步,弱,实勘审核,全托管ZO场景,待确认
+POST,/quotation/bim/offer,BOM,HTTP BomInfoAdaptor.findNBomGoodsFilterStandWithStock,HTTP,同步,强,物料处理与自动带出,接口清单-下游依赖,待确认
+POST,/quotation/bim/offer,报价规则,OfferRuleSupportService.findAllRulesByCurrentScene,本地,同步,强,报价场景识别与价格来源,接口清单-下游依赖,待确认
+POST,/quotation/createDesignCost,造价库,MySQL jz_design_cost / jz_design_cost_detail,DB,同步,强,造价单生成与明细落库,接口清单-下游依赖,待确认
+POST,/quotation/submitDesignCost,造价库,designCostDao.submitDesignCost,DB,同步,强,造价提交与审核,接口清单-下游依赖,待确认
+POST,/quotation/submitDesignCost,MQ,ex_design_cost / design_cost_routing_key,MQ,异步,强,造价提交与审核,第三节下游汇总,待确认
+POST,/quotation/confirmDesignCost,人员,HTTP PersonAdaptor.getPersonInfo,HTTP,同步,弱,造价提交与审核,接口清单-下游依赖,待确认
+POST,/quotation/confirmDesignCost,房源品质,HTTP HouseQualityAdaptor.batchGradeByOppIdsAndSource,HTTP,同步,弱,造价提交与审核,接口清单-下游依赖,待确认
+POST,/quotation/confirmDesignCost,MQ,ex_design_cost 审核结果,MQ,异步,强,生命周期与外部联动,第三节下游汇总,待确认
+POST,/quotation/confirmDesignCost,延迟消息,Foxy DESIGN_COST_EXPIRE_KEY,MQ,异步,强,生命周期与外部联动,第三节下游汇总,待确认
+POST,/quotation/confirmDesignCost,库存,EventBusHandler 预占库存,本地/RPC,异步,强,生命周期与外部联动,接口清单-下游依赖,待确认
+POST,/quotation/reviewSubmit,MQ,EX_settle_quotation_review,MQ,异步,强,实勘审核,第三节下游汇总,待确认
+POST,/quotation/reviewSubmit,报价生成,调整通过时回调用 submitQuotations / renewOffer,HTTP/本地,同步,强,报价触发与报价单生成,接口清单-下游依赖,待确认

@@ -1,0 +1,48 @@
+用例ID,用例名称,优先级,领域,应用,流程节点,功能点,测试场景,前置,步骤,预期,关联接口,缺口来源,匹配依据,关联规则,关联状态,关联字段,置信度,处理建议,确认状态,数据来源
+CA-G01,造价审核专员成功接单,P1,家装,报价,造价提交与审核,接单,造价单审核-缺口,造价单 check_status=SUBMITED(10) 且 audit_user_code 为空（待接单）,"1.审核专员在造价审核列表对待接单记录执行接单。
+2.调用 POST /costAudit/accept。","1.audit_user_code/name 更新为当前用户。
+2.状态仍为待审核 SUBMITED(10)，仅绑定审核人。",POST /costAudit/accept,造价审核接口&上下游清单&数据库.md,MD§五.2 接单：只绑定审核人，不改状态,WAIT_ACCEPT,SUBMITED + audit_user 为空 → 已接单,"audit_user_code,audit_user_name,check_status",78,人工确认后入库,待确认,AI缺口·MD覆盖比对
+CA-G02,造价审核单转派成功并通知新审核人,P1,家装,报价,造价提交与审核,转派,造价单审核-缺口,造价单已在待审核，存在原审核人,"1.有权限用户对一条或多条造价审核单执行转派到目标审核人。
+2.调用 POST /costAudit/transform。","1.audit_user 更新为目标用户。
+2.异步发送企微消息 TRANSFORM_MSG 通知新审核人。",POST /costAudit/transform,造价审核接口&上下游清单&数据库.md,MD§五.3 转派 + 企微异步通知,TRANSFORM_MSG,SUBMITED,"audit_user_code,audit_user_name",78,人工确认后入库,待确认,AI缺口·MD覆盖比对
+CA-G03,催审后列表置顶展示,P2,家装,报价,造价提交与审核,催审,造价单审核-缺口,造价单处于待审核,"1.对目标造价单执行催审。
+2.调用 POST /costAudit/urgentReview。
+3.刷新列表。","1.urgent_review_time 置为当前时间。
+2.列表按 urgent_review_time desc 置顶。
+3.不影响 check_status 状态机。",POST /costAudit/urgentReview,造价审核接口&上下游清单&数据库.md,MD§五.4 催审只改 urgent_review_time,,SUBMITED,urgent_review_time,78,人工确认后入库,待确认,AI缺口·MD覆盖比对
+CA-G04,待接单列表仅展示未绑定审核人的待审核单,P1,家装,报价,造价提交与审核,审核列表与详情,造价单审核-缺口,存在待接单与已接单两类待审核造价单,"1.打开造价审核列表，筛选待接单 WAIT_ACCEPT。
+2.调用 GET /costAudit/findList。",仅返回 check_status=10 且 audit_user_code IS NULL 的记录。,GET /costAudit/findList,造价审核接口&上下游清单&数据库.md,MD§五.1 待接单条件,WAIT_ACCEPT,SUBMITED,"check_status,audit_user_code",78,人工确认后入库,待确认,AI缺口·MD覆盖比对
+CA-G05,统计接口仅统计待审核/超时/即将超时/待接单,P2,家装,报价,造价提交与审核,审核统计,造价单审核-缺口,库中存在通过、驳回、待审核、超时等各类单据,1.调用 GET /costAudit/count 获取顶部统计。,"1.返回待审核、已超时、即将超时、待接单数量。
+2.通过/驳回计数不展示（产品已去掉 passCount/rejectCount）。",GET /costAudit/count,造价审核接口&上下游清单&数据库.md,MD§八 count 中 pass/reject 已停用,ABOUT_TIME_OUT_MS,SUBMITED,expected_audit_time,78,人工确认后入库,待确认,AI缺口·MD覆盖比对
+CA-G06,即将超时单据在超时阈值内正确标识,P1,家装,报价,造价提交与审核,审核时效,造价单审核-缺口,造价单 expected_audit_time 距当前小于 ABOUT_TIME_OUT_MS（10分钟）且未超时,"1.打开列表/统计查看即将超时。
+2.核对倒计时与标识。",单据进入即将超时集合；与已超时区分正确。,GET /costAudit/findList; GET /costAudit/count,造价审核接口&上下游清单&数据库.md,MD§四 ABOUT_TIME_OUT_MS=10分钟,ABOUT_TIME_OUT_MS=10min,SUBMITED,expected_audit_time,78,人工确认后入库,待确认,AI缺口·MD覆盖比对
+CA-G07,造价单取消后状态为已取消,P1,家装,报价,造价提交与审核,造价单状态流转,造价单审核-缺口,造价单处于待提交 INIT 或待审核 SUBMITED,1.执行取消操作。,check_status 变为 CANCEL(40)。,jz_design_cost.check_status → CANCEL(40),造价审核接口&上下游清单&数据库.md,MD§四 DesignCheckStatusEnum CANCEL=40；quote.json 亦有取消流转,,INIT/SUBMITED → CANCEL(40),check_status,78,人工确认后入库,待确认,AI缺口·MD覆盖比对
+CA-G08,造价单失效后状态为已失效,P2,家装,报价,造价提交与审核,造价单状态流转,造价单审核-缺口,造价单已审核通过且到达失效条件（或系统作废）,1.触发失效（到期/系统作废）。,check_status 变为 INVALID(50)；列表「我的审核」默认排除失效。,jz_design_cost.check_status → INVALID(50),造价审核接口&上下游清单&数据库.md,MD§四 INVALID=50；§五.1 我的审核默认排除失效,,PASS → INVALID(50),"check_status,invalid_time",78,人工确认后入库,待确认,AI缺口·MD覆盖比对
+CA-G09,审核通过后生效期为15天,P1,家装,报价,造价提交与审核,审核通过生效期,造价单审核-缺口,非长租锁库存版本；人工或自动审核通过,"1.执行审核通过（checkDesignCost PASS）。
+2.查询造价单 valid_time / invalid_time。",valid_time=当前；invalid_time=valid_time+15天。,DesignCostService#checkDesignCost(PASS),造价审核接口&上下游清单&数据库.md,MD 方向1§三 通过后失效期15天,valid/invalid +15天,SUBMITED → PASS,"valid_time,invalid_time,check_status",78,人工确认后入库,待确认,AI缺口·MD覆盖比对
+CA-G10,长租锁库存版本审核通过后失效期30天并投递延迟作废,P1,家装,报价,造价提交与审核,审核通过生效期,造价单审核-缺口,QuotationUtil.judgeNeedLockStockAndExpire 为真的产品版本,"1.审核通过。
+2.核对失效时间与延迟消息。","1.invalid_time 为 30 天。
+2.发送 Foxy 延迟消息 DESIGN_COST_EXPIRE_KEY 用于到期作废。",checkDesignCost(PASS) + foxyMessageManager,造价审核接口&上下游清单&数据库.md,MD 方向1§三/§七 长租30天 + Foxy延迟队列,judgeNeedLockStockAndExpire,SUBMITED → PASS,invalid_time,78,人工确认后入库,待确认,AI缺口·MD覆盖比对
+CA-G11,审核通过时金额不合规应拦截并回滚,P0,家装,报价,造价提交与审核,金额合规校验,造价单审核-缺口,待审核造价单；明细金额之和与总金额差超过1元（或含税单价换算超差）,"1.执行审核通过。
+2.触发 check 金额合规校验。","1.抛异常不落库。
+2.SKU 审核记录与状态回滚，造价单仍为待审核。",DesignCostService#checkDesignCost → check(金额校验),造价审核接口&上下游清单&数据库.md,MD 方向1§六 金额校验失败回滚,±1元容差；买卖线排除租赁后再比总价,保持 SUBMITED,"totalPrice,明细含税单价/数量",78,人工确认后入库,待确认,AI缺口·MD覆盖比对
+CA-G12,审核通过后发送造价单状态变更MQ,P1,家装,报价,造价提交与审核,审核下游通知,造价单审核-缺口,审核通过或驳回成功落库,"1.完成 checkDesignCost。
+2.监听 designCostExchange 消息。",发送含 designCostCode/productId/checkStatus/remark/userCode 的状态变更消息。,sendCheckResultOfDesignCost → designCostExchange,造价审核接口&上下游清单&数据库.md,MD 方向1§七.② MQ 状态广播,,PASS/REJECT,check_status,78,人工确认后入库,待确认,AI缺口·MD覆盖比对
+CA-G13,长租锁库存版本通过后触发库存预占事件,P1,家装,报价,造价提交与审核,审核下游通知,造价单审核-缺口,长租锁库存版本审核通过,"1.审核通过。
+2.观察 EventBus DesignLockStockEvent。",异步发送 DesignLockStockEvent 预占库存。,handlePassDesignCost → DesignLockStockEvent,造价审核接口&上下游清单&数据库.md,MD 方向1§七.③ 预占库存,judgeNeedLockStockAndExpire,PASS,,78,人工确认后入库,待确认,AI缺口·MD覆盖比对
+CA-G14,人工审核通过后生成ZD评价单,P2,家装,报价,造价提交与审核,审核下游通知,造价单审核-缺口,"人工审核通过（autoCheck=false, PASS）","1.人工审核通过。
+2.查询 jz_design_cost_evaluate / EvaluateAdaptor。",异步生成 ZD 评价审核员评价单（约48h有效）。,passDetail → generateZDEvaluateCostApprove / EvaluateAdaptor.evaluateCreate,造价审核接口&上下游清单&数据库.md,MD 方向1§二 人工PASS才生成评价单；自动审核跳过,autoCheck=false,PASS,evaluate_state,78,人工确认后入库,待确认,AI缺口·MD覆盖比对
+CA-G15,驳回且存在ZD码时发送企微通知,P2,家装,报价,造价提交与审核,人工审核驳回,造价单审核-缺口,造价单可驳回且关联 ZD 码,"1.审核驳回 REJECT。
+2.检查企微消息。",发送「造价审核单被驳回」企微通知给 ZD。,checkDesignCost(REJECT) → sendWecom,造价审核接口&上下游清单&数据库.md,MD 方向1§七.④ 驳回企微,REJECT + ZD,SUBMITED → REJECT,"reject_reason,check_log",78,人工确认后入库,待确认,AI缺口·MD覆盖比对
+CA-G16,AI房源品质审核中禁止造价审核通过,P1,家装,报价,造价提交与审核,前置评级校验,造价单审核-缺口,整租且非心舍毛改；HouseQualityAdaptor 返回 isAuditing=true,1.审核专员点击审核通过。,前置校验拦截，禁止通过。,HouseQualityAdaptor.batchGradeByOppIdsAndSource,造价审核接口&上下游清单&数据库.md,MD 方向1§二 AI 评级审核中阻断,整租前置强校验,保持 SUBMITED,,78,人工确认后入库,待确认,AI缺口·MD覆盖比对
+CA-G17,改前评级状态为AUDITING时禁止造价审核通过,P1,家装,报价,造价提交与审核,前置评级校验,造价单审核-缺口,定制/标准溢价场景；改前评级单状态 AUDITING,1.尝试审核通过。,提示请先完成改前评级审核，禁止通过。,QualityRatingAdaptor.getBeforeOrderBatch,造价审核接口&上下游清单&数据库.md,MD 方向1§二 QUALITY_RATING / AUDITING 阻断,QUALITY_RATING_ORDER_INVALID,保持 SUBMITED,,78,人工确认后入库,待确认,AI缺口·MD覆盖比对
+CA-G18,自动审核跳过前置评级并直接明细PASS,P1,家装,报价,造价提交与审核,自动审核判定,造价单审核-缺口,命中自动审核；对比人工通过路径,"1.触发 autoSubmitDesignCost / autoCheck=true。
+2.检查明细与前置评级调用。","1.不走前置评级强校验。
+2.全部明细 check_status=PASS，并写入 design_cost_detail_check。",autoSubmitDesignCost → saveDesignCostDetailCheck,造价审核接口&上下游清单&数据库.md,MD 方向1§二/备注2 自动审核跳过前置、明细全PASS,autoCheck=true,→ PASS,"jz_design_cost_detail.check_status,design_cost_detail_check",78,人工确认后入库,待确认,AI缺口·MD覆盖比对
+CA-G19,人工驳回写入SKU明细审核记录,P2,家装,报价,造价提交与审核,人工审核驳回,造价单审核-缺口,人工驳回且传入 designCostDetailChecks,"1.驳回时勾选/传入明细审核记录。
+2.落库后查询 design_cost_detail_check。",批量保存明细审核记录并更新 SKU 审核状态；若未传 designCostDetailChecks 则仅改主表。,checkDesignCost(REJECT) + designCostDetailChecks,造价审核接口&上下游清单&数据库.md,MD 方向1§二/备注3 驳回写SKU记录条件,,REJECT,design_cost_detail_check,78,人工确认后入库,待确认,AI缺口·MD覆盖比对
+CA-G20,非审核有效时段提交/审核的行为符合规则,P2,家装,报价,造价提交与审核,审核时效,造价单审核-缺口,当前时间不在 9:00–22:00（AUDIT_VALID_START/END）,1.在无效时段尝试列表处理或审核动作（按产品规则）。,按产品约定拦截或提示不在审核有效时间段（需产品确认具体交互）。,DesignCostAuditConstant.AUDIT_VALID_START/END,造价审核接口&上下游清单&数据库.md,MD§四 审核有效时间段 9:00–22:00,AUDIT_VALID_START/END,,,78,人工确认后入库,待确认,AI缺口·MD覆盖比对
+CA-G21,check_log追加记录审核人状态时间意见金额驳回原因,P2,家装,报价,造价提交与审核,造价单状态流转,造价单审核-缺口,执行一次通过或驳回,"1.审核通过或驳回。
+2.查看 jz_design_cost.check_log。",追加 JSON：u审核人、o状态码、t时间、i意见、p金额、r驳回原因（字典翻译）。,checkDesignCost 写 check_log,造价审核接口&上下游清单&数据库.md,MD 方向1§五 check_log 字段,,PASS/REJECT,"check_log,reject_reason",78,人工确认后入库,待确认,AI缺口·MD覆盖比对
+CA-G22,列表批量填充外部系统字段成功,P3,家装,报价,造价提交与审核,审核列表与详情,造价单审核-缺口,列表中单据关联资产增益/AI品质/改前评级/人员,"1.打开 findList。
+2.核对外部字段回显。",批量调用 Archive/HouseQuality/QualityRating/LfOrder/Person 等填充方案状态、品质、审核人姓名等。,GET /costAudit/findList 下游批量填充,造价审核接口&上下游清单&数据库.md,MD§五.1 列表批量外部调用；§六上下游表,,,"label,evaluate_state,audit_user_name",78,人工确认后入库,待确认,AI缺口·MD覆盖比对

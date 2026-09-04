@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>功能点图谱引擎 · 交互原型（M9）</title>
+  <script src="https://unpkg.com/cytoscape@3.30.2/dist/cytoscape.min.js"></script>
+  <style>
+    :root {
+      --bg: #eef2f7;
+      --panel: #fff;
+      --line: #e2e8f0;
+      --text: #0f172a;
+      --muted: #64748b;
+      --blue: #2563eb;
+      --scene: #7c3aed;
+      --case: #2563eb;
+      --api: #0891b2;
+      --rule: #d97706;
+      --script: #16a34a;
+      --defect: #dc2626;
+      --feature: #0f172a;
+      --neighbor: #475569;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+      font-size: 13px;
+      color: var(--text);
+      background: var(--bg);
+      height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+    .topbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding: 10px 16px;
+      background: #fff;
+      border-bottom: 1px solid var(--line);
+    }
+    .topbar h1 { margin: 0; font-size: 16px; }
+    .topbar .muted { color: var(--muted); font-size: 12px; }
+    .spacer { flex: 1; }
+    .btn, .chip {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 8px;
+      padding: 6px 10px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .btn.primary { background: var(--blue); border-color: var(--blue); color: #fff; }
+    .btn.active, .chip.active { border-color: var(--blue); background: #eff6ff; color: #1d4ed8; }
+    .chip { border-radius: 999px; }
+    select.btn { padding-right: 24px; }
+    .shell {
+      display: grid;
+      grid-template-columns: 220px 1fr 320px;
+      min-height: 0;
+    }
+    @media (max-width: 1100px) {
+      .shell { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto; }
+    }
+    .side, .drawer {
+      background: var(--panel);
+      border-right: 1px solid var(--line);
+      overflow: auto;
+      padding: 12px;
+    }
+    .drawer {
+      border-right: 0;
+      border-left: 1px solid var(--line);
+    }
+    .side h3, .drawer h3 { margin: 0 0 8px; font-size: 13px; }
+    .feature-item {
+      width: 100%;
+      text-align: left;
+      border: 1px solid var(--line);
+      background: #f8fafc;
+      border-radius: 10px;
+      padding: 10px;
+      margin-bottom: 8px;
+      cursor: pointer;
+    }
+    .feature-item.active { border-color: #93c5fd; background: #eff6ff; }
+    .feature-item strong { display: block; margin-bottom: 4px; }
+    .legend { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+    .legend span {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 11px; color: var(--muted);
+    }
+    .legend i {
+      width: 10px; height: 10px; border-radius: 50%; display: inline-block;
+    }
+    .filter-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .graph-wrap {
+      position: relative;
+      min-height: 520px;
+      background:
+        radial-gradient(circle at 50% 45%, rgba(37,99,235,.06), transparent 42%),
+        linear-gradient(#f8fafc, #eef2f7);
+    }
+    #cy { width: 100%; height: 100%; min-height: 560px; }
+    .graph-hint {
+      position: absolute; left: 12px; bottom: 12px; z-index: 2;
+      background: rgba(255,255,255,.96); border: 1px solid var(--line);
+      border-radius: 10px; padding: 10px 12px; font-size: 12px; color: #334155;
+      max-width: 320px; line-height: 1.45; box-shadow: 0 4px 16px rgba(15,23,42,.06);
+    }
+    .graph-hint strong { color: var(--text); }
+    .node-tip {
+      position: absolute; z-index: 5; display: none; pointer-events: none;
+      background: #0f172a; color: #fff; padding: 8px 10px; border-radius: 8px;
+      font-size: 12px; max-width: 280px; line-height: 1.4;
+      box-shadow: 0 8px 24px rgba(15,23,42,.2);
+    }
+    .node-tip .tip-kind { opacity: .75; font-size: 11px; margin-bottom: 2px; }
+    .readable-bar {
+      position: absolute; left: 12px; top: 12px; z-index: 2;
+      display: flex; flex-wrap: wrap; gap: 6px;
+      background: rgba(255,255,255,.94); border: 1px solid var(--line);
+      border-radius: 10px; padding: 8px;
+    }
+    .zoom-ctrl {
+      position: absolute; right: 12px; bottom: 12px; z-index: 2;
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .zoom-ctrl button {
+      width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--line);
+      background: #fff; cursor: pointer;
+    }
+    .drawer-empty { color: var(--muted); padding: 24px 8px; }
+    .kv { display: grid; gap: 8px; }
+    .kv .row {
+      border: 1px solid var(--line); border-radius: 10px; padding: 10px; background: #f8fafc;
+    }
+    .kv .k { font-size: 11px; color: var(--muted); }
+    .kv .v { font-weight: 650; margin-top: 2px; word-break: break-all; }
+    .tag {
+      display: inline-block; padding: 2px 8px; border-radius: 999px;
+      background: #eff6ff; color: #1d4ed8; font-size: 11px; margin-right: 4px;
+    }
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .toast {
+      position: fixed; right: 16px; bottom: 16px; z-index: 20;
+      background: #0f172a; color: #fff; padding: 10px 14px; border-radius: 10px;
+      opacity: 0; transform: translateY(8px); transition: .2s; pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: none; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <h1>功能点图谱引擎 · M9 交互原型</h1>
+    <span class="muted">独立沙盒；正式演示请用 <a href="./用例地图_公司平台_P0增强原型.html" style="color:#2563eb">P0 全局原型 → 功能点详情「图谱」</a></span>
+    <div class="spacer"></div>
+    <select class="btn" id="layoutSelect" title="布局算法">
+      <option value="concentric">中心辐射</option>
+      <option value="cose">力导向</option>
+      <option value="breadthfirst">层次展开</option>
+      <option value="circle">环形</option>
+    </select>
+    <button class="btn" type="button" id="btnFit">适应画布</button>
+    <button class="btn" type="button" id="btnRelayout">重新布局</button>
+    <button class="btn primary" type="button" id="btnRegression">生成回归包</button>
+    <a class="btn" href="./功能点地图_原型.html">布局版原型</a>
+    <a class="btn" href="./用例地图_公司平台_P0增强原型.html">回 P0</a>
+  </div>
+
+  <div class="shell">
+    <aside class="side">
+      <h3>功能点</h3>
+      <button class="feature-item active" type="button" data-key="家装/报价/金额计算与汇总/数量价汇总">
+        <strong>数量价汇总</strong>
+        <span class="muted">金额计算与汇总 · 高风险</span>
+      </button>
+      <button class="feature-item" type="button" data-key="家装/报价/金额计算与汇总/固定价汇总">
+        <strong>固定价汇总</strong>
+        <span class="muted">金额计算与汇总</span>
+      </button>
+      <button class="feature-item" type="button" data-key="家装/报价/造价提交与审核/自动审核判定">
+        <strong>自动审核判定</strong>
+        <span class="muted">造价提交与审核</span>
+      </button>
+
+      <h3 style="margin-top:16px">类型筛选</h3>
+      <div class="legend">
+        <span><i style="background:var(--feature)"></i>功能点</span>
+        <span><i style="background:var(--scene)"></i>场景</span>
+        <span><i style="background:var(--case)"></i>用例</span>
+        <span><i style="background:var(--api)"></i>接口</span>
+        <span><i style="background:var(--rule)"></i>规则</span>
+        <span><i style="background:var(--script)"></i>脚本</span>
+        <span><i style="background:var(--defect)"></i>缺陷</span>
+      </div>
+      <div class="filter-row" id="typeFilters">
+        <button class="chip active" type="button" data-type="all">全部</button>
+        <button class="chip active" type="button" data-type="scene">场景</button>
+        <button class="chip active" type="button" data-type="case">用例</button>
+        <button class="chip active" type="button" data-type="api">接口</button>
+        <button class="chip active" type="button" data-type="rule">规则</button>
+        <button class="chip active" type="button" data-type="script">脚本</button>
+        <button class="chip active" type="button" data-type="defect">缺陷</button>
+        <button class="chip active" type="button" data-type="neighbor">邻接功能点</button>
+      </div>
+      <p class="muted" style="margin-top:14px;line-height:1.5">
+        操作：拖动画布平移；滚轮缩放；拖节点微调；单击看右侧详情；双击邻接功能点可切换地图。
+      </p>
+    </aside>
+
+    <main class="graph-wrap">
+      <div class="readable-bar">
+        <button class="btn active" type="button" id="btnToggleEdgeLabel">边文字：关</button>
+        <button class="btn" type="button" id="btnSparse">更疏布局</button>
+        <button class="btn" type="button" id="btnFocusSelected">放大选中</button>
+        <button class="btn" type="button" id="btnHideOthers">只留邻域</button>
+      </div>
+      <div id="cy"></div>
+      <div class="node-tip" id="nodeTip"></div>
+      <div class="graph-hint" id="graphHint">
+        <strong>看不清时：</strong>滚轮放大 · 拖节点拉开 · 悬停看全名 · 点「放大选中 / 只留邻域」
+      </div>
+      <div class="zoom-ctrl">
+        <button type="button" id="btnZoomIn">+</button>
+        <button type="button" id="btnZoomOut">−</button>
+        <button type="button" id="btnZoomReset">◎</button>
+      </div>
+    </main>
+
+    <aside class="drawer" id="drawer">
+      <h3>节点详情</h3>
+      <div id="drawerBody" class="drawer-empty">点击图上的节点，查看类型、关联与可执行动作。</div>
+    </aside>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="./data/feature_map_samples.js"></script>
+  <script>
+    const TYPE_COLOR = {
+      feature: '#0f172a',
+      neighbor: '#475569',
+      scene: '#7c3aed',
+      case: '#2563eb',
+      api: '#0891b2',
+      rule: '#d97706',
+      script: '#16a34a',
+      defect: '#dc2626',
+      data: '#0d9488'
+    };
+
+    const state = {
+      featureKey: '家装/报价/金额计算与汇总/数量价汇总',
+      layout: 'concentric',
+      hiddenTypes: new Set(),
+      cy: null,
+      showEdgeLabel: false,
+      sparse: true,
+      selectedNodeId: null
+    };
+
+    function toast(message) {
+      const el = document.getElementById('toast');
+      el.textContent = message;
+      el.classList.add('show');
+      clearTimeout(toast._timer);
+      toast._timer = setTimeout(() => el.classList.remove('show'), 2200);
+    }
+
+    function getMap(featureKey) {
+      return (window.__FEATURE_MAP_SAMPLES__ || {})[featureKey] || null;
+    }
+
+    function safeId(prefix, raw) {
+      return prefix + ':' + String(raw).replace(/[^a-zA-Z0-9\u4e00-\u9fa5_-]/g, '_');
+    }
+
+    function shortLabel(text, maxLen) {
+      const value = String(text || '');
+      const limit = maxLen || 10;
+      if (value.length <= limit) return value;
+      return value.slice(0, limit - 1) + '…';
+    }
+
+    function pushNode(nodes, options) {
+      nodes.push({
+        data: {
+          id: options.id,
+          label: shortLabel(options.label, options.maxLen || 10),
+          fullLabel: options.label,
+          type: options.type,
+          kind: options.kind,
+          payload: options.payload || {}
+        }
+      });
+    }
+
+    function buildElements(map) {
+      const nodes = [];
+      const edges = [];
+      const featureId = safeId('feature', map.meta.featureKey);
+      pushNode(nodes, {
+        id: featureId,
+        label: map.spine.featureName,
+        type: 'feature',
+        kind: '功能点',
+        maxLen: 12,
+        payload: {
+          scene: map.spine.sceneName,
+          tags: map.spine.valueTags || [],
+          cases: map.summary && map.summary.linkedCaseCount,
+          owner: map.meta.qualityOwner,
+          featureKey: map.meta.featureKey
+        }
+      });
+
+      (map.spine.neighborFeatures || []).forEach((item) => {
+        const id = safeId('neighbor', item.featureKey);
+        pushNode(nodes, {
+          id: id,
+          label: item.featureName,
+          type: 'neighbor',
+          kind: '邻接功能点',
+          payload: { featureKey: item.featureKey }
+        });
+        edges.push({ data: { id: 'e-' + id, source: featureId, target: id, relation: '同场景邻接' } });
+      });
+
+      (map.businessView.scenarios || []).forEach((item) => {
+        const id = safeId('scene', item.id);
+        pushNode(nodes, {
+          id: id,
+          label: item.name,
+          type: 'scene',
+          kind: '业务场景',
+          payload: item
+        });
+        edges.push({ data: { id: 'e-' + id, source: featureId, target: id, relation: '覆盖场景' } });
+      });
+
+      (map.businessView.cases || []).forEach((item) => {
+        const id = safeId('case', item.id);
+        pushNode(nodes, {
+          id: id,
+          label: item.name,
+          type: 'case',
+          kind: '用例',
+          maxLen: 11,
+          payload: item
+        });
+        edges.push({ data: { id: 'e-' + id, source: featureId, target: id, relation: '挂载用例' } });
+        const scene = (map.businessView.scenarios || []).find((row) => row.name === item.testScenario);
+        if (scene) {
+          edges.push({
+            data: {
+              id: 'e-case-scene-' + item.id,
+              source: safeId('scene', scene.id),
+              target: id,
+              relation: '场景含用例'
+            }
+          });
+        }
+      });
+
+      (map.businessView.scripts || []).forEach((item) => {
+        const id = safeId('script', item.id);
+        pushNode(nodes, {
+          id: id,
+          label: item.name,
+          type: 'script',
+          kind: '脚本',
+          payload: item
+        });
+        const caseId = item.linkedCaseId ? safeId('case', item.linkedCaseId) : featureId;
+        edges.push({ data: { id: 'e-' + id, source: caseId, target: id, relation: '可执行脚本' } });
+      });
+
+      (map.techView.apis || []).forEach((item, index) => {
+        const id = safeId('api', index + '_' + item.path);
+        const full = item.label || (item.method + ' ' + item.path);
+        pushNode(nodes, {
+          id: id,
+          label: full.replace(/^POST\s+/i, 'POST ').replace(/^GET\s+/i, 'GET '),
+          type: 'api',
+          kind: '接口',
+          maxLen: 14,
+          payload: item
+        });
+        edges.push({ data: { id: 'e-' + id, source: featureId, target: id, relation: item.relation || '技术映射' } });
+      });
+
+      (map.riskView.rules || []).forEach((item) => {
+        const id = safeId('rule', item.id);
+        pushNode(nodes, {
+          id: id,
+          label: item.name,
+          type: 'rule',
+          kind: '规则',
+          payload: item
+        });
+        edges.push({ data: { id: 'e-' + id, source: featureId, target: id, relation: '约束规则' } });
+      });
+
+      (map.riskView.defects || []).forEach((item) => {
+        const id = safeId('defect', item.id);
+        pushNode(nodes, {
+          id: id,
+          label: item.title,
+          type: 'defect',
+          kind: '缺陷',
+          payload: item
+        });
+        edges.push({ data: { id: 'e-' + id, source: featureId, target: id, relation: '关联缺陷' } });
+      });
+
+      return { nodes: nodes, edges: edges, featureId: featureId };
+    }
+
+    function layoutOptions(name, featureId) {
+      const spacing = state.sparse ? 1.35 : 1;
+      if (name === 'cose') {
+        return {
+          name: 'cose',
+          animate: true,
+          animationDuration: 450,
+          nodeRepulsion: state.sparse ? 14000 : 8000,
+          idealEdgeLength: state.sparse ? 160 : 120,
+          padding: 40
+        };
+      }
+      if (name === 'breadthfirst') {
+        return {
+          name: 'breadthfirst',
+          directed: true,
+          roots: [featureId],
+          spacingFactor: state.sparse ? 1.7 : 1.35,
+          animate: true,
+          animationDuration: 400,
+          padding: 36
+        };
+      }
+      if (name === 'circle') {
+        return { name: 'circle', animate: true, animationDuration: 400, padding: 48, spacingFactor: spacing };
+      }
+      return {
+        name: 'concentric',
+        animate: true,
+        animationDuration: 450,
+        minNodeSpacing: state.sparse ? 48 : 28,
+        padding: 48,
+        concentric: function(node) {
+          if (node.data('type') === 'feature') return 10;
+          if (node.data('type') === 'scene' || node.data('type') === 'neighbor') return 6;
+          if (node.data('type') === 'case' || node.data('type') === 'api') return 4;
+          return 2;
+        },
+        levelWidth: function() { return 2; }
+      };
+    }
+
+    function showNodeTip(node, renderedPosition) {
+      const tip = document.getElementById('nodeTip');
+      const wrap = document.querySelector('.graph-wrap').getBoundingClientRect();
+      tip.innerHTML =
+        '<div class="tip-kind">' + escapeHtml(node.data('kind') || '') + '</div>' +
+        '<div>' + escapeHtml(node.data('fullLabel') || node.data('label') || '') + '</div>';
+      tip.style.display = 'block';
+      const left = Math.min(renderedPosition.x + 14, wrap.width - 200);
+      const top = Math.max(8, renderedPosition.y - 18);
+      tip.style.left = left + 'px';
+      tip.style.top = top + 'px';
+    }
+
+    function hideNodeTip() {
+      document.getElementById('nodeTip').style.display = 'none';
+    }
+
+    function syncEdgeLabelStyle() {
+      if (!state.cy) return;
+      state.cy.style()
+        .selector('edge')
+        .style('label', state.showEdgeLabel ? 'data(relation)' : '')
+        .update();
+      const btn = document.getElementById('btnToggleEdgeLabel');
+      if (btn) {
+        btn.textContent = state.showEdgeLabel ? '边文字：开' : '边文字：关';
+        btn.classList.toggle('active', !state.showEdgeLabel);
+      }
+    }
+
+    function applyTypeFilter() {
+      if (!state.cy) return;
+      state.cy.nodes().forEach((node) => {
+        const type = node.data('type');
+        if (type === 'feature') {
+          node.style('display', 'element');
+          return;
+        }
+        const hidden = state.hiddenTypes.has(type);
+        node.style('display', hidden ? 'none' : 'element');
+      });
+      state.cy.edges().forEach((edge) => {
+        const sourceHidden = edge.source().style('display') === 'none';
+        const targetHidden = edge.target().style('display') === 'none';
+        edge.style('display', sourceHidden || targetHidden ? 'none' : 'element');
+      });
+    }
+
+    function renderDrawer(node) {
+      const body = document.getElementById('drawerBody');
+      if (!node) {
+        body.className = 'drawer-empty';
+        body.textContent = '点击图上的节点，查看类型、关联与可执行动作。';
+        return;
+      }
+      const data = node.data();
+      const payload = data.payload || {};
+      const connected = node.connectedEdges().map((edge) => {
+        const other = edge.source().id() === node.id() ? edge.target() : edge.source();
+        return {
+          relation: edge.data('relation'),
+          label: other.data('fullLabel') || other.data('label'),
+          type: other.data('kind')
+        };
+      });
+      body.className = 'kv';
+      body.innerHTML =
+        '<div class="row"><div class="k">类型</div><div class="v"><span class="tag">' + data.kind + '</span>' + data.type + '</div></div>' +
+        '<div class="row"><div class="k">名称</div><div class="v">' + escapeHtml(data.fullLabel || data.label) + '</div></div>' +
+        '<div class="row"><div class="k">详情</div><div class="v">' + escapeHtml(JSON.stringify(payload, null, 0)) + '</div></div>' +
+        '<div class="row"><div class="k">相连关系（' + connected.length + '）</div><div class="v">' +
+        (connected.length
+          ? connected.map((item) => escapeHtml(item.relation + ' → [' + item.type + '] ' + item.label)).join('<br>')
+          : '无') +
+        '</div></div>' +
+        '<div class="actions">' +
+        (data.type === 'case' ? '<button class="btn primary" type="button" id="btnOpenCase">定位用例</button>' : '') +
+        (data.type === 'api' ? '<button class="btn primary" type="button" id="btnImpactApi">影响分析</button>' : '') +
+        (data.type === 'neighbor' ? '<button class="btn primary" type="button" id="btnJumpFeature">切换到该功能点</button>' : '') +
+        '<button class="btn" type="button" id="btnHighlight">高亮邻域</button>' +
+        '<button class="btn" type="button" id="btnZoomNode">放大此节点</button>' +
+        '</div>';
+
+      const openCase = document.getElementById('btnOpenCase');
+      if (openCase) openCase.onclick = () => toast('示意：跳转正式资产 / 评审定位「' + (data.fullLabel || data.label) + '」');
+      const impact = document.getElementById('btnImpactApi');
+      if (impact) impact.onclick = () => toast('示意：按接口反查受影响用例 · ' + (data.fullLabel || data.label));
+      const jump = document.getElementById('btnJumpFeature');
+      if (jump) {
+        jump.onclick = () => {
+          const key = payload.featureKey;
+          if (key && getMap(key)) loadFeature(key);
+          else toast('该邻接功能点暂无样例地图');
+        };
+      }
+      const highlight = document.getElementById('btnHighlight');
+      if (highlight) {
+        highlight.onclick = () => {
+          state.cy.elements().removeClass('faded highlighted');
+          state.cy.elements().addClass('faded');
+          node.removeClass('faded').addClass('highlighted');
+          node.neighborhood().removeClass('faded').addClass('highlighted');
+          toast('已高亮该节点一阶邻域');
+        };
+      }
+      const zoomNode = document.getElementById('btnZoomNode');
+      if (zoomNode) {
+        zoomNode.onclick = () => {
+          state.cy.animate({
+            fit: { eles: node.closedNeighborhood(), padding: 60 },
+            duration: 280
+          });
+        };
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function initCy(elements, featureId) {
+      if (state.cy) {
+        state.cy.destroy();
+        state.cy = null;
+      }
+      state.cy = cytoscape({
+        container: document.getElementById('cy'),
+        elements: elements.nodes.concat(elements.edges),
+        style: [
+          {
+            selector: 'node',
+            style: {
+              label: 'data(label)',
+              'text-wrap': 'wrap',
+              'text-max-width': 110,
+              'font-size': 12,
+              'font-weight': 600,
+              'text-valign': 'bottom',
+              'text-halign': 'center',
+              'text-margin-y': 8,
+              color: '#0f172a',
+              'text-background-color': '#ffffff',
+              'text-background-opacity': 0.92,
+              'text-background-padding': 3,
+              'text-background-shape': 'roundrectangle',
+              'background-color': '#64748b',
+              width: 56,
+              height: 56,
+              'border-width': 2,
+              'border-color': '#fff',
+              'overlay-padding': 6
+            }
+          },
+          {
+            selector: 'node[type = "feature"]',
+            style: {
+              'background-color': TYPE_COLOR.feature,
+              width: 96,
+              height: 96,
+              'font-size': 14,
+              'font-weight': 700,
+              'text-valign': 'center',
+              'text-margin-y': 0,
+              color: '#fff',
+              'text-background-opacity': 0,
+              shape: 'round-rectangle',
+              'text-max-width': 84
+            }
+          },
+          {
+            selector: 'node[type = "neighbor"]',
+            style: { 'background-color': TYPE_COLOR.neighbor, shape: 'round-rectangle', width: 64, height: 44 }
+          },
+          {
+            selector: 'node[type = "scene"]',
+            style: { 'background-color': TYPE_COLOR.scene, shape: 'ellipse', width: 58, height: 58 }
+          },
+          {
+            selector: 'node[type = "case"]',
+            style: { 'background-color': TYPE_COLOR.case, shape: 'round-rectangle', width: 62, height: 44 }
+          },
+          {
+            selector: 'node[type = "api"]',
+            style: { 'background-color': TYPE_COLOR.api, shape: 'diamond', width: 54, height: 54 }
+          },
+          {
+            selector: 'node[type = "rule"]',
+            style: { 'background-color': TYPE_COLOR.rule, shape: 'round-rectangle', width: 56, height: 42 }
+          },
+          {
+            selector: 'node[type = "script"]',
+            style: { 'background-color': TYPE_COLOR.script, shape: 'round-rectangle', width: 58, height: 42 }
+          },
+          {
+            selector: 'node[type = "defect"]',
+            style: { 'background-color': TYPE_COLOR.defect, shape: 'vee', width: 52, height: 52 }
+          },
+          {
+            selector: 'edge',
+            style: {
+              width: 1.8,
+              'line-color': '#cbd5e1',
+              'target-arrow-color': '#94a3b8',
+              'target-arrow-shape': 'triangle',
+              'curve-style': 'bezier',
+              label: '',
+              'font-size': 10,
+              color: '#64748b',
+              'text-background-color': '#fff',
+              'text-background-opacity': 0.9,
+              'text-background-padding': 2,
+              'text-rotation': 'autorotate',
+              'text-margin-y': -6
+            }
+          },
+          {
+            selector: 'node.highlighted',
+            style: { 'border-width': 4, 'border-color': '#2563eb', 'z-index': 999 }
+          },
+          {
+            selector: 'edge.highlighted',
+            style: {
+              width: 3,
+              'line-color': '#2563eb',
+              'target-arrow-color': '#2563eb',
+              label: 'data(relation)',
+              color: '#1d4ed8'
+            }
+          },
+          {
+            selector: '.faded',
+            style: { opacity: 0.12 }
+          }
+        ],
+        layout: layoutOptions(state.layout, featureId),
+        minZoom: 0.3,
+        maxZoom: 2.8,
+        wheelSensitivity: 0.22
+      });
+
+      state.cy.on('tap', 'node', (event) => {
+        const node = event.target;
+        state.selectedNodeId = node.id();
+        state.cy.elements().removeClass('faded highlighted');
+        node.addClass('highlighted');
+        node.connectedEdges().addClass('highlighted');
+        renderDrawer(node);
+      });
+
+      state.cy.on('tap', (event) => {
+        if (event.target === state.cy) {
+          state.selectedNodeId = null;
+          state.cy.elements().removeClass('faded highlighted');
+          renderDrawer(null);
+          hideNodeTip();
+        }
+      });
+
+      state.cy.on('mouseover', 'node', (event) => {
+        const node = event.target;
+        showNodeTip(node, event.renderedPosition || node.renderedPosition());
+      });
+      state.cy.on('mousemove', 'node', (event) => {
+        showNodeTip(event.target, event.renderedPosition || event.target.renderedPosition());
+      });
+      state.cy.on('mouseout', 'node', hideNodeTip);
+
+      state.cy.on('dbltap', 'node[type = "neighbor"]', (event) => {
+        const key = event.target.data('payload').featureKey;
+        if (key && getMap(key)) loadFeature(key);
+      });
+
+      applyTypeFilter();
+      syncEdgeLabelStyle();
+      state.cy.one('layoutstop', () => {
+        state.cy.fit(undefined, 56);
+      });
+    }
+
+    function loadFeature(featureKey) {
+      const map = getMap(featureKey);
+      if (!map) {
+        toast('未找到该功能点样例');
+        return;
+      }
+      state.featureKey = featureKey;
+      document.querySelectorAll('.feature-item').forEach((btn) => {
+        btn.classList.toggle('active', btn.getAttribute('data-key') === featureKey);
+      });
+      const elements = buildElements(map);
+      initCy(elements, elements.featureId);
+      document.getElementById('graphHint').innerHTML =
+        '<strong>当前：</strong>' + map.spine.featureName +
+        ' · 看不清时滚轮放大 / 悬停看全名 / 点「放大选中」「只留邻域」';
+      renderDrawer(null);
+      toast('已加载「' + map.spine.featureName + '」图谱');
+    }
+
+    function runLayout() {
+      if (!state.cy) return;
+      const map = getMap(state.featureKey);
+      const elements = buildElements(map);
+      state.cy.layout(layoutOptions(state.layout, elements.featureId)).run();
+      state.cy.one('layoutstop', () => state.cy.fit(undefined, 56));
+      document.getElementById('graphHint').innerHTML =
+        '<strong>当前：</strong>' + map.spine.featureName +
+        ' · 布局：' + document.getElementById('layoutSelect').selectedOptions[0].text +
+        (state.sparse ? '（疏）' : '（密）');
+    }
+
+    document.querySelectorAll('.feature-item').forEach((btn) => {
+      btn.addEventListener('click', () => loadFeature(btn.getAttribute('data-key')));
+    });
+
+    document.getElementById('layoutSelect').addEventListener('change', (event) => {
+      state.layout = event.target.value;
+      runLayout();
+    });
+
+    document.getElementById('btnRelayout').addEventListener('click', runLayout);
+    document.getElementById('btnFit').addEventListener('click', () => state.cy && state.cy.fit(undefined, 56));
+    document.getElementById('btnZoomIn').addEventListener('click', () => state.cy && state.cy.zoom(state.cy.zoom() * 1.18));
+    document.getElementById('btnZoomOut').addEventListener('click', () => state.cy && state.cy.zoom(state.cy.zoom() / 1.18));
+    document.getElementById('btnZoomReset').addEventListener('click', () => {
+      if (!state.cy) return;
+      state.cy.fit(undefined, 56);
+    });
+    document.getElementById('btnToggleEdgeLabel').addEventListener('click', () => {
+      state.showEdgeLabel = !state.showEdgeLabel;
+      syncEdgeLabelStyle();
+    });
+    document.getElementById('btnSparse').addEventListener('click', () => {
+      state.sparse = !state.sparse;
+      document.getElementById('btnSparse').textContent = state.sparse ? '更疏布局' : '更密布局';
+      document.getElementById('btnSparse').classList.toggle('active', state.sparse);
+      runLayout();
+      toast(state.sparse ? '已切换更疏布局' : '已切换更密布局');
+    });
+    document.getElementById('btnFocusSelected').addEventListener('click', () => {
+      if (!state.cy || !state.selectedNodeId) {
+        toast('请先点击一个节点');
+        return;
+      }
+      const node = state.cy.getElementById(state.selectedNodeId);
+      state.cy.animate({
+        fit: { eles: node.closedNeighborhood(), padding: 70 },
+        duration: 280
+      });
+    });
+    document.getElementById('btnHideOthers').addEventListener('click', () => {
+      if (!state.cy || !state.selectedNodeId) {
+        toast('请先点击一个节点');
+        return;
+      }
+      const node = state.cy.getElementById(state.selectedNodeId);
+      state.cy.elements().addClass('faded');
+      node.closedNeighborhood().removeClass('faded').addClass('highlighted');
+      state.cy.animate({
+        fit: { eles: node.closedNeighborhood(), padding: 70 },
+        duration: 280
+      });
+      toast('已淡化其他节点，只突出邻域');
+    });
+    document.getElementById('btnRegression').addEventListener('click', () => {
+      const map = getMap(state.featureKey);
+      const count = (((map || {}).businessView) || {}).cases || [];
+      toast('已按当前功能点生成回归包示意：' + count.length + ' 条用例');
+    });
+
+    document.getElementById('typeFilters').addEventListener('click', (event) => {
+      const chip = event.target.closest('[data-type]');
+      if (!chip) return;
+      const type = chip.getAttribute('data-type');
+      if (type === 'all') {
+        state.hiddenTypes.clear();
+        document.querySelectorAll('#typeFilters .chip').forEach((node) => node.classList.add('active'));
+      } else {
+        chip.classList.toggle('active');
+        if (chip.classList.contains('active')) state.hiddenTypes.delete(type);
+        else state.hiddenTypes.add(type);
+        const allChip = document.querySelector('#typeFilters [data-type="all"]');
+        const others = [...document.querySelectorAll('#typeFilters .chip')].filter((node) => node.getAttribute('data-type') !== 'all');
+        allChip.classList.toggle('active', others.every((node) => node.classList.contains('active')));
+      }
+      applyTypeFilter();
+    });
+
+    loadFeature(state.featureKey);
+  </script>
+</body>
+</html>

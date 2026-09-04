@@ -1,0 +1,152 @@
+{
+  "domain": "quote",
+  "displayName": "家装报价领域",
+  "flowNodes": [
+    {
+      "node": "报价触发与报价单生成",
+      "description": "外部系统或管家端发起报价，生成报价单主记录。",
+      "risk": "高",
+      "keywords": ["生成报价单", "发起报价", "首次下新", "续约", "改价", "重新获取", "报价接口", "offerQuotations", "/quotation/offer", "/quotation/bim/offer", "quotationsType", "NEWLY", "BOM", "BIM", "designCostCode", "quotationsCode"]
+    },
+    {
+      "node": "报价场景识别与价格来源",
+      "description": "识别报价场景，并决定目录价、销售价或销售价加税；含标准出房价来源。",
+      "risk": "高",
+      "keywords": ["场景", "SFBJ", "LFBJ", "JZBJ", "PZYJ", "QTG_ZO_YZBJ", "QTG_ZD_YZBJ", "QUTG_ZO_YZBJ", "QUTG_ZE_YZBJ", "SCH_ZD2_YZBJ", "XP_YZ_YZBJ", "XP_ZO_YZBJ", "XP_ZD_YZBJ", "QTG", "QUTG", "XP_", "目录价", "销售价", "销售价加税", "MLJ", "XSJ", "XSJJS", "priceSourceType", "PriceSourceTypeEnum", "SceneEnum", "standardRentalPriceSource", "k2", "定价系统", "computeStandardPrice", "报价类型"]
+    },
+    {
+      "node": "参数解析与输入精度",
+      "description": "解析 BOM、模型、系统、参考参数，校验功能区间、数量、单价、输入精度。",
+      "risk": "高",
+      "keywords": ["参数", "精度", "模板", "功能区间", "必填", "参数异常", "operateType", "inputTypes", "groups"]
+    },
+    {
+      "node": "物料处理与自动带出",
+      "description": "处理主物料、套餐包、续约、增购、升级、配件、同类 SPU 拦截和自动带出。",
+      "risk": "高",
+      "keywords": ["物品", "物料", "带出", "SPU", "SKU", "同类", "套餐包", "标配", "升级", "增购", "配件", "OfferRule", "offerRule", "quantityRule", "INSIDE_RULE"]
+    },
+    {
+      "node": "金额计算与汇总",
+      "description": "计算物品总价、租赁总价、含税/不含税、去利润价、分组汇总、找平与智能折扣。",
+      "risk": "高",
+      "keywords": ["金额", "合计", "总价", "含税", "不含税", "去利润", "单价", "数量", "租赁", "税", "差价", "QUANTITY_PRICE", "FIXED_PRICE", "totalPriceRule", "rentalCycle", "noProfitPrice", "profitRate", "四舍五入", "找平", "maxPriceLeveling", "灵之智能折扣", "INTELLIGENT_DISCOUNT", "discountRate", "溢价", "PremiumSceneEnum", "PZSJ", "BZYJXS"]
+    },
+    {
+      "node": "造价单生成与明细落库",
+      "description": "报价明细生成造价单、造价明细、扩展包明细和关联数据。",
+      "risk": "高",
+      "keywords": ["造价单", "造价", "明细", "DesignCost", "落库", "保存", "designCostCode", "jz_design_cost"]
+    },
+    {
+      "node": "造价提交与审核",
+      "description": "造价单从待提交到待审核，再到通过、拒绝、复审、取消；含审核时效与可编辑规则。",
+      "risk": "高",
+      "keywords": ["提交", "审核", "通过", "拒绝", "驳回", "复审", "待审核", "自动审核", "免审", "抽审", "INIT", "SUBMITED", "PASS", "REJECT", "CANCEL", "canEdit", "validTime", "invalidTime", "checkDesignCost", "审核时效", "auto-submit", "互斥"]
+    },
+    {
+      "node": "实勘审核",
+      "description": "报价实勘审核从待审核到审核通过、调整通过、审核驳回或作废。",
+      "risk": "中",
+      "keywords": ["实勘", "Survey", "Review", "DSH", "SHTG", "TZTG", "SHBH", "YZF", "待审核", "审核通过", "调整通过", "审核驳回", "已作废", "cancelSKReview", "上门实勘", "SurveyGroupsEnum", "表价格", "虚拟物品", "judgeGroupWhetherSurvey", "全屋不可实勘", "ZO管家", "审核单"]
+    },
+    {
+      "node": "申诉审核",
+      "description": "申诉单从初审/终审进入通过、调整通过或拒绝，并赋值 finallyCost。",
+      "risk": "中",
+      "keywords": ["申诉", "Appeal", "初审", "终审", "WAIT_FIRST_CHECK", "WAIT_LAST_CHECK", "FIRST_CHECK_REJECT", "LAST_CHECK_PASS", "LAST_CHECK_ADJUST", "LAST_CHECK_REJECT", "FIRST_CHECK", "LAST_CHECK", "ADJUST_PASS", "finallyCost", "estimatedCost", "standardCost", "checkAdjustCost", "modifyCost", "跳过初审", "auto_appeal_adjust", "auto_appeal_switch", "QuotationsAppeal", "调整金额"]
+    },
+    {
+      "node": "生命周期与外部联动",
+      "description": "处理审核通过后的库存预占、时效失效、合同作废、改价作废与库存释放。",
+      "risk": "高",
+      "keywords": ["失效", "作废", "取消", "合同", "库存", "预占", "释放", "地址", "MQ", "通知", "INVALID", "STANDARD_DAYS_15", "AUDIT_DAYS_30", "CONTRACT_INVALID", "COPY_INVALID", "HISTORY_INVALID", "HAS_HIRE_CONTRACT", "prohibitExpireType", "lockStock", "lockStockType", "cancelLockStock", "expireDesignCost", "handleDesignCostExpire", "Foxy", "DesignCostTimeExpireListener", "YZContractConsumerListener", "CopyDesignCostListener", "改价作废", "收房合同", "judgeNeedLockStockAndExpire"]
+    },
+    {
+      "node": "前端展示与金额明细",
+      "description": "金额明细弹窗、Tab、名称、排序和端上展示校验。",
+      "risk": "中",
+      "keywords": ["弹窗", "tab", "展示", "名称", "页面", "按钮", "移动端", "金额明细"]
+    }
+  ],
+  "stateTransitions": [
+    {"chain": "DesignCost", "source": "待提交(0/INIT)", "target": "待审核(10/SUBMITED)", "action": "提交审核", "type": "正向", "node": "造价提交与审核"},
+    {"chain": "DesignCost", "source": "待审核(10/SUBMITED)", "target": "审核通过(20/PASS)", "action": "审核通过", "type": "正向", "node": "造价提交与审核"},
+    {"chain": "DesignCost", "source": "待审核(10/SUBMITED)", "target": "审核拒绝(30/REJECT)", "action": "审核拒绝", "type": "异常", "node": "造价提交与审核"},
+    {"chain": "DesignCost", "source": "审核拒绝(30/REJECT)", "target": "待审核(10/SUBMITED)", "action": "编辑后重新提交", "type": "回退", "node": "造价提交与审核"},
+    {"chain": "DesignCost", "source": "待提交(0/INIT)", "target": "已取消(40/CANCEL)", "action": "取消", "type": "终止", "node": "造价提交与审核"},
+    {"chain": "DesignCost", "source": "待审核(10/SUBMITED)", "target": "已取消(40/CANCEL)", "action": "取消", "type": "终止", "node": "造价提交与审核"},
+    {"chain": "DesignCost", "source": "审核通过(20/PASS)", "target": "已失效(50/INVALID)", "action": "标准15天/长租30天到期失效", "type": "生命周期", "node": "生命周期与外部联动"},
+    {"chain": "DesignCost", "source": "审核通过(20/PASS)", "target": "已失效(50/INVALID)", "action": "收房合同作废触发失效", "type": "生命周期", "node": "生命周期与外部联动"},
+    {"chain": "DesignCost", "source": "审核通过(20/PASS)", "target": "已失效(50/INVALID)", "action": "改价复制作废旧单", "type": "生命周期", "node": "生命周期与外部联动"},
+    {"chain": "DesignCost", "source": "审核通过(20/PASS)", "target": "预占成功/失败补偿", "action": "长租场景触发库存预占", "type": "联动", "node": "生命周期与外部联动"},
+    {"chain": "Review", "source": "待审核(0/DSH)", "target": "审核通过(10/SHTG)", "action": "审核通过", "type": "正向", "node": "实勘审核"},
+    {"chain": "Review", "source": "待审核(0/DSH)", "target": "调整通过(20/TZTG)", "action": "调整并通过", "type": "正向", "node": "实勘审核"},
+    {"chain": "Review", "source": "待审核(0/DSH)", "target": "审核驳回(30/SHBH)", "action": "审核驳回", "type": "异常", "node": "实勘审核"},
+    {"chain": "Review", "source": "待审核(0/DSH)", "target": "已作废(40/YZF)", "action": "系统作废/取消实勘", "type": "终止", "node": "实勘审核"},
+    {"chain": "Review", "source": "审核通过(10/SHTG)", "target": "已作废(40/YZF)", "action": "作废", "type": "终止", "node": "实勘审核"},
+    {"chain": "Review", "source": "调整通过(20/TZTG)", "target": "已作废(40/YZF)", "action": "作废", "type": "终止", "node": "实勘审核"},
+    {"chain": "Review", "source": "审核驳回(30/SHBH)", "target": "已作废(40/YZF)", "action": "作废", "type": "终止", "node": "实勘审核"},
+    {"chain": "Appeal", "source": "待初审(10)", "target": "待终审(20)", "action": "初审通过", "type": "正向", "node": "申诉审核"},
+    {"chain": "Appeal", "source": "待初审(10)", "target": "待终审(20)", "action": "初审调整通过", "type": "正向", "node": "申诉审核"},
+    {"chain": "Appeal", "source": "待初审(10)", "target": "初审已拒绝(30)", "action": "初审拒绝", "type": "异常", "node": "申诉审核"},
+    {"chain": "Appeal", "source": "新建申诉", "target": "待终审(20)", "action": "跳过初审直接终审", "type": "正向", "node": "申诉审核"},
+    {"chain": "Appeal", "source": "待终审(20)", "target": "终审已通过(40)", "action": "终审通过(finallyCost=estimatedCost)", "type": "正向", "node": "申诉审核"},
+    {"chain": "Appeal", "source": "待终审(20)", "target": "终审有调整(50)", "action": "终审调整通过(finallyCost=checkAdjustCost)", "type": "正向", "node": "申诉审核"},
+    {"chain": "Appeal", "source": "待终审(20)", "target": "终审已拒绝(60)", "action": "终审拒绝(finallyCost=standardCost)", "type": "异常", "node": "申诉审核"}
+  ],
+  "fields": [
+    {"entity": "Quotations", "field": "quotationsCode", "meaning": "报价单号", "type": "主键/展示", "node": "报价触发与报价单生成"},
+    {"entity": "Quotations", "field": "quotationsType", "meaning": "报价类型", "type": "枚举", "node": "报价场景识别与价格来源"},
+    {"entity": "QuotationsRecord", "field": "scene", "meaning": "报价场景编码", "type": "枚举", "node": "报价场景识别与价格来源"},
+    {"entity": "QuotationsRecord", "field": "priceSourceType", "meaning": "报价金额类型(MLJ/XSJ/XSJJS)", "type": "枚举", "node": "报价场景识别与价格来源"},
+    {"entity": "DesignCost", "field": "standardRentalPriceSource", "meaning": "标准出房价来源(k2/定价系统)", "type": "枚举", "node": "报价场景识别与价格来源"},
+    {"entity": "DesignCost", "field": "standardRentalPrice", "meaning": "标准出房价", "type": "计算", "node": "报价场景识别与价格来源"},
+    {"entity": "QuotationsRecord", "field": "totalPrice", "meaning": "总价", "type": "计算", "node": "金额计算与汇总"},
+    {"entity": "QuotationsRecord", "field": "totalNoProfitPrice", "meaning": "去利润总价", "type": "计算", "node": "金额计算与汇总"},
+    {"entity": "QuotationsRecord", "field": "bimOfferGoodsList", "meaning": "BIM物料信息列表", "type": "集合", "node": "物料处理与自动带出"},
+    {"entity": "QuotationsRecord", "field": "quotationParam", "meaning": "报价参数列表", "type": "集合", "node": "参数解析与输入精度"},
+    {"entity": "QuotationsRecord", "field": "quotationsDetailList", "meaning": "报价明细列表", "type": "集合", "node": "造价单生成与明细落库"},
+    {"entity": "OfferRule", "field": "totalPriceRule", "meaning": "总价计算方式", "type": "枚举", "node": "金额计算与汇总"},
+    {"entity": "OfferRule", "field": "quantityType", "meaning": "数量计算方式", "type": "枚举", "node": "金额计算与汇总"},
+    {"entity": "DesignCost", "field": "checkStatus", "meaning": "审核状态", "type": "状态", "node": "造价提交与审核"},
+    {"entity": "DesignCost", "field": "validTime", "meaning": "生效时间", "type": "生命周期", "node": "生命周期与外部联动"},
+    {"entity": "DesignCost", "field": "invalidTime", "meaning": "失效时间", "type": "生命周期", "node": "生命周期与外部联动"},
+    {"entity": "DesignCost", "field": "invalidType", "meaning": "失效类型", "type": "枚举", "node": "生命周期与外部联动"},
+    {"entity": "DesignCost", "field": "prohibitExpireType", "meaning": "禁止失效类型", "type": "枚举", "node": "生命周期与外部联动"},
+    {"entity": "DesignCost", "field": "lockStockType", "meaning": "预占库存状态", "type": "联动", "node": "生命周期与外部联动"},
+    {"entity": "QuotationsAppeal", "field": "appealStatus", "meaning": "申诉状态", "type": "状态", "node": "申诉审核"},
+    {"entity": "QuotationsAppeal", "field": "finallyCost", "meaning": "最终造价", "type": "计算", "node": "申诉审核"},
+    {"entity": "QuotationsAppeal", "field": "estimatedCost", "meaning": "预估造价", "type": "计算", "node": "申诉审核"},
+    {"entity": "QuotationsAppeal", "field": "standardCost", "meaning": "标准造价", "type": "计算", "node": "申诉审核"},
+    {"entity": "QuotationsAppealCheck", "field": "checkAdjustCost", "meaning": "审核调整金额", "type": "计算", "node": "申诉审核"},
+    {"entity": "Review", "field": "reviewStatus", "meaning": "实勘审核状态", "type": "状态", "node": "实勘审核"}
+  ],
+  "rules": [
+    {"id": "R001", "name": "固定价物品总价", "description": "totalPriceRule=FIXED_PRICE 时总价=单价。", "node": "金额计算与汇总", "testType": "金额计算"},
+    {"id": "R002", "name": "数量价物品总价", "description": "totalPriceRule=QUANTITY_PRICE 时总价=round(unitPrice*amount,2)。", "node": "金额计算与汇总", "testType": "金额计算"},
+    {"id": "R003", "name": "租赁物品总价", "description": "租赁物品总价=round(amount*unitPrice*rentalCycle,2)。", "node": "金额计算与汇总", "testType": "金额计算"},
+    {"id": "R004", "name": "去利润总价", "description": "noProfitPrice=round(totalPrice/(1+profitRate),2)。", "node": "金额计算与汇总", "testType": "金额计算"},
+    {"id": "R005", "name": "分组汇总", "description": "按 itemGroup 汇总硬装/软装基础和增项金额。", "node": "金额计算与汇总", "testType": "金额计算"},
+    {"id": "R006", "name": "场景价格来源映射", "description": "SFBJ/LFBJ/JZBJ/PZYJ→MLJ；轻托管/选配等→XSJJS。", "node": "报价场景识别与价格来源", "testType": "规则校验"},
+    {"id": "R007", "name": "自动审核判定", "description": "产品版本、改价标签、复审、驳回记录、抽审比例共同决定是否自动通过。", "node": "造价提交与审核", "testType": "规则校验"},
+    {"id": "R008", "name": "基础参数校验", "description": "功能区间、单价、数量、operateType 不能为空或非法。", "node": "参数解析与输入精度", "testType": "规则校验"},
+    {"id": "R009", "name": "定制二级分类校验", "description": "定制设计 ADD/UPDATE 物品的二级展示分类必须有值。", "node": "参数解析与输入精度", "testType": "规则校验"},
+    {"id": "R010", "name": "配件参数校验", "description": "配件标签物品必须有关联父 SKU 和比例。", "node": "物料处理与自动带出", "testType": "规则校验"},
+    {"id": "R011", "name": "uniqueCode 去重", "description": "同一条物品信息不可重复添加。", "node": "物料处理与自动带出", "testType": "规则校验"},
+    {"id": "R012", "name": "配件比例校验", "description": "配件数量=round(比例*主物品数量,2)。", "node": "物料处理与自动带出", "testType": "规则校验"},
+    {"id": "R013", "name": "UPDATE 数量为0", "description": "UPDATE 且 amount=0 时逻辑删除并置 CANCEL。", "node": "造价提交与审核", "testType": "状态流转"},
+    {"id": "R014", "name": "通用数值四舍五入与找平", "description": "每步计算四舍五入到2位，支持 maxPriceLeveling 金额找平。", "node": "金额计算与汇总", "testType": "边界值"},
+    {"id": "R015", "name": "标准出房价双源回退", "description": "先查 k2，无值再调定价系统 computeStandardPrice，回写 standardRentalPrice。", "node": "报价场景识别与价格来源", "testType": "规则校验"},
+    {"id": "R016", "name": "造价单可编辑状态", "description": "仅 INIT(0) 或 REJECT(30) 可编辑。", "node": "造价提交与审核", "testType": "状态流转"},
+    {"id": "R017", "name": "审核通过失效时间", "description": "标准场景 invalidTime=now+15天；长租场景 now+30天。", "node": "生命周期与外部联动", "testType": "规则校验"},
+    {"id": "R018", "name": "签约合同阻止失效", "description": "合同签约后 prohibitExpireType=HAS_HIRE_CONTRACT，阻止时效失效。", "node": "生命周期与外部联动", "testType": "规则校验"},
+    {"id": "R019", "name": "长租库存预占判定", "description": "judgeNeedLockStockAndExpire 为真时审核通过触发预占；心舍市场化或非新建可不占库存。", "node": "生命周期与外部联动", "testType": "规则校验"},
+    {"id": "R020", "name": "申诉 finallyCost 赋值", "description": "终审通过取 estimatedCost；调整通过取 checkAdjustCost；拒绝取 standardCost。", "node": "申诉审核", "testType": "金额计算"},
+    {"id": "R021", "name": "申诉跳过初审", "description": "新建申诉可直接进入 WAIT_LAST_CHECK 跳过初审。", "node": "申诉审核", "testType": "状态流转"},
+    {"id": "R022", "name": "实勘不可上门补差", "description": "非可实勘房间若表价格>BOM价格，生成虚拟物品补差。", "node": "实勘审核", "testType": "规则校验"},
+    {"id": "R023", "name": "灵之智能折扣", "description": "定制设计模式且灵之智能套组，按城市/全国规则与阈值匹配后折后价=原价×discountRate。", "node": "金额计算与汇总", "testType": "金额计算"},
+    {"id": "R024", "name": "OfferRule 审核场景过滤", "description": "报价提交适用 ALL+仅设计师；造价审核适用 ALL+仅造价审核。", "node": "造价提交与审核", "testType": "规则校验"},
+    {"id": "R025", "name": "失效释放库存", "description": "handleDesignCostExpire 置 INVALID 后调用 cancelLockStock 释放库存。", "node": "生命周期与外部联动", "testType": "状态流转"}
+  ]
+}

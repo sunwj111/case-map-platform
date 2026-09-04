@@ -1,0 +1,10 @@
+用例ID,用例名称,优先级,领域,应用,流程节点,功能点,featureKey,测试场景,关联接口,接口来源,置信度,处理建议,数据来源,确认状态
+TC-001,标准方案数量价计算正确,P0,家装,报价,金额计算与汇总,数量价汇总,家装/报价/金额计算与汇总/数量价汇总,正常报价,POST /quotation/offer,用例直连,92,自动挂载,feature_map_samples.js,样例
+TC-002,优惠折扣后数量价正确,P0,家装,报价,金额计算与汇总,数量价汇总,家装/报价/金额计算与汇总/数量价汇总,优惠报价,POST /quotation/offer,用例直连,88,自动挂载,feature_map_samples.js,样例
+TC-003,金额为负拦截,P1,家装,报价,金额计算与汇总,数量价汇总,家装/报价/金额计算与汇总/数量价汇总,边界校验,POST /quotation/offer,用例直连,85,自动挂载,feature_map_samples.js,样例
+TC-004,数量为0边界,P1,家装,报价,金额计算与汇总,数量价汇总,家装/报价/金额计算与汇总/数量价汇总,边界校验,POST /quotation/offer,用例直连,72,待抽检,feature_map_samples.js,样例
+TC-101,固定价项汇总正确,P0,家装,报价,金额计算与汇总,固定价汇总,家装/报价/金额计算与汇总/固定价汇总,固定价正常汇总,POST /quotation/offer,用例直连,90,自动挂载,feature_map_samples.js,样例
+TC-102,固定价与数量价混合,P1,家装,报价,金额计算与汇总,固定价汇总,家装/报价/金额计算与汇总/固定价汇总,固定价正常汇总,POST /quotation/offer,用例直连,80,自动挂载,feature_map_samples.js,样例
+TC-201,满足免审条件自动通过,P0,家装,报价,造价提交与审核,自动审核判定,家装/报价/造价提交与审核/自动审核判定,免审通过,POST /quotation/submitDesignCost,用例直连,95,自动挂载,feature_map_samples.js,样例
+TC-202,抽审比例命中转人工,P1,家装,报价,造价提交与审核,自动审核判定,家装/报价/造价提交与审核/自动审核判定,抽审命中,POST /quotation/submitDesignCost,用例直连,82,自动挂载,feature_map_samples.js,样例
+（待填）,请将质保平台历史用例导出放到 input/quote/历史用例.xlsx,,家装,报价,,,,,,无接口则继承功能点主接口,,待挂载,历史用例.xlsx,待提供

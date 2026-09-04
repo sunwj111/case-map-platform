@@ -1,0 +1,18 @@
+领域,应用,主归属流程节点,功能点,方法,路径,关系类型,Controller,关联流程节点,来源,确认状态
+家装,报价,造价提交与审核,提交审核,POST,/quotation/submitDesignCost,主接口,QuotationApi#submitDesignCost,造价提交与审核,造价审核接口文档,待确认
+家装,报价,造价提交与审核,自动审核判定,POST,/quotation/submitDesignCost,主接口·autoSubmitDesignCost,DesignCostService#autoSubmitDesignCost,造价提交与审核,造价审核接口文档,待确认
+家装,报价,造价提交与审核,审核列表与详情,GET,/costAudit/findList,主接口,CostAuditApi#findList,造价提交与审核,造价审核接口文档,待确认
+家装,报价,造价提交与审核,审核列表与详情,GET,/costAudit/count,统计,CostAuditApi#count,造价提交与审核,造价审核接口文档,待确认
+家装,报价,造价提交与审核,审核列表与详情,GET,/designCost/findDesignCostAuditInfo,详情,DesignCostApi#findDesignCostAuditInfo,造价提交与审核,造价审核接口文档,待确认
+家装,报价,造价提交与审核,审核列表与详情,GET,/designCost/batchFindDesignCostAuditInfo,批量详情,DesignCostApi#batchFindDesignCostAuditInfo,造价提交与审核,造价审核接口文档,待确认
+家装,报价,造价提交与审核,接单,POST,/costAudit/accept,主接口,CostAuditApi#accept,造价提交与审核,造价审核接口文档,待确认
+家装,报价,造价提交与审核,转派,POST,/costAudit/transform,主接口,CostAuditApi#transform,造价提交与审核,造价审核接口文档,待确认
+家装,报价,造价提交与审核,催审,POST,/costAudit/urgentReview,主接口,CostAuditApi#urgentReview,造价提交与审核,造价审核接口文档,待确认
+家装,报价,造价提交与审核,枚举字典,GET,/costAudit/enums,辅助,CostAuditApi#enums,造价提交与审核,造价审核接口文档,待确认
+家装,报价,造价提交与审核,人工审核通过,RPC,DesignCostService#checkDesignCost(PASS),落地（hddp-admin 反写，文档边界）,DesignCostServiceImpl#checkDesignCost,造价提交与审核,造价审核接口文档,待确认
+家装,报价,造价提交与审核,人工审核驳回,RPC,DesignCostService#checkDesignCost(REJECT),落地（hddp-admin 反写，文档边界）,DesignCostServiceImpl#checkDesignCost,造价提交与审核,造价审核接口文档,待确认
+家装,报价,造价提交与审核,前置评级校验,HTTP,QualityRatingAdaptor.getBeforeOrderBatch,前置依赖,品质评级系统,造价提交与审核,造价审核接口文档,待确认
+家装,报价,造价提交与审核,前置评级校验,HTTP,HouseQualityAdaptor.batchGradeByOppIdsAndSource,前置依赖,AI房源品质,造价提交与审核,造价审核接口文档,待确认
+家装,报价,造价提交与审核,评级联动驳回,HTTP,QualityRatingAdaptor → checkDesignCost(REJECT),已确认联动,品质评级驳回触发造价自动驳回,造价提交与审核,造价审核接口文档,待确认
+家装,报价,造价提交与审核,审核时效,GET,/costAudit/findList,主接口·超时字段,CostAuditApi#findList (expected_audit_time),造价提交与审核,造价审核接口文档,待确认
+家装,报价,造价提交与审核,审核时效,GET,/costAudit/count,统计·超时/即将超时,CostAuditApi#count,造价提交与审核,造价审核接口文档,待确认

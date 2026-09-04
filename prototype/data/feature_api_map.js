@@ -1,0 +1,169 @@
+/* 来源：input/quote/家装报价生成及审核场景核心接口清单.md · 第五节映射总表 */
+window.__FEATURE_API_MAP__ = {
+  domain: '家装',
+  app: '报价',
+  service: 'jz_quotation',
+  source: '家装报价生成及审核场景核心接口清单.md',
+  items: [
+    {
+      method: 'POST',
+      paths: ['/quotation/offer'],
+      primaryNode: '报价触发与报价单生成',
+      nodes: ['报价触发与报价单生成', '报价场景识别与价格来源', '物料处理与自动带出', '金额计算与汇总', '造价单生成与明细落库'],
+      features: ['报价单生成', '场景价格来源映射', '物料自动带出', '数量价汇总', '造价明细落库'],
+      relation: '主接口',
+      controller: 'QuotationApi#offerQuotations'
+    },
+    {
+      method: 'POST',
+      paths: ['/quotation/bim/offer'],
+      primaryNode: '报价触发与报价单生成',
+      nodes: ['报价触发与报价单生成', '报价场景识别与价格来源', '物料处理与自动带出', '金额计算与汇总', '造价单生成与明细落库'],
+      features: ['报价单生成', '场景价格来源映射', '物料自动带出', '数量价汇总', '造价明细落库'],
+      relation: '主接口',
+      controller: 'QuotationBimApi#offerQuotations'
+    },
+    {
+      method: 'POST',
+      paths: ['/quotation/bim/kysx/offer'],
+      primaryNode: '报价触发与报价单生成',
+      nodes: ['报价触发与报价单生成', '报价场景识别与价格来源', '造价提交与审核'],
+      features: ['报价单生成', '报价类型识别', '自动审核判定'],
+      relation: '主接口',
+      controller: 'QuotationBimApi#kysxOfferQuotations'
+    },
+    {
+      method: 'POST',
+      paths: ['/quotation/renewalOffer', '/quotation/v2/renewalOffer'],
+      primaryNode: '报价触发与报价单生成',
+      nodes: ['报价触发与报价单生成', '报价场景识别与价格来源'],
+      features: ['报价单生成', '报价类型识别'],
+      relation: '主接口',
+      controller: 'QuotationApi#renewalOfferQuotations'
+    },
+    {
+      method: 'POST',
+      paths: ['/quotation/createDesignCost'],
+      primaryNode: '造价单生成与明细落库',
+      nodes: ['造价单生成与明细落库'],
+      features: ['造价明细落库'],
+      relation: '主接口',
+      controller: 'QuotationApi#createDesignCost'
+    },
+    {
+      method: 'POST',
+      paths: ['/quotation/submitDesignCost'],
+      primaryNode: '造价提交与审核',
+      nodes: ['造价提交与审核'],
+      features: ['提交审核', '自动审核判定'],
+      relation: '主接口',
+      controller: 'QuotationApi#submitDesignCost'
+    },
+    {
+      method: 'POST',
+      paths: ['/quotation/checkParamBeforeSubmit'],
+      primaryNode: '参数解析与输入精度',
+      nodes: ['参数解析与输入精度', '造价提交与审核'],
+      features: ['参数必填校验', '输入精度校验'],
+      relation: '校验接口',
+      controller: 'QuotationApi#checkParamBeforeSubmit'
+    },
+    {
+      method: 'POST',
+      paths: ['/quotation/tempSaveOfferInfo', '/quotation/findTempOfferInfo'],
+      primaryNode: '报价触发与报价单生成',
+      nodes: ['报价触发与报价单生成', '参数解析与输入精度'],
+      features: ['报价单生成', '参数必填校验'],
+      relation: '配套接口',
+      controller: 'QuotationApi#tempSaveOfferInfo'
+    },
+    {
+      method: 'POST',
+      paths: ['/quotation/confirmDesignCost'],
+      primaryNode: '造价提交与审核',
+      nodes: ['造价提交与审核', '生命周期与外部联动'],
+      features: ['提交审核', '审核拒绝回退', '自动审核判定', '库存预占与失效'],
+      relation: '主接口',
+      controller: 'QuotationApi#confirmDesignCost'
+    },
+    {
+      method: 'POST',
+      paths: ['/quotation/checkQuotationStatus'],
+      primaryNode: '实勘审核',
+      nodes: ['实勘审核', '报价场景识别与价格来源'],
+      features: ['自动审核判定', '场景价格来源映射'],
+      relation: '校验接口',
+      controller: 'QuotationApi#checkQuotationStatus'
+    },
+    {
+      method: 'POST',
+      paths: ['/costAudit/findList'],
+      primaryNode: '造价提交与审核',
+      nodes: ['造价提交与审核'],
+      features: ['提交审核'],
+      relation: '查询接口',
+      controller: 'CostAuditApi#findList'
+    },
+    {
+      method: 'POST',
+      paths: ['/costAudit/count'],
+      primaryNode: '造价提交与审核',
+      nodes: ['造价提交与审核'],
+      features: ['提交审核'],
+      relation: '配套接口',
+      controller: 'CostAuditApi#count'
+    },
+    {
+      method: 'POST',
+      paths: ['/costAudit/accept', '/costAudit/transform', '/costAudit/urgentReview'],
+      primaryNode: '造价提交与审核',
+      nodes: ['造价提交与审核'],
+      features: ['提交审核'],
+      relation: '配套接口',
+      controller: 'CostAuditApi#accept/transform/urgentReview'
+    },
+    {
+      method: 'POST',
+      paths: ['/costAudit/enums'],
+      primaryNode: '造价提交与审核',
+      nodes: ['造价提交与审核', '前端展示与金额明细'],
+      features: ['提交审核'],
+      relation: '配套接口',
+      controller: 'CostAuditApi#enums'
+    },
+    {
+      method: 'POST',
+      paths: ['/designCost/findDesignCostAuditInfo', '/designCost/batchFindDesignCostAuditInfo'],
+      primaryNode: '造价提交与审核',
+      nodes: ['造价提交与审核', '前端展示与金额明细'],
+      features: ['提交审核'],
+      relation: '查询接口',
+      controller: 'DesignCostApi#findDesignCostAuditInfo'
+    },
+    {
+      method: 'POST',
+      paths: ['/quotation/quotationReviewPage', '/quotation/reviewSubmit', '/quotation/cancelReview'],
+      primaryNode: '实勘审核',
+      nodes: ['实勘审核', '生命周期与外部联动'],
+      features: ['提交审核', '审核拒绝回退', '库存预占与失效'],
+      relation: '主接口',
+      controller: 'QuotationApi#reviewSubmit'
+    },
+    {
+      method: 'POST',
+      paths: [
+        '/quotationV2/quotationReviewPage',
+        '/quotationV2/quotationReviewStatusCheck',
+        '/quotationV2/accept',
+        '/quotationV2/transform',
+        '/quotationV2/count',
+        '/quotationV2/refreshExpectTime'
+      ],
+      primaryNode: '实勘审核',
+      nodes: ['实勘审核'],
+      features: ['提交审核'],
+      relation: '配套接口',
+      controller: 'QuotationV2Api'
+    }
+  ]
+};

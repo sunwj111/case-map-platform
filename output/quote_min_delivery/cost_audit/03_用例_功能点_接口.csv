@@ -1,0 +1,15 @@
+用例ID,用例名称,优先级,领域,应用,流程节点,功能点,原Excel功能点,测试场景,关联接口,接口来源,置信度,匹配依据,处理建议,数据来源,确认状态
+CA-001,设计师成功提交造价审核,P1,家装,报价,造价提交与审核,提交审核,人工审核,造价单审核,POST /quotation/submitDesignCost,接口文档,95,提交→SUBMITED(10),自动挂载,造价审核测试用例.xlsx（时效已按知识库拆分）,待确认
+CA-002,造价审核专员成功审核造价单,P1,家装,报价,造价提交与审核,人工审核通过,人工审核,造价单审核,DesignCostService#checkDesignCost(PASS)（经 hddp-admin，接口文档边界）,接口文档·落地边界,93,PASS(20),自动挂载,造价审核测试用例.xlsx（时效已按知识库拆分）,待确认
+CA-003,造价单自动审核通过,P1,家装,报价,造价提交与审核,自动审核判定,自动审核,造价单审核,POST /quotation/submitDesignCost → autoSubmitDesignCost,接口文档+知识库,93,autoCheck=true → PASS,自动挂载,造价审核测试用例.xlsx（时效已按知识库拆分）,待确认
+CA-004,造价审核专员成功驳回造价单,P2,家装,报价,造价提交与审核,人工审核驳回,人工审核,造价单审核,DesignCostService#checkDesignCost(REJECT)（经 hddp-admin，接口文档边界）,接口文档·落地边界,93,REJECT(30),自动挂载,造价审核测试用例.xlsx（时效已按知识库拆分）,待确认
+CA-005,造价审核页面测试,P3,家装,报价,造价提交与审核,审核列表与详情,人工审核,造价单审核,GET /costAudit/findList; GET /costAudit/count; GET /designCost/findDesignCostAuditInfo,接口文档·CostAuditApi/DesignCostApi,95,PC 列表/详情回显,自动挂载,造价审核测试用例.xlsx（时效已按知识库拆分）,待确认
+CA-006,造价审核权限,P3,家装,报价,造价提交与审核,审核权限,人工审核,造价单审核,POST /costAudit/accept; GET /costAudit/findList,接口文档·接单,90,非 audit_user 不可审,自动挂载,造价审核测试用例.xlsx（时效已按知识库拆分）,待确认
+CA-007,审核驳回失败-未选择原因驳回,P4,家装,报价,造价提交与审核,驳回原因校验,人工审核,造价单审核,DesignCostService#checkDesignCost(REJECT)（经 hddp-admin，接口文档边界）,接口文档·落地边界,90,驳回原因必填,自动挂载,造价审核测试用例.xlsx（时效已按知识库拆分）,待确认
+CA-008,审核时效-初审20分钟,P1,家装,报价,造价提交与审核,审核时效-初审,人工审核,造价单审核-时效,GET /costAudit/findList; GET /costAudit/count,接口文档·列表/统计 + 知识库时效常量,95,初审20min（以知识库为准，拆自原重复时效用例）,自动挂载,造价审核测试用例.xlsx（时效已按知识库拆分）,待确认
+CA-009,审核时效-复审15分钟,P1,家装,报价,造价提交与审核,审核时效-复审,人工审核,造价单审核-时效,GET /costAudit/findList; GET /costAudit/count,接口文档·列表/统计 + 知识库时效常量,95,复审15min（以知识库为准；againCheck=checkLog含驳回）,自动挂载,造价审核测试用例.xlsx（时效已按知识库拆分）,待确认
+CA-010,改价单审核,P2,家装,报价,造价提交与审核,改价单审核,人工审核,造价单审核,DesignCostService#checkDesignCost(PASS)（经 hddp-admin，接口文档边界）,接口文档·落地边界,90,改价标签审核通过,自动挂载,造价审核测试用例.xlsx（时效已按知识库拆分）,待确认
+CA-011,造价审核复审成功操作,P3,家装,报价,造价提交与审核,复审,人工审核,造价单审核,DesignCostService#checkDesignCost(PASS)（经 hddp-admin，接口文档边界）,接口文档·落地边界,92,againCheck 复审通过,自动挂载,造价审核测试用例.xlsx（时效已按知识库拆分）,待确认
+CA-012,定制模式，造价审核校验,P3,家装,报价,造价提交与审核,前置评级校验,人工审核,造价单审核,QualityRatingAdaptor.getBeforeOrderBatch; HouseQualityAdaptor.batchGradeByOppIdsAndSource,接口文档·上下游,93,人工通过前评级必须完成,自动挂载,造价审核测试用例.xlsx（时效已按知识库拆分）,待确认
+CA-013,定制设计模式，品质评级审核驳回，造价单被自动驳回,P3,家装,报价,造价提交与审核,评级联动驳回,人工审核,造价单审核,QualityRatingAdaptor → DesignCostService#checkDesignCost(REJECT),接口文档·上下游 + 业务确认有现成联动,95,已确认：品质评级驳回→造价单自动驳回,自动挂载,造价审核测试用例.xlsx（时效已按知识库拆分）,待确认
+CA-014,造价单状态流转准确,P1,家装,报价,造价提交与审核,造价单状态流转,造价单状态,造价单审核,jz_design_cost.check_status（DesignCheckStatusEnum）,知识库状态机 + 接口文档落库,92,INIT/SUBMITED/PASS/REJECT/超时,自动挂载,造价审核测试用例.xlsx（时效已按知识库拆分）,待确认

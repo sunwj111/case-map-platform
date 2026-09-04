@@ -1,0 +1,2447 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>用例地图平台原型 · 检索优先</title>
+  <style>
+    :root {
+      --bg: #f3f5f8;
+      --card: #fff;
+      --line: #e5eaf1;
+      --text: #111827;
+      --muted: #6b7280;
+      --blue: #2563eb;
+      --blue-soft: #eff6ff;
+      --green: #16a34a;
+      --green-soft: #ecfdf5;
+      --red: #dc2626;
+      --orange: #d97706;
+      --shadow: 0 1px 2px rgba(16,24,40,.04), 0 6px 16px rgba(16,24,40,.05);
+      --radius: 12px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .shell { min-height: 100vh; display: grid; grid-template-columns: 220px 1fr; }
+    .sider {
+      background: #0f172a; color: #e2e8f0; padding: 18px 12px;
+      position: sticky; top: 0; height: 100vh;
+    }
+    .logo { font-weight: 700; font-size: 16px; padding: 6px 10px 10px; }
+    .logo-sub { color: #94a3b8; font-size: 11px; font-weight: 400; margin-top: 4px; line-height: 1.4; }
+    .menu-btn {
+      width: 100%; text-align: left; border: 0; background: transparent;
+      color: #cbd5e1; border-radius: 8px; padding: 10px 12px; margin-bottom: 4px; cursor: pointer;
+      display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    }
+    .menu-btn .menu-label { flex: 1; }
+    .menu-btn .badge {
+      min-width: 18px; height: 18px; border-radius: 999px; padding: 0 6px;
+      background: #334155; color: #e2e8f0; font-size: 11px; line-height: 18px; text-align: center;
+    }
+    .menu-btn.active .badge { background: rgba(255,255,255,.25); color: #fff; }
+    .path-callout {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      padding: 10px 12px; margin-bottom: 12px;
+      background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; color: #1e3a8a; font-size: 12px;
+    }
+    .path-callout strong { color: #1d4ed8; }
+    .path-callout .sep { color: #93c5fd; }
+    .sticky-actions {
+      position: sticky; bottom: 12px; z-index: 15;
+      background: rgba(255,255,255,.96); border: 1px solid var(--line);
+      border-radius: 12px; box-shadow: var(--shadow); padding: 12px 14px;
+      display: flex; gap: 8px; flex-wrap: wrap; align-items: center; justify-content: space-between;
+    }
+    .toast-wrap {
+      position: fixed; right: 18px; bottom: 18px; z-index: 100;
+      display: flex; flex-direction: column; gap: 8px; max-width: min(380px, calc(100vw - 24px));
+    }
+    .toast {
+      background: #0f172a; color: #fff; border-radius: 10px; padding: 10px 12px;
+      box-shadow: 0 10px 30px rgba(15,23,42,.25); font-size: 13px;
+      display: flex; gap: 10px; align-items: flex-start;
+    }
+    .toast .toast-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+    .toast .btn { font-size: 12px; padding: 4px 8px; }
+    .toast.success { background: #166534; }
+    .collapse-hd {
+      display: flex; justify-content: space-between; align-items: center; gap: 8px; cursor: pointer;
+      user-select: none;
+    }
+    .collapse-bd.hidden { display: none; }
+    .quick-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .chip-btn {
+      border: 1px solid var(--line); background: #fff; border-radius: 999px;
+      padding: 4px 10px; cursor: pointer; font-size: 12px; color: var(--text);
+    }
+    .chip-btn:hover, .chip-btn.active { border-color: #93c5fd; background: var(--blue-soft); color: var(--blue); }
+    .list-row .actions-col { display: flex; flex-direction: column; gap: 6px; align-items: stretch; min-width: 108px; }
+    .list-row .actions-col .btn { width: 100%; }
+    .page-guide {
+      margin: 0 0 12px; color: var(--muted); font-size: 12px;
+    }
+    .filter-toolbar {
+      display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: end;
+    }
+    @media (max-width: 1100px) {
+      .filter-toolbar { grid-template-columns: 1fr; }
+    }
+    .menu-btn:hover { background: rgba(255,255,255,.06); color: #fff; }
+    .menu-btn.active { background: var(--blue); color: #fff; font-weight: 650; }
+    .menu-group { color: #64748b; font-size: 11px; padding: 14px 12px 6px; }
+    .main { padding: 16px 22px 40px; }
+    .view { display: none; }
+    .view.active { display: block; }
+
+    .top-search {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 12px;
+      margin-bottom: 14px;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+    .top-search.hidden,
+    .hidden { display: none !important; }
+    .flow-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .flow-step {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 12px;
+      position: relative;
+    }
+    .flow-step .step-no { color: var(--muted); font-size: 11px; }
+    .flow-step strong { display: block; margin: 2px 0; }
+    .flow-step .step-desc { color: var(--muted); font-size: 12px; }
+    .flow-step.active { border-color: #93c5fd; background: var(--blue-soft); }
+    .tab-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+    .tab-btn {
+      border: 1px solid var(--line); background: #fff; border-radius: 999px;
+      padding: 6px 12px; cursor: pointer; color: var(--text);
+    }
+    .tab-btn.active { background: var(--blue); border-color: var(--blue); color: #fff; }
+    .dest-banner {
+      margin-top: 8px; padding: 8px 10px; border-radius: 8px;
+      background: var(--green-soft); border: 1px solid #bbf7d0; color: #166534; font-size: 12px;
+    }
+    .stat.clickable { cursor: pointer; transition: border-color .15s, box-shadow .15s; }
+    .stat.clickable:hover { border-color: #93c5fd; box-shadow: 0 0 0 2px rgba(37,99,235,.12); }
+    .flow-step.clickable { cursor: pointer; }
+    .flow-step.clickable:hover { border-color: #93c5fd; }
+    .modal-mask {
+      display: none; position: fixed; inset: 0; background: rgba(15,23,42,.45);
+      z-index: 80; align-items: center; justify-content: center; padding: 16px;
+    }
+    .modal-mask.show { display: flex; }
+    .modal {
+      width: min(720px, 100%); max-height: 90vh; overflow: auto;
+      background: #fff; border-radius: 12px; box-shadow: var(--shadow);
+    }
+    .modal-hd {
+      padding: 14px 16px; border-bottom: 1px solid var(--line);
+      display: flex; justify-content: space-between; align-items: center; font-weight: 650;
+    }
+    .modal-bd { padding: 16px; }
+    .modal-ft {
+      padding: 12px 16px; border-top: 1px solid var(--line);
+      display: flex; justify-content: flex-end; gap: 8px;
+    }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .form-grid .full { grid-column: 1 / -1; }
+    .form-field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+    .section-title {
+      font-weight: 650; margin: 0 0 10px; padding-bottom: 8px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .adjust-block {
+      border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 12px;
+      background: #fafbfc;
+    }
+    .preview-box {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      background: #f8fafc;
+      font-size: 12px;
+      color: var(--muted);
+      max-height: 140px;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .preview-box strong { color: var(--text); }
+    .import-result {
+      display: none;
+      margin-top: 12px;
+    }
+    .import-result.show { display: block; }
+    .search-row {
+      display: grid;
+      grid-template-columns: 120px 1fr auto auto;
+      gap: 8px;
+    }
+    .filter-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+      max-width: 560px;
+    }
+    .filter-row label {
+      display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px;
+    }
+    input, select, textarea {
+      width: 100%; border: 1px solid var(--line); border-radius: 8px;
+      padding: 9px 10px; background: #fff; font: inherit;
+    }
+    .btn {
+      border: 1px solid var(--line); background: #fff; border-radius: 8px;
+      padding: 8px 12px; cursor: pointer; color: var(--text); white-space: nowrap;
+    }
+    .btn.primary { background: var(--blue); border-color: var(--blue); color: #fff; }
+    .btn:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+    }
+    .hint { color: var(--muted); font-size: 12px; margin-top: 8px; }
+
+    .page-hd {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      gap: 12px; margin-bottom: 12px;
+    }
+    .page-hd h1 { margin: 0 0 4px; font-size: 22px; }
+    .page-hd p { margin: 0; color: var(--muted); }
+    .crumb { color: var(--muted); margin-bottom: 8px; font-size: 12px; }
+    .crumb a { color: var(--blue); cursor: pointer; text-decoration: none; }
+
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    .grid-2 { display: grid; grid-template-columns: 1.3fr .9fr; gap: 12px; }
+    .card {
+      background: var(--card); border: 1px solid var(--line);
+      border-radius: var(--radius); box-shadow: var(--shadow);
+    }
+    .card-hd {
+      padding: 12px 14px; border-bottom: 1px solid var(--line);
+      font-weight: 650; display: flex; justify-content: space-between; align-items: center;
+    }
+    .card-bd { padding: 14px; }
+    .stat {
+      padding: 14px; background: var(--card); border: 1px solid var(--line);
+      border-radius: var(--radius); box-shadow: var(--shadow);
+    }
+    .stat .label { color: var(--muted); }
+    .stat .value { font-size: 26px; font-weight: 700; margin-top: 4px; }
+    .stat .sub { color: var(--muted); font-size: 12px; margin-top: 2px; }
+
+    .tag {
+      display: inline-block; font-size: 11px; border-radius: 999px;
+      padding: 1px 8px; border: 1px solid var(--line); color: var(--muted); background: #f8fafc;
+    }
+    .tag.blue { color: var(--blue); background: var(--blue-soft); border-color: #bfdbfe; }
+    .tag.green { color: var(--green); background: var(--green-soft); border-color: #bbf7d0; }
+    .tag.red { color: #b91c1c; background: #fef2f2; border-color: #fecaca; }
+    .tag.orange { color: #b45309; background: #fffbeb; border-color: #fde68a; }
+
+    .result-item, .list-row {
+      display: grid; grid-template-columns: 1fr auto; gap: 12px;
+      padding: 12px 0; border-bottom: 1px solid #f1f5f9; align-items: start;
+    }
+    .result-item:last-child, .list-row:last-child { border-bottom: 0; }
+    .result-title { font-weight: 650; margin-bottom: 4px; }
+    .result-path { color: var(--muted); font-size: 12px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+    .meta-row { display: flex; justify-content: space-between; margin: 6px 0; color: var(--muted); }
+    .bar { height: 8px; border-radius: 999px; background: #e5e7eb; overflow: hidden; margin-top: 8px; }
+    .bar > i { display: block; height: 100%; background: var(--green); }
+
+    .tree-table { width: 100%; border-collapse: collapse; }
+    .tree-table th, .tree-table td {
+      text-align: left; padding: 10px 8px; border-bottom: 1px solid #f1f5f9; vertical-align: top;
+    }
+    .tree-table th { color: var(--muted); font-weight: 650; background: #f8fafc; }
+    .indent-1 { padding-left: 8px; }
+    .indent-2 { padding-left: 28px; color: var(--text); }
+    .indent-3 { padding-left: 48px; }
+    .link { color: var(--blue); cursor: pointer; border: 0; background: none; padding: 0; font: inherit; }
+
+    .detail-layout { display: grid; grid-template-columns: 240px 1fr 300px; gap: 12px; align-items: start; }
+    .h-item {
+      border: 1px solid var(--line); border-radius: 8px; padding: 10px;
+      margin-bottom: 8px; background: #fafbfc;
+    }
+    .h-item.active { border-color: var(--blue); background: var(--blue-soft); }
+    .h-label { color: var(--muted); font-size: 12px; }
+    .h-value { font-weight: 650; margin-top: 2px; }
+    .cols-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .mini {
+      border: 1px solid var(--line); border-radius: 8px; padding: 8px;
+      margin-bottom: 8px; background: #fff; cursor: pointer;
+    }
+    .mini.active, .mini:hover { border-color: var(--blue); box-shadow: 0 0 0 2px rgba(37,99,235,.1); }
+    .mini .id { color: var(--muted); font-size: 11px; }
+    .mini .name { font-weight: 600; margin-top: 2px; }
+    .tech-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .tech-box {
+      border: 1px dashed #dbe3ef; border-radius: 8px; padding: 8px; background: #fcfdff; min-height: 84px;
+    }
+    .tech-box h4 { margin: 0 0 8px; font-size: 12px; color: var(--muted); }
+    .chip {
+      display: inline-block; margin: 0 6px 6px 0; padding: 3px 8px; border-radius: 6px;
+      background: #f3f4f6; border: 1px solid var(--line); font-size: 12px;
+    }
+    .dropzone {
+      border: 1.5px dashed #c7d2fe; background: #f8faff; border-radius: 10px;
+      padding: 20px 14px; text-align: center; color: var(--muted); margin-bottom: 12px;
+    }
+    .dropzone strong { display: block; color: var(--text); margin-bottom: 6px; }
+    .table { width: 100%; border-collapse: collapse; }
+    .table th, .table td { border: 1px solid var(--line); padding: 8px; text-align: left; }
+    .table th { background: #f8fafc; color: var(--muted); }
+    .flex { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .mt-8 { margin-top: 8px; }
+    .mt-12 { margin-top: 12px; }
+    .muted { color: var(--muted); }
+    .empty {
+      padding: 24px; text-align: center; color: var(--muted);
+      border: 1px dashed var(--line); border-radius: 10px; background: #fafbfc;
+    }
+    .donut {
+      width: 84px; height: 84px; border-radius: 50%;
+      background: conic-gradient(#ef4444 0 28%, #f59e0b 28% 71%, #3b82f6 71% 90%, #94a3b8 90% 100%);
+      position: relative;
+    }
+    .donut::after {
+      content: "42"; position: absolute; inset: 16px; border-radius: 50%;
+      background: #fff; display: grid; place-items: center; font-weight: 700;
+    }
+    @media (max-width: 1100px) {
+      .shell { grid-template-columns: 1fr; }
+      .sider { position: relative; height: auto; }
+      .search-row, .filter-row, .grid-4, .grid-2, .detail-layout, .cols-4, .tech-grid, .flow-strip, .form-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sider">
+      <div class="logo">用例地图平台
+        <div class="logo-sub">推荐路径：导入 → 评审 → 正式资产库</div>
+      </div>
+      <div class="menu-group">工作台</div>
+      <button class="menu-btn active" data-view="overview"><span class="menu-label">总览检索</span></button>
+      <button class="menu-btn" data-view="detail"><span class="menu-label">功能点详情</span></button>
+      <button class="menu-btn" data-view="search"><span class="menu-label">检索结果</span></button>
+      <div class="menu-group">资产生产（主流程）</div>
+      <button class="menu-btn" data-view="import"><span class="menu-label">1. 资产导入</span></button>
+      <button class="menu-btn" data-view="review"><span class="menu-label">2. 评审校准</span><span class="badge" id="badgeReview">0</span></button>
+      <button class="menu-btn" data-view="assets"><span class="menu-label">3. 正式资产库</span><span class="badge" id="badgeAssets">0</span></button>
+    </aside>
+
+    <main class="main">
+      <!-- 1. 总览检索（顶部搜索仅本页） -->
+      <section class="view active" id="view-overview">
+        <div class="path-callout">
+          <strong>主流程</strong>
+          <span>1 导入资产</span><span class="sep">→</span>
+          <span>2 评审校准</span><span class="sep">→</span>
+          <span>3 正式资产库（多维检索 / 回归包）</span>
+        </div>
+
+        <div class="top-search" id="globalSearch">
+          <div class="search-row">
+            <select id="searchType">
+              <option value="all">领域/应用</option>
+              <option value="domain">仅领域</option>
+              <option value="app">仅应用</option>
+            </select>
+            <input id="searchInput" placeholder="搜索领域或应用，例如：家装、报价、量房、设计" />
+            <button class="btn primary" id="btnSearch">检索</button>
+            <button class="btn" id="btnClear">清空</button>
+          </div>
+          <div class="filter-row">
+            <div>
+              <label>领域</label>
+              <select id="filterDomain">
+                <option value="">全部领域</option>
+                <option>家装</option>
+                <option>租赁</option>
+                <option>售后</option>
+              </select>
+            </div>
+            <div>
+              <label>应用</label>
+              <select id="filterApp">
+                <option value="">全部应用</option>
+                <option>报价</option>
+                <option>量房</option>
+                <option>设计</option>
+                <option>合同</option>
+                <option>施工</option>
+              </select>
+            </div>
+          </div>
+          <div class="hint" id="searchHint">仅在总览检索领域/应用；场景 / 功能点 / 接口请到「正式资产库」。</div>
+        </div>
+
+        <div class="page-hd">
+          <div>
+            <h1>总览 · 按领域/应用检索</h1>
+            <p class="page-guide">先找领域/应用；场景、功能点、接口请到「正式资产库」检索。</p>
+          </div>
+          <div class="flex">
+            <button class="btn primary" data-view="import">去导入资产</button>
+            <button class="btn" data-view="assets">打开正式资产库</button>
+          </div>
+        </div>
+
+        <div class="grid-4">
+          <div class="stat"><div class="label">领域</div><div class="value">6</div><div class="sub">当前检索命中 1</div></div>
+          <div class="stat"><div class="label">应用</div><div class="value">28</div><div class="sub">当前检索命中 3</div></div>
+          <div class="stat"><div class="label">业务场景</div><div class="value">146</div><div class="sub">进入应用后浏览</div></div>
+          <div class="stat"><div class="label">测试用例</div><div class="value">3,182</div><div class="sub">待评审 36 · 覆盖 82%</div></div>
+        </div>
+
+        <div class="grid-2 mt-12">
+          <div class="card">
+            <div class="card-hd">
+              <span>检索命中：领域 / 应用</span>
+              <span class="tag blue">点开应用后展开场景与功能点</span>
+            </div>
+            <div class="card-bd" style="padding:0">
+              <table class="tree-table">
+                <thead>
+                  <tr>
+                    <th style="width:42%">层级路径</th>
+                    <th>类型</th>
+                    <th>用例</th>
+                    <th>覆盖</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="indent-1"><strong>家装</strong></td>
+                    <td><span class="tag">领域</span></td>
+                    <td>518</td>
+                    <td>82%</td>
+                    <td><button class="link" data-quick="家装">仅看此领域</button></td>
+                  </tr>
+                  <tr>
+                    <td class="indent-2">└ 报价</td>
+                    <td><span class="tag blue">应用</span></td>
+                    <td>183</td>
+                    <td>86%</td>
+                    <td><button class="link" data-quick="报价">进入应用</button></td>
+                  </tr>
+                  <tr>
+                    <td class="indent-2">└ 量房</td>
+                    <td><span class="tag blue">应用</span></td>
+                    <td>96</td>
+                    <td>74%</td>
+                    <td><button class="link" data-quick="量房">进入应用</button></td>
+                  </tr>
+                  <tr>
+                    <td class="indent-2">└ 设计</td>
+                    <td><span class="tag blue">应用</span></td>
+                    <td>129</td>
+                    <td>79%</td>
+                    <td><button class="link" data-quick="设计">进入应用</button></td>
+                  </tr>
+                </tbody>
+              </table>
+              <div class="card-bd" style="border-top:1px solid var(--line)">
+                <div class="muted" style="margin-bottom:8px">已选应用「报价」后的下钻（不参与顶部检索）</div>
+                <table class="tree-table">
+                  <thead>
+                    <tr><th>业务场景</th><th>功能点</th><th>用例</th><th></th></tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>获取报价</td>
+                      <td>计算报价、识别价格来源</td>
+                      <td>68</td>
+                      <td><button class="link" data-view="detail">打开计算报价</button></td>
+                    </tr>
+                    <tr>
+                      <td>提交报价</td>
+                      <td>参数校验、明细落库</td>
+                      <td>36</td>
+                      <td><button class="link" data-view="detail">打开参数校验</button></td>
+                    </tr>
+                    <tr>
+                      <td>报价审核</td>
+                      <td>提交审核、审核通过/拒绝</td>
+                      <td>48</td>
+                      <td><button class="link" data-view="detail">打开提交审核</button></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-hd"><span>快捷入口</span></div>
+            <div class="card-bd">
+              <div class="meta-row"><span>最近检索</span><span class="muted">家装、报价、量房</span></div>
+              <div class="meta-row"><span>待评审</span><span class="tag orange">12</span></div>
+              <div class="meta-row"><span>P0 缺口</span><span class="tag red">5</span></div>
+              <div class="mt-12 flex">
+                <button class="btn primary" data-view="import">开始：导入资产</button>
+                <button class="btn" data-view="review">去评审</button>
+                <button class="btn" data-view="assets">正式资产库</button>
+              </div>
+              <div class="empty mt-12">不知道从哪开始？按侧栏 1→2→3 走即可。</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. 功能点详情 -->
+      <section class="view" id="view-detail">
+        <div class="crumb">
+          <a data-view="overview">总览检索</a> /
+          <a data-view="search">检索结果</a> /
+          应用：报价 / 场景：获取报价 / <strong>功能点：计算报价</strong>
+        </div>
+        <div class="page-hd">
+          <div>
+            <h1>功能点详情 · <span id="detailFeatureTitle">计算报价</span></h1>
+            <p class="page-guide">查看单功能点下的用例、脚本、数据与技术映射；可用下方搜索在功能点内定位。</p>
+          </div>
+          <div class="flex">
+            <button class="btn" data-view="overview">回总览</button>
+            <button class="btn" data-view="assets">去正式资产库</button>
+            <button class="btn primary" id="btnDetailRegression" type="button">生成回归包</button>
+          </div>
+        </div>
+
+        <div class="top-search" id="detailSearchBar">
+          <div class="search-row">
+            <select id="detailSearchType">
+              <option value="case">用例名称</option>
+              <option value="feature">功能点</option>
+              <option value="scene">业务场景</option>
+              <option value="api">接口</option>
+              <option value="all">综合</option>
+            </select>
+            <input id="detailSearchInput" placeholder="在功能点详情内搜索，例如：折扣、/api/quote/calc、获取报价" />
+            <button class="btn primary" id="btnDetailSearch" type="button">搜索</button>
+            <button class="btn" id="btnDetailSearchClear" type="button">清空</button>
+          </div>
+          <div class="hint" id="detailSearchHint">当前功能点：计算报价。搜索会过滤本页用例，并提示正式资产库中的相关命中。</div>
+        </div>
+
+        <div class="detail-layout">
+          <div class="card" style="padding:12px">
+            <div class="h-item"><div class="h-label">应用</div><div class="h-value" id="detailApp">报价</div></div>
+            <div class="h-item"><div class="h-label">业务场景</div><div class="h-value" id="detailScene">获取报价</div></div>
+            <div class="h-item active"><div class="h-label">功能点</div><div class="h-value" style="color:var(--blue)" id="detailFeature">计算报价</div></div>
+            <div class="h-item">
+              <div class="h-label">同场景功能点</div>
+              <div class="muted mt-8" id="detailRelatedFeatures">识别价格来源<br />参数解析校验<br />物料自动带出</div>
+            </div>
+            <div class="chips">
+              <span class="tag red">高风险</span>
+              <span class="tag blue">核心链路</span>
+              <span class="tag orange">金额计算</span>
+            </div>
+          </div>
+
+          <div>
+            <div class="card">
+              <div class="card-hd"><span>测试用例</span><span class="tag" id="detailCaseCount">4 条</span></div>
+              <div class="card-bd">
+                <div class="flex" style="margin-bottom:10px">
+                  <input id="caseFilter" placeholder="快捷过滤用例名称…" style="max-width:320px" />
+                  <button class="btn" id="btnCaseFilter" type="button">过滤</button>
+                </div>
+                <div class="cols-4" id="detailCaseGrid">
+                  <div>
+                    <div class="muted" style="margin-bottom:6px">用例</div>
+                    <div class="mini active" data-case-name="标准方案计算正确" data-case-id="TC-001" data-tags="计算报价 总价"><div class="id">TC-001 · P0</div><div class="name">标准方案计算正确</div></div>
+                    <div class="mini" data-case-name="优惠折扣计算正确" data-case-id="TC-002" data-tags="折扣 优惠"><div class="id">TC-002 · P0</div><div class="name">优惠折扣计算正确</div></div>
+                    <div class="mini" data-case-name="金额为负拦截" data-case-id="TC-003" data-tags="金额 边界"><div class="id">TC-003 · P1</div><div class="name">金额为负拦截</div></div>
+                    <div class="mini" data-case-name="数量为0边界" data-case-id="TC-004" data-tags="数量 边界"><div class="id">TC-004 · P1</div><div class="name">数量为0边界</div></div>
+                  </div>
+                  <div>
+                    <div class="muted" style="margin-bottom:6px">脚本</div>
+                    <div class="mini active" data-case-name="quote_normal.json" data-tags="api calc"><div class="id">API</div><div class="name">quote_normal.json</div></div>
+                    <div class="mini" data-case-name="quote_discount.json" data-tags="api discount"><div class="id">API</div><div class="name">quote_discount.json</div></div>
+                  </div>
+                  <div>
+                    <div class="muted" style="margin-bottom:6px">数据</div>
+                    <div class="mini active" data-case-name="标准装修方案" data-tags="数据"><div class="id">DT-001</div><div class="name">标准装修方案</div></div>
+                    <div class="mini" data-case-name="优惠活动数据" data-tags="折扣 数据"><div class="id">DT-002</div><div class="name">优惠活动数据</div></div>
+                  </div>
+                  <div>
+                    <div class="muted" style="margin-bottom:6px">执行</div>
+                    <div class="mini active" data-case-name="近3次通过" data-tags="执行"><div class="name">近3次 ✓ ✓ ✓</div></div>
+                    <div class="mini" data-case-name="近3次有失败" data-tags="执行"><div class="name">近3次 ✓ × ✓</div></div>
+                  </div>
+                </div>
+                <div class="muted mt-8" id="detailFilterEmpty" style="display:none">没有匹配的用例，请调整搜索词。</div>
+              </div>
+            </div>
+            <div class="card mt-12">
+              <div class="card-hd"><span>技术映射</span></div>
+              <div class="card-bd tech-grid">
+                <div class="tech-box"><h4>应用 / 服务</h4><span class="chip">quote-service</span></div>
+                <div class="tech-box"><h4>接口</h4><span class="chip" id="detailApiChip">POST /api/quote/calc</span></div>
+                <div class="tech-box"><h4>规则</h4><span class="chip">R002 数量价</span><span class="chip">R014 四舍五入</span></div>
+                <div class="tech-box"><h4>代码</h4><span class="chip">QuoteService#calculate()</span></div>
+              </div>
+            </div>
+            <div class="card mt-12" id="detailAssetHitsCard" style="display:none">
+              <div class="card-hd"><span>正式资产库相关命中</span><span class="tag blue" id="detailAssetHitCount">0</span></div>
+              <div class="card-bd" id="detailAssetHits"></div>
+            </div>
+          </div>
+
+          <div class="card" style="padding:14px">
+            <div style="font-weight:650;margin-bottom:10px">功能点总览</div>
+            <div class="flex" style="gap:12px;align-items:center">
+              <div class="donut"></div>
+              <div class="muted">P0 28%<br />P1 43%<br />P2 19%<br />P3 10%</div>
+            </div>
+            <div class="meta-row mt-12"><span>关联用例</span><strong id="detailLinkedCount">42</strong></div>
+            <div class="meta-row"><span>自动化覆盖</span><strong>78%</strong></div>
+            <div class="bar"><i style="width:78%"></i></div>
+            <button class="btn primary mt-12" style="width:100%" data-view="assets">去正式资产库检索</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. 检索结果 -->
+      <section class="view" id="view-search">
+        <div class="crumb"><a data-view="overview">总览检索</a> / 检索结果</div>
+        <div class="page-hd">
+          <div>
+            <h1>检索结果</h1>
+            <p id="resultSummary">按层级分组展示，避免一次列出全部应用。</p>
+          </div>
+          <button class="btn" data-view="overview">回总览</button>
+        </div>
+
+        <div class="card">
+          <div class="card-hd"><span>分组结果</span><span class="tag" id="resultCount">8 条</span></div>
+          <div class="card-bd" id="searchResults">
+            <div class="result-item">
+              <div>
+                <div class="result-title">领域 · 家装</div>
+                <div class="result-path">下属应用：报价 / 量房 / 设计 · 用例 518</div>
+              </div>
+              <button class="btn" data-quick="家装">查看应用</button>
+            </div>
+            <div class="result-item">
+              <div>
+                <div class="result-title">应用 · 报价</div>
+                <div class="result-path">所属领域：家装 · 业务场景 5 · 功能点 14 · 测试用例 183</div>
+                <div class="chips"><span class="tag">获取报价</span><span class="tag">提交报价</span><span class="tag">报价审核</span></div>
+              </div>
+              <button class="btn primary" data-view="overview">进入应用下钻</button>
+            </div>
+            <div class="result-item">
+              <div>
+                <div class="result-title">应用 · 量房</div>
+                <div class="result-path">所属领域：家装 · 业务场景 6 · 功能点 12 · 测试用例 96</div>
+              </div>
+              <button class="btn" data-quick="量房">进入应用</button>
+            </div>
+            <div class="result-item">
+              <div>
+                <div class="result-title">应用 · 设计</div>
+                <div class="result-path">所属领域：家装 · 业务场景 7 · 功能点 20 · 测试用例 129</div>
+              </div>
+              <button class="btn" data-quick="设计">进入应用</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. 资产导入：知识库 + 历史用例必须都完成才能下一步 -->
+      <section class="view" id="view-import">
+        <div class="path-callout">
+          <strong>当前步骤 1/3</strong>
+          <span>导入历史用例 + 知识库后，才能生成草稿并进入评审</span>
+          <button class="btn" type="button" id="btnDemoBoth" style="margin-left:auto">一键填充演示样例</button>
+        </div>
+        <div class="page-hd">
+          <div>
+            <h1>资产导入</h1>
+            <p class="page-guide">两项都导入后，「生成地图草稿」才会亮起。可用一键演示快速体验。</p>
+          </div>
+          <button class="btn" data-view="overview">回总览</button>
+        </div>
+
+        <div class="card">
+          <div class="card-hd"><span>导入进度门禁</span><span class="tag orange" id="importGateTag">未满足</span></div>
+          <div class="card-bd">
+            <div class="flex">
+              <span class="tag" id="caseStatusTag">历史用例：未导入</span>
+              <span class="tag" id="kbStatusTag">知识库：未导入</span>
+            </div>
+            <div class="hint mt-8" id="importGateHint">请先完成下方两项导入。缺一不可。</div>
+          </div>
+        </div>
+
+        <div class="card mt-12">
+          <div class="card-hd"><span>1. 选择导入目标（仅检索领域 / 应用）</span></div>
+          <div class="card-bd">
+            <div class="filter-row" style="margin-top:0; max-width:none">
+              <div>
+                <label>目标领域</label>
+                <select id="importDomain">
+                  <option>家装</option>
+                  <option>租赁</option>
+                  <option>售后</option>
+                </select>
+              </div>
+              <div>
+                <label>目标应用</label>
+                <select id="importApp">
+                  <option>报价</option>
+                  <option>量房</option>
+                  <option>设计</option>
+                  <option>合同</option>
+                </select>
+              </div>
+            </div>
+            <div class="flex mt-12">
+              <input id="importTargetSearch" placeholder="搜索领域或应用名快速定位" style="max-width:360px" />
+              <button class="btn" id="btnImportLocate">定位</button>
+            </div>
+            <div class="hint" id="importTargetHint">当前导入目标：领域「家装」 / 应用「报价」</div>
+          </div>
+        </div>
+
+        <div class="grid-2 mt-12">
+          <div class="card">
+            <div class="card-hd"><span>2a. 历史用例导入（必填）</span><span class="tag blue">Excel</span></div>
+            <div class="card-bd">
+              <div class="dropzone">
+                <strong>上传历史用例 Excel</strong>
+                将挂到上方选定的领域 / 应用
+                <div class="mt-12"><input type="file" id="caseFile" accept=".xlsx,.xls,.csv" /></div>
+              </div>
+              <table class="table">
+                <thead><tr><th>源列</th><th>映射到</th><th>状态</th></tr></thead>
+                <tbody>
+                  <tr><td>casename</td><td>用例名称</td><td><span class="tag green">已识别</span></td></tr>
+                  <tr><td>step</td><td>步骤</td><td><span class="tag green">已识别</span></td></tr>
+                  <tr><td>expected_results</td><td>预期结果</td><td><span class="tag green">已识别</span></td></tr>
+                </tbody>
+              </table>
+              <div class="mt-12 flex">
+                <button class="btn" id="btnDemoCases" type="button">使用演示样例</button>
+                <button class="btn primary" id="btnImportCases">导入历史用例</button>
+              </div>
+              <div class="muted mt-12" id="caseImportMsg"></div>
+              <div class="preview-box" id="casePreview">尚未导入。可点「使用演示样例」或选择本地 Excel/CSV。</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-hd"><span>2b. 知识库接入（必填）</span><span class="tag green">txt / md</span></div>
+            <div class="card-bd">
+              <div class="dropzone">
+                <strong>上传知识库文件</strong>
+                解析出的场景/功能点/规则，归入选定领域与应用
+                <div class="mt-12"><input type="file" id="kbFile" accept=".txt,.md,.markdown" /></div>
+              </div>
+              <div class="chips">
+                <span class="tag green">业务场景</span>
+                <span class="tag green">功能点</span>
+                <span class="tag green">规则</span>
+                <span class="tag green">状态机</span>
+              </div>
+              <div class="mt-12 flex">
+                <button class="btn" id="btnDemoKb" type="button">使用演示样例</button>
+                <button class="btn primary" id="btnImportKb">导入知识库</button>
+              </div>
+              <div class="muted mt-12" id="kbImportMsg"></div>
+              <div class="preview-box" id="kbPreview">尚未导入。可点「使用演示样例」或选择本地 txt/md。</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card mt-12 import-result" id="importResultCard">
+          <div class="card-hd"><span>导入解析预览</span><span class="tag blue" id="importResultTag">草稿</span></div>
+          <div class="card-bd" id="importResultBody"></div>
+        </div>
+
+        <div class="card mt-12 sticky-actions" id="importNextBar">
+          <div>
+            <div style="font-weight:650">下一步</div>
+            <div class="muted" id="nextStepHint">两项都导入成功后，按钮才会可用。</div>
+          </div>
+          <div class="flex">
+            <button class="btn primary" id="btnGenerateMap" disabled title="需先完成历史用例与知识库导入">生成地图草稿</button>
+            <button class="btn" id="btnGoReview" disabled title="需先完成历史用例与知识库导入">去评审校准</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5. 评审：历史挂载 / 缺口 / 已确认分流 -->
+      <section class="view" id="view-review">
+        <div class="path-callout">
+          <strong>当前步骤 2/3</strong>
+          <span>确认 / 调整后进入正式资产库；缺口可单独处理</span>
+          <button class="btn primary" type="button" id="btnOpenAssetsTop" style="margin-left:auto">查看正式资产库</button>
+        </div>
+        <div class="page-hd">
+          <div>
+            <h1>评审校准</h1>
+            <p class="page-guide" id="reviewPageDesc">完成资产导入并生成地图草稿后，这里会展示真实待评审用例。</p>
+          </div>
+          <button class="btn primary" id="btnBatchConfirm" disabled>批量确认当前结果</button>
+        </div>
+
+        <div class="flow-strip" id="reviewFlowStrip">
+          <div class="flow-step active">
+            <div class="step-no">① 待评审</div>
+            <strong>历史挂载 / 缺口</strong>
+            <div class="step-desc">人工确认、调整或废弃</div>
+          </div>
+          <div class="flow-step clickable" id="flowToAssets" title="查看正式用例地图资产">
+            <div class="step-no">② 确认后</div>
+            <strong>正式用例地图资产</strong>
+            <div class="step-desc">点击进入正式资产库查看</div>
+          </div>
+          <div class="flow-step">
+            <div class="step-no">③ 消费</div>
+            <strong>总览检索 · 回归包</strong>
+            <div class="step-desc">按领域/应用/场景调用</div>
+          </div>
+          <div class="flow-step">
+            <div class="step-no">缺口分支</div>
+            <strong>确认入库 / 废弃</strong>
+            <div class="step-desc">补齐覆盖或关闭缺口</div>
+          </div>
+        </div>
+
+        <div class="grid-4" id="reviewStats">
+          <div class="stat"><div class="label">历史待评审</div><div class="value" id="statHistPending">0</div></div>
+          <div class="stat"><div class="label">缺口待处理</div><div class="value" id="statGapPending">0</div><div class="sub">知识库未覆盖</div></div>
+          <div class="stat clickable" id="statConfirmedCard" title="查看正式资产库">
+            <div class="label">已确认入库</div>
+            <div class="value" id="statConfirmed">0</div>
+            <div class="sub">点击查看正式资产 →</div>
+          </div>
+          <div class="stat"><div class="label">已废弃缺口</div><div class="value" id="statDiscarded">0</div></div>
+        </div>
+
+        <div class="card mt-12">
+          <div class="card-bd">
+            <div class="flex">
+              <select id="reviewApp" style="max-width:160px">
+                <option value="">全部应用</option>
+                <option value="报价">报价</option>
+                <option value="量房">量房</option>
+                <option value="设计">设计</option>
+                <option value="合同">合同</option>
+              </select>
+              <select id="reviewStatus" style="max-width:160px">
+                <option value="" selected>全部状态</option>
+                <option value="待抽检">待抽检</option>
+                <option value="待确认">待确认</option>
+                <option value="已确认">已确认</option>
+                <option value="已废弃">已废弃</option>
+              </select>
+              <input id="reviewKeyword" placeholder="搜用例名 / 功能点 / 场景" style="max-width:280px" />
+              <button class="btn" id="btnReviewFilter">筛选</button>
+              <button class="btn" id="btnOpenAssets" type="button">正式资产库</button>
+            </div>
+            <div class="tab-row mt-12" id="reviewTabs">
+              <button class="tab-btn active" type="button" data-tab="pending">待评审 <span class="tag" id="tabCountPending">0</span></button>
+              <button class="tab-btn" type="button" data-tab="gap">缺口用例 <span class="tag orange" id="tabCountGap">0</span></button>
+              <button class="tab-btn" type="button" data-tab="confirmed">已确认 <span class="tag green" id="tabCountConfirmed">0</span></button>
+              <button class="tab-btn" type="button" data-tab="all">全部</button>
+            </div>
+            <div class="hint" id="reviewFlowHint">点「调整」可改用例内容与功能点；确认后可从提示一键进入正式资产库。</div>
+          </div>
+        </div>
+
+        <div class="card mt-12" id="gapPoolCard">
+          <div class="card-hd collapse-hd" id="gapPoolToggle">
+            <span>缺口用例池（知识库未覆盖） <span class="tag orange" id="gapPoolCount">0</span></span>
+            <button class="btn" type="button" id="gapPoolToggleBtn">收起</button>
+          </div>
+          <div class="card-bd collapse-bd" id="gapPoolBody">
+            <div id="gapPoolList">
+              <div class="muted">生成地图草稿后，这里会单独列出缺口用例。</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card mt-12">
+          <div class="card-hd">
+            <span id="reviewQueueTitle">待评审队列</span>
+            <span class="tag orange" id="reviewQueueCount">0</span>
+          </div>
+          <div class="card-bd" id="reviewQueueList">
+            <div class="muted">尚未生成地图草稿。请先在「资产导入」完成历史用例与知识库导入，再点「生成地图草稿」。</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6. 正式资产库：多维检索入口 -->
+      <section class="view" id="view-assets">
+        <div class="path-callout">
+          <strong>当前步骤 3/3</strong>
+          <span>多维检索正式资产，按需生成回归包</span>
+        </div>
+        <div class="page-hd">
+          <div>
+            <h1>正式用例地图资产</h1>
+            <p class="page-guide" id="assetsPageDesc">评审确认后的正式资产在此按场景 / 功能点 / 接口等维度检索，并可生成回归包。</p>
+          </div>
+          <div class="flex">
+            <button class="btn" data-view="review">回评审校准</button>
+            <button class="btn primary" id="btnBuildRegression" type="button">生成回归包</button>
+          </div>
+        </div>
+        <div class="grid-4">
+          <div class="stat"><div class="label">正式资产总数</div><div class="value" id="assetsTotal">0</div></div>
+          <div class="stat"><div class="label">历史校准入库</div><div class="value" id="assetsHist">0</div></div>
+          <div class="stat"><div class="label">缺口补齐入库</div><div class="value" id="assetsGap">0</div></div>
+          <div class="stat"><div class="label">当前命中</div><div class="value" id="assetsHit">0</div><div class="sub">多维检索结果</div></div>
+        </div>
+
+        <div class="card mt-12">
+          <div class="card-hd"><span>多维检索</span><span class="tag blue">正式资产专用</span></div>
+          <div class="card-bd">
+            <div class="filter-toolbar">
+              <div class="form-field" style="margin:0">
+                <label>关键词（可搜场景 / 功能点 / 接口 / 用例名）</label>
+                <input id="assetsKeyword" placeholder="例如：计算报价、/api/quote/calc、获取报价" />
+              </div>
+              <button class="btn primary" id="btnAssetsFilter" type="button">检索</button>
+              <button class="btn" id="btnAssetsClear" type="button">清空</button>
+            </div>
+            <div class="quick-chips" id="assetsQuickChips"></div>
+            <div class="collapse-hd mt-12" id="assetsMoreToggle">
+              <span class="muted">更多筛选：领域 / 应用 / 场景 / 功能点 / 接口 / 来源</span>
+              <button class="btn" type="button" id="assetsMoreToggleBtn">展开</button>
+            </div>
+            <div class="collapse-bd hidden mt-12" id="assetsMoreBody">
+              <div class="form-grid">
+                <div class="form-field">
+                  <label>检索维度</label>
+                  <select id="assetsDim">
+                    <option value="all">综合（关键词）</option>
+                    <option value="scene">业务场景</option>
+                    <option value="feature">功能点</option>
+                    <option value="api">接口</option>
+                    <option value="app">应用</option>
+                    <option value="domain">领域</option>
+                  </select>
+                </div>
+                <div class="form-field">
+                  <label>领域</label>
+                  <select id="assetsDomain">
+                    <option value="">全部领域</option>
+                    <option>家装</option>
+                    <option>租赁</option>
+                    <option>售后</option>
+                  </select>
+                </div>
+                <div class="form-field">
+                  <label>应用</label>
+                  <select id="assetsApp">
+                    <option value="">全部应用</option>
+                    <option>报价</option>
+                    <option>量房</option>
+                    <option>设计</option>
+                    <option>合同</option>
+                  </select>
+                </div>
+                <div class="form-field">
+                  <label>业务场景</label>
+                  <select id="assetsScene">
+                    <option value="">全部场景</option>
+                  </select>
+                </div>
+                <div class="form-field">
+                  <label>功能点</label>
+                  <select id="assetsFeature">
+                    <option value="">全部功能点</option>
+                  </select>
+                </div>
+                <div class="form-field">
+                  <label>接口</label>
+                  <select id="assetsApi">
+                    <option value="">全部接口</option>
+                  </select>
+                </div>
+                <div class="form-field">
+                  <label>来源</label>
+                  <select id="assetsSource">
+                    <option value="">全部来源</option>
+                    <option value="历史挂载">历史校准入库</option>
+                    <option value="AI缺口">缺口补齐入库</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div class="hint mt-8" id="assetsSearchHint">先输入关键词检索；需要精确条件时再展开更多筛选。</div>
+          </div>
+        </div>
+
+        <div class="card mt-12" id="regressionCard" style="display:none">
+          <div class="card-hd"><span>回归包预览</span><span class="tag green" id="regressionCount">0</span></div>
+          <div class="card-bd" id="regressionBody"></div>
+        </div>
+
+        <div class="card mt-12">
+          <div class="card-hd">
+            <span>正式资产列表</span>
+            <span class="tag green" id="assetsListCount">0</span>
+          </div>
+          <div class="card-bd" id="assetsList">
+            <div class="muted">暂无正式资产。请先在「评审校准」确认用例。</div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal-mask" id="adjustModal">
+    <div class="modal">
+      <div class="modal-hd">
+        <span>调整评审项</span>
+        <button class="btn" type="button" id="btnAdjustClose">关闭</button>
+      </div>
+      <div class="modal-bd">
+        <div class="adjust-block">
+          <div class="section-title">① 用例内容</div>
+          <div class="form-grid">
+            <div class="form-field full">
+              <label>用例名称</label>
+              <input id="adjustCaseName" />
+            </div>
+            <div class="form-field full">
+              <label>步骤</label>
+              <textarea id="adjustStep" rows="3"></textarea>
+            </div>
+            <div class="form-field full">
+              <label>预期结果</label>
+              <textarea id="adjustExpected" rows="3"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="adjust-block">
+          <div class="section-title">② 功能点挂载</div>
+          <div class="form-grid">
+            <div class="form-field">
+              <label>业务场景</label>
+              <input id="adjustScene" list="adjustSceneOptions" />
+              <datalist id="adjustSceneOptions"></datalist>
+            </div>
+            <div class="form-field">
+              <label>功能点</label>
+              <input id="adjustFeature" list="adjustFeatureOptions" />
+              <datalist id="adjustFeatureOptions"></datalist>
+            </div>
+          </div>
+          <div class="hint mt-8">功能点决定该用例挂到地图的哪个节点；用例内容决定执行与验收信息。</div>
+        </div>
+      </div>
+      <div class="modal-ft">
+        <button class="btn" type="button" id="btnAdjustCancel">取消</button>
+        <button class="btn primary" type="button" id="btnAdjustSave">保存调整</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-wrap" id="toastWrap"></div>
+
+  <script>
+    const hint = document.getElementById('searchHint');
+    const resultSummary = document.getElementById('resultSummary');
+
+    function currentFilterText() {
+      const domain = document.getElementById('filterDomain').value || '全部领域';
+      const app = document.getElementById('filterApp').value || '全部应用';
+      const kw = document.getElementById('searchInput').value.trim() || '无关键词';
+      return '关键词「' + kw + '」 · 领域：' + domain + ' · 应用：' + app;
+    }
+
+    function refreshHint() {
+      hint.textContent = '仅支持领域/应用检索。当前：' + currentFilterText();
+      if (resultSummary) resultSummary.textContent = '检索条件：' + currentFilterText() + '（结果仅含领域与应用）';
+      const domain = document.getElementById('importDomain').value;
+      const app = document.getElementById('importApp').value;
+      document.getElementById('importTargetHint').textContent =
+        '当前导入目标：领域「' + domain + '」 / 应用「' + app + '」';
+    }
+
+    function switchView(viewId) {
+      document.querySelectorAll('.view').forEach((n) => n.classList.remove('active'));
+      document.querySelectorAll('.menu-btn').forEach((n) => n.classList.remove('active'));
+      const view = document.getElementById('view-' + viewId);
+      if (view) view.classList.add('active');
+      document.querySelectorAll('.menu-btn').forEach((btn) => {
+        if (btn.dataset.view === viewId) btn.classList.add('active');
+      });
+      const globalSearch = document.getElementById('globalSearch');
+      // 搜索条已内置于总览页；随 view-overview 显隐，无需再单独控制
+      if (globalSearch) globalSearch.classList.toggle('hidden', viewId !== 'overview');
+      refreshHint();
+      if (viewId === 'review' && typeof renderReviewQueue === 'function') renderReviewQueue();
+      if (viewId === 'assets' && typeof renderAssetsPage === 'function') renderAssetsPage();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function runSearch(gotoResults) {
+      refreshHint();
+      if (gotoResults) switchView('search');
+    }
+
+    document.querySelectorAll('[data-view]').forEach((el) => {
+      el.addEventListener('click', () => switchView(el.dataset.view));
+    });
+
+    document.getElementById('btnSearch').addEventListener('click', () => runSearch(true));
+    document.getElementById('searchInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') runSearch(true);
+    });
+    document.getElementById('btnClear').addEventListener('click', () => {
+      document.getElementById('searchInput').value = '';
+      document.getElementById('filterDomain').value = '';
+      document.getElementById('filterApp').value = '';
+      refreshHint();
+    });
+
+    ['filterDomain', 'filterApp'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('change', refreshHint);
+    });
+
+    document.querySelectorAll('[data-quick]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const value = btn.getAttribute('data-quick');
+        document.getElementById('searchInput').value = value;
+        if (['家装', '租赁', '售后'].includes(value)) {
+          document.getElementById('filterDomain').value = value;
+          document.getElementById('filterApp').value = '';
+          document.getElementById('searchType').value = 'domain';
+        } else if (['报价', '量房', '设计', '合同', '施工'].includes(value)) {
+          document.getElementById('filterDomain').value = '家装';
+          document.getElementById('filterApp').value = value;
+          document.getElementById('searchType').value = 'app';
+        }
+        runSearch(true);
+      });
+    });
+
+    document.getElementById('btnImportCases').addEventListener('click', () => {
+      const file = document.getElementById('caseFile').files[0];
+      const target = document.getElementById('importTargetHint').textContent;
+      if (!file) {
+        document.getElementById('caseImportMsg').textContent = '请先选择 Excel/CSV 文件，或点「使用演示样例」。';
+        return;
+      }
+      const lowerName = file.name.toLowerCase();
+      if (lowerName.endsWith('.csv') || lowerName.endsWith('.txt')) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          ingestCaseText(file.name, String(reader.result || ''), target);
+        };
+        reader.readAsText(file);
+        return;
+      }
+      const placeholderRows = buildPlaceholderCases(file.name, Math.max(5, Math.round(file.size / 220)));
+      markCasesImported(file.name, placeholderRows, target);
+    });
+
+    document.getElementById('btnImportKb').addEventListener('click', () => {
+      const file = document.getElementById('kbFile').files[0];
+      const target = document.getElementById('importTargetHint').textContent;
+      if (!file) {
+        document.getElementById('kbImportMsg').textContent = '请先选择知识库文件，或点「使用演示样例」。';
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        ingestKbText(file.name, String(reader.result || ''), target);
+      };
+      reader.readAsText(file);
+    });
+
+    const DEMO_CASES_CSV =
+      'casename,step,expected_results,scene\n' +
+      'TC-QUOTE-001 数量价汇总,输入数量与单价,总价=数量×单价,获取报价\n' +
+      'TC-QUOTE-002 优惠折扣校验,选择折扣规则,折扣后总价正确,获取报价\n' +
+      'TC-QUOTE-088 数量价总价计算,修改行项目数量,页面刷新总价,获取报价\n' +
+      'TC-AUDIT-003 审核拒绝回退,审核驳回,状态回退待提交,报价审核\n' +
+      'TC-SUBMIT-011 提交报价必填,清空联系人提交,提示必填项,提交报价\n';
+
+    const DEMO_KB_MD =
+      '# 家装报价知识库（演示）\n\n' +
+      '## 业务场景\n- 获取报价\n- 提交报价\n- 报价审核\n\n' +
+      '## 功能点\n- 计算报价\n- 优惠规则\n- 提交审核\n- 物料自动带出\n- 价格来源识别\n\n' +
+      '## 规则\n1. 总价 = 数量 × 单价 - 优惠\n2. 审核拒绝后回退到待提交\n3. 提交前联系人必填\n4. 同一报价单禁止重复提交\n5. 优惠券过期不可叠加使用\n';
+
+    const importState = {
+      cases: false,
+      knowledge: false,
+      caseMeta: null,
+      kbMeta: null,
+      caseRows: [],
+      kbText: '',
+      kbParsed: null
+    };
+
+    const reviewState = {
+      generated: false,
+      items: [],
+      discarded: [],
+      filterApp: '',
+      filterStatus: '',
+      filterKeyword: '',
+      activeTab: 'pending',
+      lastConfirmMsg: ''
+    };
+
+    function currentImportTarget() {
+      return {
+        domain: document.getElementById('importDomain').value,
+        app: document.getElementById('importApp').value,
+        text: document.getElementById('importTargetHint').textContent
+      };
+    }
+
+    function splitCsvLine(line) {
+      const cells = [];
+      let current = '';
+      let inQuotes = false;
+      for (let index = 0; index < line.length; index += 1) {
+        const char = line[index];
+        if (char === '"') {
+          inQuotes = !inQuotes;
+          continue;
+        }
+        if (char === ',' && !inQuotes) {
+          cells.push(current.trim());
+          current = '';
+          continue;
+        }
+        current += char;
+      }
+      cells.push(current.trim());
+      return cells;
+    }
+
+    function parseCaseCsv(text) {
+      const lines = text.split(/\r?\n/).filter((line) => line.trim());
+      if (!lines.length) return [];
+      const headers = splitCsvLine(lines[0]).map((header) => header.toLowerCase());
+      const hasHeader = headers.some((header) =>
+        ['casename', 'case_name', '用例名称', '用例名', 'name', 'title'].includes(header)
+      );
+      const startIndex = hasHeader ? 1 : 0;
+      const nameIdx = hasHeader
+        ? Math.max(0, headers.findIndex((header) =>
+          ['casename', 'case_name', '用例名称', '用例名', 'name', 'title'].includes(header)
+        ))
+        : 0;
+      const stepIdx = hasHeader
+        ? headers.findIndex((header) => ['step', 'steps', '步骤'].includes(header))
+        : 1;
+      const expectIdx = hasHeader
+        ? headers.findIndex((header) =>
+          ['expected_results', 'expected', '预期结果', '期望结果'].includes(header)
+        )
+        : 2;
+      const sceneIdx = hasHeader
+        ? headers.findIndex((header) => ['scene', '场景', '业务场景'].includes(header))
+        : 3;
+
+      return lines.slice(startIndex).map((line, rowIndex) => {
+        const cells = splitCsvLine(line);
+        const caseName = cells[nameIdx] || ('未命名用例-' + (rowIndex + 1));
+        return {
+          caseName: caseName,
+          step: stepIdx >= 0 ? (cells[stepIdx] || '') : '',
+          expected: expectIdx >= 0 ? (cells[expectIdx] || '') : '',
+          scene: sceneIdx >= 0 ? (cells[sceneIdx] || '') : ''
+        };
+      }).filter((row) => row.caseName);
+    }
+
+    function buildPlaceholderCases(fileName, rowCount) {
+      const count = Math.min(20, Math.max(3, rowCount));
+      const rows = [];
+      for (let index = 1; index <= count; index += 1) {
+        rows.push({
+          caseName: 'TC-IMPORT-' + String(index).padStart(3, '0') + ' ' + fileName.replace(/\.[^.]+$/, '') + '-' + index,
+          step: '待从 Excel 解析步骤',
+          expected: '待从 Excel 解析预期',
+          scene: ''
+        });
+      }
+      return rows;
+    }
+
+    function parseKnowledge(text) {
+      const scenes = [];
+      const features = [];
+      const rules = [];
+      const sectionPattern = /^##\s*(.+)\s*$/gm;
+      const sections = [];
+      let match;
+      while ((match = sectionPattern.exec(text)) !== null) {
+        sections.push({ title: match[1].trim(), start: match.index + match[0].length });
+      }
+      for (let index = 0; index < sections.length; index += 1) {
+        const section = sections[index];
+        const end = index + 1 < sections.length ? sections[index + 1].start : text.length;
+        const body = text.slice(section.start, end);
+        const items = body
+          .split(/\r?\n/)
+          .map((line) => line.replace(/^[-*+\d.、)\s]+/, '').trim())
+          .filter((line) => line && !line.startsWith('#'));
+        const title = section.title;
+        if (/场景/.test(title)) scenes.push(...items);
+        else if (/功能/.test(title)) features.push(...items);
+        else if (/规则|状态/.test(title)) rules.push(...items);
+      }
+      return {
+        scenes: uniqueList(scenes).slice(0, 12),
+        features: uniqueList(features).slice(0, 12),
+        rules: uniqueList(rules).slice(0, 12)
+      };
+    }
+
+    function uniqueList(items) {
+      const seen = new Set();
+      const result = [];
+      items.forEach((item) => {
+        if (!item || seen.has(item)) return;
+        seen.add(item);
+        result.push(item);
+      });
+      return result;
+    }
+
+    function guessScene(caseRow, kbParsed, appName) {
+      if (caseRow.scene) return caseRow.scene;
+      const haystack = (caseRow.caseName + ' ' + caseRow.step + ' ' + caseRow.expected).toLowerCase();
+      const hit = (kbParsed.scenes || []).find((scene) => haystack.includes(scene.toLowerCase().slice(0, 2)));
+      if (hit) return hit;
+      if (/审核|驳回|回退/.test(haystack)) return '报价审核';
+      if (/提交|必填/.test(haystack)) return '提交报价';
+      return (kbParsed.scenes && kbParsed.scenes[0]) || (appName + '默认场景');
+    }
+
+    function guessFeature(caseRow, kbParsed, sceneName) {
+      const haystack = (caseRow.caseName + ' ' + caseRow.step + ' ' + caseRow.expected).toLowerCase();
+      const hit = (kbParsed.features || []).find((feature) => {
+        const token = feature.toLowerCase().replace(/\s/g, '');
+        return token && haystack.replace(/\s/g, '').includes(token.slice(0, Math.min(4, token.length)));
+      });
+      if (hit) return hit;
+      if (/优惠|折扣/.test(haystack)) return '优惠规则';
+      if (/审核|驳回|回退/.test(haystack)) return '提交审核';
+      if (/总价|数量|单价|计算/.test(haystack)) return '计算报价';
+      return (kbParsed.features && kbParsed.features[0]) || (sceneName + '-功能点');
+    }
+
+    function calcConfidence(caseRow, featureName, sceneName) {
+      let score = 62;
+      if (caseRow.scene) score += 10;
+      if (caseRow.step) score += 8;
+      if (caseRow.expected) score += 8;
+      if (featureName && caseRow.caseName.includes(featureName.slice(0, 2))) score += 6;
+      if (sceneName && caseRow.caseName.includes(sceneName.slice(0, 2))) score += 4;
+      return Math.min(96, score);
+    }
+
+    function historyBagText(items) {
+      return items
+        .filter((item) => item.sourceType === '历史挂载')
+        .map((item) => (item.caseName + ' ' + item.step + ' ' + item.expected + ' ' + item.feature + ' ' + item.scene).toLowerCase())
+        .join(' || ');
+    }
+
+    function isRuleCovered(ruleText, bag) {
+      const normalized = ruleText.toLowerCase().replace(/\s/g, '');
+      // 严格覆盖：整句关键片段命中，或至少 2 个实义词命中
+      const stopWords = new Set(['之后', '之前', '然后', '以及', '并且', '或者', '可以', '需要', '进行', '对应', '校验']);
+      const tokens = ruleText
+        .toLowerCase()
+        .split(/[\s=×+\-−－，,。；;：:、（）()【】\[\]]+/)
+        .map((token) => token.trim())
+        .filter((token) => token.length >= 2 && !stopWords.has(token));
+      if (normalized.length >= 6 && bag.replace(/\s/g, '').includes(normalized.slice(0, Math.min(12, normalized.length)))) {
+        return true;
+      }
+      const hitCount = tokens.filter((token) => bag.includes(token)).length;
+      return hitCount >= 2 && tokens.length > 0 && hitCount / tokens.length >= 0.6;
+    }
+
+    function isFeatureCovered(featureName, items) {
+      return items.some((item) => {
+        if (item.sourceType !== '历史挂载') return false;
+        const bag = (item.caseName + item.feature + item.step + item.expected).toLowerCase();
+        const token = featureName.toLowerCase().replace(/\s/g, '');
+        return item.feature === featureName || (token && bag.replace(/\s/g, '').includes(token));
+      });
+    }
+
+    function ingestCaseText(fileName, text, targetText) {
+      const rows = parseCaseCsv(text);
+      if (!rows.length) {
+        document.getElementById('caseImportMsg').textContent = '未解析到用例行，请检查 CSV 表头（casename/step/expected_results）。';
+        return;
+      }
+      markCasesImported(fileName, rows, targetText);
+    }
+
+    function ingestKbText(fileName, text, targetText) {
+      markKbImported(fileName, text, targetText);
+    }
+
+    function markCasesImported(fileName, rows, targetText) {
+      importState.cases = true;
+      importState.caseRows = rows;
+      importState.caseMeta = {
+        fileName: fileName,
+        rowCount: rows.length,
+        preview: rows.slice(0, 4).map((row) => row.caseName + ',' + row.step + ',' + row.expected).join('\n')
+      };
+      reviewState.generated = false;
+      reviewState.items = [];
+      reviewState.discarded = [];
+      document.getElementById('caseImportMsg').textContent =
+        '已导入「' + fileName + '」，解析 ' + rows.length + ' 条用例 · ' + targetText;
+      document.getElementById('casePreview').innerHTML =
+        '<strong>' + fileName + '</strong>（' + rows.length + ' 条）\n' + importState.caseMeta.preview;
+      updateImportGate();
+      renderReviewQueue();
+    }
+
+    function markKbImported(fileName, text, targetText) {
+      const parsed = parseKnowledge(text);
+      importState.knowledge = true;
+      importState.kbText = text;
+      importState.kbParsed = parsed;
+      importState.kbMeta = {
+        fileName: fileName,
+        charCount: text.length,
+        preview: [
+          parsed.scenes.length ? '场景：' + parsed.scenes.join('、') : '',
+          parsed.features.length ? '功能点：' + parsed.features.join('、') : '',
+          parsed.rules.length ? '规则：' + parsed.rules.slice(0, 3).join('；') : ''
+        ].filter(Boolean).join('\n') || text.slice(0, 280)
+      };
+      reviewState.generated = false;
+      reviewState.items = [];
+      reviewState.discarded = [];
+      document.getElementById('kbImportMsg').textContent =
+        '已导入「' + fileName + '」，' + text.length + ' 字符 · 场景 ' + parsed.scenes.length +
+        ' / 功能点 ' + parsed.features.length + ' / 规则 ' + parsed.rules.length + ' · ' + targetText;
+      document.getElementById('kbPreview').innerHTML =
+        '<strong>' + fileName + '</strong>\n' + importState.kbMeta.preview;
+      updateImportGate();
+      renderReviewQueue();
+    }
+
+
+    function guessApi(featureName, appName) {
+      const feature = String(featureName || '');
+      const app = String(appName || 'quote');
+      if (/计算报价|数量|单价|总价/.test(feature)) return 'POST /api/quote/calc';
+      if (/优惠|折扣|券/.test(feature)) return 'POST /api/quote/discount';
+      if (/提交审核|审核/.test(feature)) return 'POST /api/quote/audit';
+      if (/参数校验|提交|幂等/.test(feature)) return 'POST /api/quote/submit';
+      if (/物料|带出/.test(feature)) return 'GET /api/quote/materials';
+      if (/价格来源|识别/.test(feature)) return 'GET /api/quote/price-source';
+      if (/量房/.test(app)) return 'POST /api/measure/save';
+      if (/设计/.test(app)) return 'POST /api/design/save';
+      return 'POST /api/' + encodeURIComponent(app) + '/action';
+    }
+
+    function generateReviewQueue() {
+      const target = currentImportTarget();
+      const kbParsed = importState.kbParsed || { scenes: [], features: [], rules: [] };
+      const items = [];
+
+      importState.caseRows.forEach((caseRow, index) => {
+        const sceneName = guessScene(caseRow, kbParsed, target.app);
+        const featureName = guessFeature(caseRow, kbParsed, sceneName);
+        const confidence = calcConfidence(caseRow, featureName, sceneName);
+        items.push({
+          id: 'hist-' + index,
+          sourceType: '历史挂载',
+          caseName: caseRow.caseName,
+          domain: target.domain,
+          app: target.app,
+          scene: sceneName,
+          feature: featureName,
+          step: caseRow.step,
+          expected: caseRow.expected,
+          confidence: confidence,
+          status: confidence >= 80 ? '待确认' : '待抽检',
+          destination: '',
+          gapReason: '',
+          api: guessApi(featureName, target.app)
+        });
+      });
+
+      const bag = historyBagText(items);
+      let gapIndex = 1;
+
+      (kbParsed.rules || []).forEach((ruleText) => {
+        if (isRuleCovered(ruleText, bag)) return;
+        const sceneName = /审核|回退|驳回/.test(ruleText)
+          ? '报价审核'
+          : (/提交|必填|联系人/.test(ruleText) ? '提交报价' : ((kbParsed.scenes && kbParsed.scenes[0]) || '获取报价'));
+        const featureName = /优惠|折扣/.test(ruleText)
+          ? '优惠规则'
+          : (/审核|回退/.test(ruleText) ? '提交审核' : ((kbParsed.features && kbParsed.features[0]) || '计算报价'));
+        items.push({
+          id: 'gap-rule-' + gapIndex,
+          sourceType: 'AI缺口',
+          caseName: 'GAP-' + String(gapIndex).padStart(3, '0') + ' 规则覆盖：' + ruleText.slice(0, 18),
+          domain: target.domain,
+          app: target.app,
+          scene: sceneName,
+          feature: featureName,
+          step: '补齐知识库规则对应校验步骤',
+          expected: ruleText,
+          confidence: 0,
+          status: '待确认',
+          destination: '',
+          gapReason: '规则未覆盖',
+          api: guessApi(featureName, target.app)
+        });
+        gapIndex += 1;
+      });
+
+      (kbParsed.features || []).forEach((featureName) => {
+        if (isFeatureCovered(featureName, items)) return;
+        const sceneName = (kbParsed.scenes && kbParsed.scenes[0]) || '获取报价';
+        items.push({
+          id: 'gap-feat-' + gapIndex,
+          sourceType: 'AI缺口',
+          caseName: 'GAP-' + String(gapIndex).padStart(3, '0') + ' 功能点缺口：' + featureName,
+          domain: target.domain,
+          app: target.app,
+          scene: sceneName,
+          feature: featureName,
+          step: '为功能点补充至少 1 条主路径用例',
+          expected: '覆盖功能点「' + featureName + '」的核心校验',
+          confidence: 0,
+          status: '待确认',
+          destination: '',
+          gapReason: '功能点无历史用例',
+          api: guessApi(featureName, target.app)
+        });
+        gapIndex += 1;
+      });
+
+      // 演示保障：若仍无缺口，至少生成 1 条明确缺口
+      if (!items.some((item) => item.sourceType === 'AI缺口')) {
+        items.push({
+          id: 'gap-fallback-1',
+          sourceType: 'AI缺口',
+          caseName: 'GAP-001 并发提交报价幂等校验',
+          domain: target.domain,
+          app: target.app,
+          scene: '提交报价',
+          feature: '参数校验',
+          step: '同一报价单连续提交两次',
+          expected: '第二次提交被幂等拦截，不产生重复单据',
+          confidence: 0,
+          status: '待确认',
+          destination: '',
+          gapReason: '知识库场景无对应历史用例',
+          api: guessApi('参数校验', target.app)
+        });
+      }
+
+      reviewState.generated = true;
+      reviewState.items = items;
+      reviewState.discarded = [];
+      reviewState.activeTab = 'pending';
+      document.getElementById('reviewApp').value = target.app;
+      reviewState.filterApp = target.app;
+      reviewState.filterStatus = '';
+      document.getElementById('reviewStatus').value = '';
+      document.getElementById('reviewKeyword').value = '';
+      reviewState.filterKeyword = '';
+      document.querySelectorAll('#reviewTabs .tab-btn').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.tab === 'pending');
+      });
+      const histCount = items.filter((item) => item.sourceType === '历史挂载').length;
+      const gapCount = items.filter((item) => item.sourceType === 'AI缺口').length;
+      document.getElementById('reviewPageDesc').textContent =
+        '来自「' + target.domain + ' / ' + target.app + '」：历史挂载 ' + histCount +
+        ' 条，缺口 ' + gapCount + ' 条。确认后进入正式用例地图资产。';
+      renderReviewQueue();
+    }
+
+    function matchesFilters(item) {
+      if (reviewState.filterApp && item.app !== reviewState.filterApp) return false;
+      if (reviewState.filterStatus && item.status !== reviewState.filterStatus) return false;
+      if (reviewState.filterKeyword) {
+        const keyword = reviewState.filterKeyword.toLowerCase();
+        const bag = (item.caseName + ' ' + item.feature + ' ' + item.scene + ' ' + item.expected + ' ' + (item.gapReason || '')).toLowerCase();
+        if (!bag.includes(keyword)) return false;
+      }
+      return true;
+    }
+
+    function filteredReviewItems() {
+      return reviewState.items.filter(matchesFilters);
+    }
+
+    function itemsByTab(tab) {
+      const all = filteredReviewItems();
+      if (tab === 'gap') return all.filter((item) => item.sourceType === 'AI缺口' && item.status !== '已确认' && item.status !== '已废弃');
+      if (tab === 'confirmed') return all.filter((item) => item.status === '已确认');
+      if (tab === 'pending') {
+        return all.filter((item) => item.status !== '已确认' && item.status !== '已废弃');
+      }
+      return all;
+    }
+
+    function renderItemRow(item, options) {
+      const showDestination = options && options.showDestination;
+      const readonly = options && options.readonly;
+      const confText = item.sourceType === 'AI缺口' ? ('缺口 · ' + (item.gapReason || '未覆盖')) : ('置信度 ' + item.confidence);
+      const primaryLabel = item.sourceType === 'AI缺口'
+        ? (item.status === '已确认' ? '已入库' : '确认入库')
+        : (item.status === '已确认' ? '已入库' : '确认');
+      const disabled = (item.status === '已确认' || item.status === '已废弃' || readonly) ? ' disabled' : '';
+      const actions = readonly
+        ? '<button class="btn" data-action="view-asset">查看</button>'
+        : (
+          '<button class="btn primary" data-action="confirm"' + disabled + '>' + primaryLabel + '</button>' +
+          '<button class="btn" data-action="adjust"' + disabled + '>调整</button>' +
+          (item.sourceType === 'AI缺口'
+            ? '<button class="btn" data-action="discard"' + disabled + '>废弃</button>'
+            : '')
+        );
+      return (
+        '<div class="list-row" data-id="' + item.id + '">' +
+          '<div>' +
+            '<div class="result-title">' + escapeHtml(item.caseName) +
+              ' <span class="tag' + (item.sourceType === 'AI缺口' ? ' orange' : ' blue') + '">' +
+              item.sourceType + '</span> <span class="tag">' + item.status + '</span></div>' +
+            '<div class="result-path">' +
+              escapeHtml(item.domain + ' / ' + item.app + ' / ' + item.scene + ' / ' + item.feature) +
+              (item.api ? (' · ' + escapeHtml(item.api)) : '') +
+              ' · ' + confText +
+            '</div>' +
+            (item.step || item.expected
+              ? '<div class="muted mt-8">步骤：' + escapeHtml(item.step || '-') +
+                '｜预期：' + escapeHtml(item.expected || '-') + '</div>'
+              : '') +
+            (showDestination && item.destination
+              ? '<div class="dest-banner">流向：' + escapeHtml(item.destination) +
+                ' <a class="link" data-action="goto-assets">打开正式资产库</a></div>'
+              : '') +
+          '</div>' +
+          '<div class="actions-col">' + actions + '</div>' +
+        '</div>'
+      );
+    }
+
+    function renderReviewQueue() {
+      const list = document.getElementById('reviewQueueList');
+      const countTag = document.getElementById('reviewQueueCount');
+      const title = document.getElementById('reviewQueueTitle');
+      const batchBtn = document.getElementById('btnBatchConfirm');
+      const gapList = document.getElementById('gapPoolList');
+      const gapCount = document.getElementById('gapPoolCount');
+      const flowHint = document.getElementById('reviewFlowHint');
+
+      const histPending = reviewState.items.filter((item) => item.sourceType === '历史挂载' && item.status !== '已确认').length;
+      const gapPending = reviewState.items.filter((item) => item.sourceType === 'AI缺口' && item.status !== '已确认' && item.status !== '已废弃').length;
+      const confirmed = reviewState.items.filter((item) => item.status === '已确认').length;
+      const discarded = reviewState.discarded.length + reviewState.items.filter((item) => item.status === '已废弃').length;
+
+      document.getElementById('statHistPending').textContent = String(histPending);
+      document.getElementById('statGapPending').textContent = String(gapPending);
+      document.getElementById('statConfirmed').textContent = String(confirmed);
+      document.getElementById('statDiscarded').textContent = String(discarded);
+      const tabPending = document.getElementById('tabCountPending');
+      const tabGap = document.getElementById('tabCountGap');
+      const tabConfirmed = document.getElementById('tabCountConfirmed');
+      if (tabPending) tabPending.textContent = String(histPending + gapPending);
+      if (tabGap) tabGap.textContent = String(gapPending);
+      if (tabConfirmed) tabConfirmed.textContent = String(confirmed);
+      updateNavBadges();
+      // 缺口池：有缺口时默认展开一次提醒，无缺口则收起
+      const gapBody = document.getElementById('gapPoolBody');
+      const gapBtn = document.getElementById('gapPoolToggleBtn');
+      if (gapBody && gapBtn && reviewState.generated) {
+        if (gapPending > 0 && reviewState.activeTab === 'gap') {
+          gapBody.classList.remove('hidden');
+          gapBtn.textContent = '收起';
+        }
+      }
+
+      if (!reviewState.generated) {
+        title.textContent = '待评审队列';
+        countTag.textContent = '0';
+        countTag.className = 'tag orange';
+        batchBtn.disabled = true;
+        list.innerHTML = '<div class="muted">尚未生成地图草稿。请先在「资产导入」完成历史用例与知识库导入，再点「生成地图草稿」。</div>';
+        gapCount.textContent = '0';
+        gapList.innerHTML = '<div class="muted">生成地图草稿后，这里会单独列出缺口用例。</div>';
+        return;
+      }
+
+      const pendingOrAll = itemsByTab(reviewState.activeTab);
+      const gapItems = reviewState.items.filter((item) =>
+        item.sourceType === 'AI缺口' && item.status !== '已确认' && item.status !== '已废弃' && matchesFilters(item)
+      );
+
+      const tabLabel = ({
+        pending: '待评审',
+        gap: '缺口用例',
+        confirmed: '已确认入库',
+        all: '全部'
+      })[reviewState.activeTab] || '待评审';
+      title.textContent = tabLabel + '（' + (reviewState.filterApp || '全部应用') + '）';
+      countTag.textContent = String(pendingOrAll.length);
+      countTag.className = pendingOrAll.length ? 'tag orange' : 'tag green';
+      batchBtn.disabled = !itemsByTab('pending').length;
+
+      gapCount.textContent = String(gapItems.length);
+      gapCount.className = gapItems.length ? 'tag orange' : 'tag green';
+      gapList.innerHTML = gapItems.length
+        ? gapItems.map((item) => renderItemRow(item, { showDestination: false })).join('')
+        : '<div class="muted">当前无待处理缺口。若知识库规则/功能点均已被历史用例覆盖，则缺口池为空。</div>';
+
+      if (!pendingOrAll.length) {
+        list.innerHTML = '<div class="muted">当前 Tab / 筛选下没有条目。已确认的请到左侧「正式资产库」查看。</div>';
+      } else {
+        list.innerHTML = pendingOrAll.map((item) => renderItemRow(item, {
+          showDestination: item.status === '已确认'
+        })).join('');
+      }
+
+      if (reviewState.lastConfirmMsg) {
+        flowHint.innerHTML = escapeHtml(reviewState.lastConfirmMsg) +
+          ' <button class="link" type="button" data-action="goto-assets">打开正式资产库</button>';
+      } else {
+        flowHint.innerHTML =
+          '确认后请到左侧菜单「正式资产库」查看。调整时可分别修改「用例内容」与「功能点挂载」。当前正式资产 ' +
+          confirmed + ' 条，缺口待处理 ' + gapPending + ' 条。' +
+          ' <button class="link" type="button" data-action="goto-assets">打开正式资产库</button>';
+      }
+      if (typeof renderAssetsPage === 'function') renderAssetsPage();
+    }
+
+    function currentAssetsFilter() {
+      return {
+        dim: document.getElementById('assetsDim').value,
+        keyword: document.getElementById('assetsKeyword').value.trim(),
+        domain: document.getElementById('assetsDomain').value,
+        app: document.getElementById('assetsApp').value,
+        scene: document.getElementById('assetsScene').value,
+        feature: document.getElementById('assetsFeature').value,
+        api: document.getElementById('assetsApi').value,
+        source: document.getElementById('assetsSource').value
+      };
+    }
+
+    function formalAssets(filter) {
+      const query = filter || {};
+      return reviewState.items.filter((item) => {
+        if (item.status !== '已确认') return false;
+        if (query.domain && item.domain !== query.domain) return false;
+        if (query.app && item.app !== query.app) return false;
+        if (query.scene && item.scene !== query.scene) return false;
+        if (query.feature && item.feature !== query.feature) return false;
+        if (query.api && item.api !== query.api) return false;
+        if (query.source && item.sourceType !== query.source) return false;
+        if (query.keyword) {
+          const keyword = query.keyword.toLowerCase();
+          const dim = query.dim || 'all';
+          const fields = {
+            all: [item.caseName, item.feature, item.scene, item.api, item.expected, item.step, item.app, item.domain],
+            scene: [item.scene],
+            feature: [item.feature],
+            api: [item.api],
+            app: [item.app],
+            domain: [item.domain]
+          };
+          const bag = (fields[dim] || fields.all).join(' ').toLowerCase();
+          if (!bag.includes(keyword)) return false;
+        }
+        return true;
+      });
+    }
+
+    function refreshAssetsFilterOptions() {
+      const allConfirmed = reviewState.items.filter((item) => item.status === '已确认');
+      const fillSelect = (selectId, values, emptyLabel) => {
+        const select = document.getElementById(selectId);
+        const current = select.value;
+        const options = ['<option value="">' + emptyLabel + '</option>']
+          .concat(uniqueList(values).map((value) =>
+            '<option value="' + escapeHtml(value) + '"' + (value === current ? ' selected' : '') + '>' +
+            escapeHtml(value) + '</option>'
+          ));
+        select.innerHTML = options.join('');
+      };
+      fillSelect('assetsScene', allConfirmed.map((item) => item.scene).filter(Boolean), '全部场景');
+      fillSelect('assetsFeature', allConfirmed.map((item) => item.feature).filter(Boolean), '全部功能点');
+      fillSelect('assetsApi', allConfirmed.map((item) => item.api).filter(Boolean), '全部接口');
+    }
+
+    function describeAssetsFilter(filter) {
+      const parts = [];
+      if (filter.domain) parts.push('领域=' + filter.domain);
+      if (filter.app) parts.push('应用=' + filter.app);
+      if (filter.scene) parts.push('场景=' + filter.scene);
+      if (filter.feature) parts.push('功能点=' + filter.feature);
+      if (filter.api) parts.push('接口=' + filter.api);
+      if (filter.source) parts.push('来源=' + filter.source);
+      if (filter.keyword) parts.push((filter.dim === 'all' ? '关键词' : filter.dim) + '=' + filter.keyword);
+      return parts.length ? parts.join(' · ') : '无额外条件（全部正式资产）';
+    }
+
+    function renderAssetsPage() {
+      refreshAssetsFilterOptions();
+      const filter = currentAssetsFilter();
+      const assets = formalAssets(filter);
+      const allConfirmed = formalAssets({});
+      document.getElementById('assetsTotal').textContent = String(allConfirmed.length);
+      document.getElementById('assetsHist').textContent = String(allConfirmed.filter((item) => item.sourceType === '历史挂载').length);
+      document.getElementById('assetsGap').textContent = String(allConfirmed.filter((item) => item.sourceType === 'AI缺口').length);
+      document.getElementById('assetsHit').textContent = String(assets.length);
+      document.getElementById('assetsListCount').textContent = String(assets.length);
+      document.getElementById('assetsSearchHint').textContent = '当前条件：' + describeAssetsFilter(filter) + '；命中 ' + assets.length + ' 条。';
+      document.getElementById('assetsPageDesc').textContent = allConfirmed.length
+        ? ('共 ' + allConfirmed.length + ' 条正式资产。多维检索支持场景 / 功能点 / 接口 / 应用 / 领域 / 关键词，并可基于命中结果生成回归包。')
+        : '暂无正式资产。请先在「评审校准」确认用例。';
+      document.getElementById('assetsList').innerHTML = assets.length
+        ? assets.map((item) => renderItemRow(item, { showDestination: true, readonly: true })).join('')
+        : '<div class="empty">' + (allConfirmed.length
+          ? '当前条件无命中，请清空或调整筛选。'
+          : '暂无正式资产。<div class="mt-12"><button class="btn primary" type="button" data-view="review">去评审确认</button></div>') + '</div>';
+      renderAssetsQuickChips(allConfirmed);
+    }
+
+    function renderAssetsQuickChips(allConfirmed) {
+      const box = document.getElementById('assetsQuickChips');
+      if (!box) return;
+      const features = uniqueList(allConfirmed.map((item) => item.feature).filter(Boolean)).slice(0, 6);
+      const scenes = uniqueList(allConfirmed.map((item) => item.scene).filter(Boolean)).slice(0, 4);
+      const apis = uniqueList(allConfirmed.map((item) => item.api).filter(Boolean)).slice(0, 4);
+      const chips = []
+        .concat(features.map((value) => ({ type: 'feature', value: value, label: '功能点·' + value })))
+        .concat(scenes.map((value) => ({ type: 'scene', value: value, label: '场景·' + value })))
+        .concat(apis.map((value) => ({ type: 'api', value: value, label: '接口·' + value })));
+      if (!chips.length) {
+        box.innerHTML = '<span class="muted">确认入库后，这里会出现快捷筛选标签</span>';
+        return;
+      }
+      box.innerHTML = chips.map((chip) =>
+        '<button class="chip-btn" type="button" data-chip-type="' + chip.type + '" data-chip-value="' +
+        escapeHtml(chip.value) + '">' + escapeHtml(chip.label) + '</button>'
+      ).join('');
+    }
+
+    function buildRegressionPack() {
+      const filter = currentAssetsFilter();
+      const assets = formalAssets(filter);
+      const card = document.getElementById('regressionCard');
+      const body = document.getElementById('regressionBody');
+      const count = document.getElementById('regressionCount');
+      if (!assets.length) {
+        card.style.display = 'block';
+        count.textContent = '0';
+        body.innerHTML = '<div class="muted">当前检索无正式资产，无法生成回归包。请先确认入库或放宽条件。</div>';
+        return;
+      }
+      const byFeature = {};
+      assets.forEach((item) => {
+        const key = item.feature || '未挂载功能点';
+        if (!byFeature[key]) byFeature[key] = [];
+        byFeature[key].push(item);
+      });
+      count.textContent = String(assets.length);
+      card.style.display = 'block';
+      body.innerHTML =
+        '<div class="hint">回归包条件：' + escapeHtml(describeAssetsFilter(filter)) + '</div>' +
+        '<div class="mt-12">' +
+        Object.keys(byFeature).map((featureName) => {
+          const rows = byFeature[featureName];
+          return '<div class="list-row"><div><div class="result-title">' + escapeHtml(featureName) +
+            ' <span class="tag blue">' + rows.length + ' 条</span></div>' +
+            '<div class="result-path">' + escapeHtml(rows.map((item) => item.caseName).join('；')) + '</div>' +
+            '<div class="muted mt-8">接口：' + escapeHtml(uniqueList(rows.map((item) => item.api)).join(' / ') || '-') +
+            ' · 场景：' + escapeHtml(uniqueList(rows.map((item) => item.scene)).join(' / ')) +
+            '</div></div></div>';
+        }).join('') +
+        '</div>' +
+        '<div class="dest-banner mt-12">已按当前多维检索结果生成回归包预览（原型示意，可对接质保执行/导出）。</div>';
+      showToast('回归包已生成：' + assets.length + ' 条用例', { success: true });
+    }
+
+    let adjustingItemId = null;
+
+    function fillDatalist(listId, values) {
+      const list = document.getElementById(listId);
+      list.innerHTML = uniqueList(values).map((value) => '<option value="' + escapeHtml(value) + '"></option>').join('');
+    }
+
+    function openAdjustModal(item) {
+      adjustingItemId = item.id;
+      document.getElementById('adjustCaseName').value = item.caseName || '';
+      document.getElementById('adjustStep').value = item.step || '';
+      document.getElementById('adjustExpected').value = item.expected || '';
+      document.getElementById('adjustScene').value = item.scene || '';
+      document.getElementById('adjustFeature').value = item.feature || '';
+      const kb = importState.kbParsed || { scenes: [], features: [] };
+      const sceneOptions = (kb.scenes || []).concat(reviewState.items.map((entry) => entry.scene));
+      const featureOptions = (kb.features || []).concat(reviewState.items.map((entry) => entry.feature));
+      fillDatalist('adjustSceneOptions', sceneOptions);
+      fillDatalist('adjustFeatureOptions', featureOptions);
+      document.getElementById('adjustModal').classList.add('show');
+    }
+
+    function closeAdjustModal() {
+      adjustingItemId = null;
+      document.getElementById('adjustModal').classList.remove('show');
+    }
+
+    function saveAdjustModal() {
+      const item = reviewState.items.find((entry) => entry.id === adjustingItemId);
+      if (!item) return;
+      const caseName = document.getElementById('adjustCaseName').value.trim();
+      const step = document.getElementById('adjustStep').value.trim();
+      const expected = document.getElementById('adjustExpected').value.trim();
+      const scene = document.getElementById('adjustScene').value.trim();
+      const feature = document.getElementById('adjustFeature').value.trim();
+      if (!caseName) {
+        window.alert('用例名称不能为空');
+        return;
+      }
+      if (!feature) {
+        window.alert('功能点不能为空');
+        return;
+      }
+      item.caseName = caseName;
+      item.step = step;
+      item.expected = expected;
+      item.scene = scene || item.scene;
+      item.feature = feature;
+      item.api = guessApi(feature, item.app);
+      item.status = '待确认';
+      item.destination = '';
+      item.confidence = Math.min(99, (item.confidence || 60) + 6);
+      reviewState.lastConfirmMsg = '已调整「用例内容 + 功能点挂载」，请再次确认后进入正式资产库。';
+      closeAdjustModal();
+      renderReviewQueue();
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+
+    function showToast(message, options) {
+      const opts = options || {};
+      const wrap = document.getElementById('toastWrap');
+      const toast = document.createElement('div');
+      toast.className = 'toast' + (opts.success ? ' success' : '');
+      let html = '<div><div>' + escapeHtml(message) + '</div>';
+      if (opts.actionLabel && opts.actionView) {
+        html += '<div class="toast-actions"><button class="btn" type="button" data-toast-view="' +
+          opts.actionView + '">' + escapeHtml(opts.actionLabel) + '</button></div>';
+      }
+      html += '</div>';
+      toast.innerHTML = html;
+      wrap.appendChild(toast);
+      const closer = toast.querySelector('[data-toast-view]');
+      if (closer) {
+        closer.addEventListener('click', () => {
+          switchView(closer.getAttribute('data-toast-view'));
+          toast.remove();
+        });
+      }
+      setTimeout(() => toast.remove(), opts.duration || 4200);
+    }
+
+    function updateNavBadges() {
+      const pending = reviewState.items.filter((item) => item.status !== '已确认' && item.status !== '已废弃').length;
+      const assets = reviewState.items.filter((item) => item.status === '已确认').length;
+      const badgeReview = document.getElementById('badgeReview');
+      const badgeAssets = document.getElementById('badgeAssets');
+      if (badgeReview) badgeReview.textContent = String(pending);
+      if (badgeAssets) badgeAssets.textContent = String(assets);
+    }
+
+
+
+    function confirmItem(item) {
+      item.status = '已确认';
+      item.destination = item.sourceType === 'AI缺口'
+        ? '正式用例地图资产 · 缺口补齐入库 · 可用于回归包'
+        : '正式用例地图资产 · 历史校准入库 · 可在总览检索中消费';
+      reviewState.lastConfirmMsg =
+        '「' + item.caseName + '」已确认，流向：' + item.destination + '。请到「正式资产库」查看。';
+      reviewState.activeTab = 'confirmed';
+      document.querySelectorAll('#reviewTabs .tab-btn').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.tab === 'confirmed');
+      });
+      showToast('已入库：' + item.caseName, {
+        success: true,
+        actionLabel: '去正式资产库',
+        actionView: 'assets'
+      });
+    }
+
+
+        function refreshImportResult() {
+      const resultCard = document.getElementById('importResultCard');
+      const resultBody = document.getElementById('importResultBody');
+      if (!(importState.cases && importState.knowledge)) {
+        resultCard.classList.remove('show');
+        return;
+      }
+      const target = currentImportTarget();
+      const caseMeta = importState.caseMeta || { fileName: '-', rowCount: 0 };
+      const kbParsed = importState.kbParsed || { scenes: [], features: [], rules: [] };
+      resultCard.classList.add('show');
+      resultBody.innerHTML =
+        '<div class="grid-4">' +
+        '<div class="stat"><div class="label">目标领域</div><div class="value" style="font-size:18px">' + target.domain + '</div></div>' +
+        '<div class="stat"><div class="label">目标应用</div><div class="value" style="font-size:18px">' + target.app + '</div></div>' +
+        '<div class="stat"><div class="label">历史用例</div><div class="value" style="font-size:18px">' + caseMeta.rowCount + '</div><div class="sub">' + caseMeta.fileName + '</div></div>' +
+        '<div class="stat"><div class="label">知识库要素</div><div class="value" style="font-size:18px">' +
+          (kbParsed.scenes.length + kbParsed.features.length + kbParsed.rules.length) +
+        '</div><div class="sub">场景' + kbParsed.scenes.length + ' · 功能' + kbParsed.features.length + ' · 规则' + kbParsed.rules.length + '</div></div>' +
+        '</div>' +
+        '<div class="hint mt-8">两项已齐。点「生成地图草稿」后，会按知识库挂载历史用例并补缺口，写入评审队列。</div>';
+    }
+
+    function updateImportGate() {
+      const ready = importState.cases && importState.knowledge;
+      const caseTag = document.getElementById('caseStatusTag');
+      const kbTag = document.getElementById('kbStatusTag');
+      const gateTag = document.getElementById('importGateTag');
+      const gateHint = document.getElementById('importGateHint');
+      const nextHint = document.getElementById('nextStepHint');
+      const btnMap = document.getElementById('btnGenerateMap');
+      const btnReview = document.getElementById('btnGoReview');
+
+      caseTag.textContent = importState.cases ? '历史用例：已导入' : '历史用例：未导入';
+      caseTag.className = importState.cases ? 'tag green' : 'tag';
+      kbTag.textContent = importState.knowledge ? '知识库：已导入' : '知识库：未导入';
+      kbTag.className = importState.knowledge ? 'tag green' : 'tag';
+
+      gateTag.textContent = ready ? '已满足' : '未满足';
+      gateTag.className = ready ? 'tag green' : 'tag orange';
+      gateHint.textContent = ready
+        ? '历史用例与知识库均已导入，可以进入下一步。'
+        : '请先完成下方两项导入。缺一不可。';
+      nextHint.textContent = ready
+        ? (reviewState.generated
+          ? ('已生成待评审 ' + reviewState.items.length + ' 条，可进入评审校准。')
+          : '门禁已通过，请先点「生成地图草稿」。')
+        : '两项都导入成功后，按钮才会可用。';
+
+      btnMap.disabled = !ready;
+      btnReview.disabled = !reviewState.generated;
+      btnMap.title = ready ? '' : '需先完成历史用例与知识库导入';
+      btnReview.title = reviewState.generated ? '' : '请先点击「生成地图草稿」';
+      refreshImportResult();
+    }
+
+    document.getElementById('btnDemoCases').addEventListener('click', () => {
+      ingestCaseText('demo_history_cases.csv', DEMO_CASES_CSV, currentImportTarget().text);
+    });
+
+    document.getElementById('btnDemoKb').addEventListener('click', () => {
+      ingestKbText('demo_quote_kb.md', DEMO_KB_MD, currentImportTarget().text);
+    });
+
+    document.getElementById('btnGenerateMap').addEventListener('click', () => {
+      if (!(importState.cases && importState.knowledge)) return;
+      const target = currentImportTarget();
+      generateReviewQueue();
+      document.getElementById('importResultTag').textContent = '已生成';
+      document.getElementById('importResultTag').className = 'tag green';
+      document.getElementById('nextStepHint').textContent =
+        '已生成「' + target.domain + ' / ' + target.app + '」待评审 ' + reviewState.items.length + ' 条，进入评审校准。';
+      updateImportGate();
+      switchView('review');
+      showToast('地图草稿已生成，开始评审校准', { success: true });
+    });
+
+    document.getElementById('btnGoReview').addEventListener('click', () => {
+      if (!reviewState.generated) return;
+      switchView('review');
+    });
+
+    document.getElementById('btnReviewFilter').addEventListener('click', () => {
+      reviewState.filterApp = document.getElementById('reviewApp').value;
+      reviewState.filterStatus = document.getElementById('reviewStatus').value;
+      reviewState.filterKeyword = document.getElementById('reviewKeyword').value.trim();
+      renderReviewQueue();
+    });
+    document.getElementById('reviewKeyword').addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') document.getElementById('btnReviewFilter').click();
+    });
+
+    function handleReviewAction(event) {
+      const goto = event.target.closest('[data-action="goto-assets"]');
+      if (goto) {
+        event.preventDefault();
+        switchView('assets');
+        return;
+      }
+      const button = event.target.closest('button[data-action]');
+      if (!button || button.disabled) return;
+      const row = button.closest('[data-id]');
+      if (!row) return;
+      const item = reviewState.items.find((entry) => entry.id === row.dataset.id);
+      if (!item) return;
+      const action = button.dataset.action;
+      if (action === 'confirm') {
+        confirmItem(item);
+        renderReviewQueue();
+        return;
+      }
+      if (action === 'adjust') {
+        openAdjustModal(item);
+        return;
+      }
+      if (action === 'discard') {
+        item.status = '已废弃';
+        item.destination = '缺口关闭 · 不进入正式资产';
+        reviewState.discarded.push(item.id);
+        reviewState.lastConfirmMsg = '「' + item.caseName + '」已废弃，缺口关闭，不进入正式资产库。';
+        renderReviewQueue();
+        return;
+      }
+      if (action === 'view-asset') {
+        switchView('assets');
+      }
+    }
+
+    document.getElementById('reviewQueueList').addEventListener('click', handleReviewAction);
+    document.getElementById('gapPoolList').addEventListener('click', handleReviewAction);
+    document.getElementById('assetsList').addEventListener('click', handleReviewAction);
+    document.getElementById('reviewFlowHint').addEventListener('click', handleReviewAction);
+
+    document.getElementById('btnAdjustSave').addEventListener('click', saveAdjustModal);
+    document.getElementById('btnAdjustCancel').addEventListener('click', closeAdjustModal);
+    document.getElementById('btnAdjustClose').addEventListener('click', closeAdjustModal);
+    document.getElementById('adjustModal').addEventListener('click', (event) => {
+      if (event.target.id === 'adjustModal') closeAdjustModal();
+    });
+
+    function openFormalAssets() {
+      switchView('assets');
+    }
+    document.getElementById('btnOpenAssets').addEventListener('click', openFormalAssets);
+    document.getElementById('flowToAssets').addEventListener('click', openFormalAssets);
+    document.getElementById('statConfirmedCard').addEventListener('click', openFormalAssets);
+    document.getElementById('btnAssetsFilter').addEventListener('click', renderAssetsPage);
+    document.getElementById('btnAssetsClear').addEventListener('click', () => {
+      document.getElementById('assetsDim').value = 'all';
+      document.getElementById('assetsKeyword').value = '';
+      document.getElementById('assetsDomain').value = '';
+      document.getElementById('assetsApp').value = '';
+      document.getElementById('assetsScene').value = '';
+      document.getElementById('assetsFeature').value = '';
+      document.getElementById('assetsApi').value = '';
+      document.getElementById('assetsSource').value = '';
+      document.getElementById('regressionCard').style.display = 'none';
+      renderAssetsPage();
+    });
+    document.getElementById('assetsKeyword').addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') renderAssetsPage();
+    });
+    ['assetsDim', 'assetsDomain', 'assetsApp', 'assetsScene', 'assetsFeature', 'assetsApi', 'assetsSource'].forEach((id) => {
+      document.getElementById(id).addEventListener('change', renderAssetsPage);
+    });
+    document.getElementById('btnBuildRegression').addEventListener('click', buildRegressionPack);
+
+    document.getElementById('btnBatchConfirm').addEventListener('click', () => {
+      itemsByTab('pending').forEach((item) => confirmItem(item));
+      renderReviewQueue();
+    });
+
+    document.querySelectorAll('#reviewTabs .tab-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        reviewState.activeTab = btn.dataset.tab;
+        document.querySelectorAll('#reviewTabs .tab-btn').forEach((node) => {
+          node.classList.toggle('active', node === btn);
+        });
+        const gapBody = document.getElementById('gapPoolBody');
+        const gapBtn = document.getElementById('gapPoolToggleBtn');
+        if (gapBody && gapBtn) {
+          if (reviewState.activeTab === 'gap') {
+            gapBody.classList.remove('hidden');
+            gapBtn.textContent = '收起';
+          } else if (reviewState.activeTab === 'pending' || reviewState.activeTab === 'confirmed') {
+            gapBody.classList.add('hidden');
+            gapBtn.textContent = '展开';
+          }
+        }
+        renderReviewQueue();
+      });
+    });
+
+    function resetImportAssets() {
+      importState.cases = false;
+      importState.knowledge = false;
+      importState.caseMeta = null;
+      importState.kbMeta = null;
+      importState.caseRows = [];
+      importState.kbText = '';
+      importState.kbParsed = null;
+      reviewState.generated = false;
+      reviewState.items = [];
+      reviewState.discarded = [];
+      reviewState.lastConfirmMsg = '';
+      document.getElementById('caseImportMsg').textContent = '';
+      document.getElementById('kbImportMsg').textContent = '';
+      document.getElementById('casePreview').textContent = '尚未导入。可点「使用演示样例」或选择本地 Excel/CSV。';
+      document.getElementById('kbPreview').textContent = '尚未导入。可点「使用演示样例」或选择本地 txt/md。';
+      document.getElementById('importResultTag').textContent = '草稿';
+      document.getElementById('importResultTag').className = 'tag blue';
+      document.getElementById('reviewPageDesc').textContent =
+        '完成资产导入并生成地图草稿后，这里会展示真实待评审用例。';
+      updateImportGate();
+      renderReviewQueue();
+      refreshHint();
+    }
+
+    ['importDomain', 'importApp'].forEach((id) => {
+      document.getElementById(id).addEventListener('change', resetImportAssets);
+    });
+    document.getElementById('caseFile').addEventListener('change', () => {
+      importState.cases = false;
+      importState.caseMeta = null;
+      importState.caseRows = [];
+      reviewState.generated = false;
+      reviewState.items = [];
+      document.getElementById('caseImportMsg').textContent = '';
+      document.getElementById('casePreview').textContent = '已选择文件，请点击「导入历史用例」。';
+      updateImportGate();
+      renderReviewQueue();
+    });
+    document.getElementById('kbFile').addEventListener('change', () => {
+      importState.knowledge = false;
+      importState.kbMeta = null;
+      importState.kbText = '';
+      importState.kbParsed = null;
+      reviewState.generated = false;
+      reviewState.items = [];
+      document.getElementById('kbImportMsg').textContent = '';
+      document.getElementById('kbPreview').textContent = '已选择文件，请点击「导入知识库」。';
+      updateImportGate();
+      renderReviewQueue();
+    });
+
+    function locateImportTarget() {
+      const value = document.getElementById('importTargetSearch').value.trim();
+      if (!value) return;
+      if (['家装', '租赁', '售后'].includes(value)) {
+        document.getElementById('importDomain').value = value;
+      } else if (['报价', '量房', '设计', '合同'].includes(value)) {
+        document.getElementById('importDomain').value = '家装';
+        document.getElementById('importApp').value = value;
+      }
+      refreshHint();
+    }
+
+    document.getElementById('btnImportLocate').addEventListener('click', locateImportTarget);
+    document.getElementById('importTargetSearch').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') locateImportTarget();
+    });
+
+    document.querySelectorAll('#view-detail .mini').forEach((item) => {
+      item.addEventListener('click', () => {
+        const col = item.parentElement;
+        col.querySelectorAll('.mini').forEach((n) => n.classList.remove('active'));
+        item.classList.add('active');
+      });
+    });
+
+    function runDetailSearch() {
+      const keyword = (document.getElementById('detailSearchInput').value || document.getElementById('caseFilter').value || '').trim().toLowerCase();
+      const searchType = document.getElementById('detailSearchType').value;
+      const featureName = document.getElementById('detailFeature').textContent.trim();
+      const sceneName = document.getElementById('detailScene').textContent.trim();
+      const apiName = document.getElementById('detailApiChip').textContent.trim();
+      const cards = document.querySelectorAll('#detailCaseGrid .mini');
+      let visibleCount = 0;
+
+      cards.forEach((card) => {
+        const caseName = (card.getAttribute('data-case-name') || '').toLowerCase();
+        const tags = (card.getAttribute('data-tags') || '').toLowerCase();
+        const bag = caseName + ' ' + tags;
+        let matched = true;
+        if (keyword) {
+          if (searchType === 'case') matched = caseName.includes(keyword) || tags.includes(keyword);
+          else if (searchType === 'feature') matched = featureName.toLowerCase().includes(keyword) || bag.includes(keyword);
+          else if (searchType === 'scene') matched = sceneName.toLowerCase().includes(keyword) || bag.includes(keyword);
+          else if (searchType === 'api') matched = apiName.toLowerCase().includes(keyword) || bag.includes(keyword);
+          else matched = bag.includes(keyword) || featureName.toLowerCase().includes(keyword) ||
+            sceneName.toLowerCase().includes(keyword) || apiName.toLowerCase().includes(keyword);
+        }
+        card.style.display = matched ? '' : 'none';
+        if (matched) visibleCount += 1;
+      });
+
+      document.getElementById('detailCaseCount').textContent = visibleCount + ' 条';
+      document.getElementById('detailFilterEmpty').style.display = visibleCount ? 'none' : 'block';
+      document.getElementById('detailSearchHint').textContent = keyword
+        ? ('搜索「' + keyword + '」· 维度=' + searchType + ' · 本页命中 ' + visibleCount + ' 项')
+        : ('当前功能点：' + featureName + '。可按用例名 / 功能点 / 场景 / 接口搜索。');
+
+      // 同步提示正式资产库命中（不改变入库能力，仅展示）
+      const hitCard = document.getElementById('detailAssetHitsCard');
+      const hitBody = document.getElementById('detailAssetHits');
+      const confirmed = typeof formalAssets === 'function' ? formalAssets({}) : [];
+      const related = confirmed.filter((item) => {
+        if (!keyword) return item.feature === featureName;
+        const text = (item.caseName + ' ' + item.feature + ' ' + item.scene + ' ' + (item.api || '')).toLowerCase();
+        if (searchType === 'feature') return item.feature.toLowerCase().includes(keyword);
+        if (searchType === 'scene') return item.scene.toLowerCase().includes(keyword);
+        if (searchType === 'api') return String(item.api || '').toLowerCase().includes(keyword);
+        return text.includes(keyword);
+      }).slice(0, 8);
+      document.getElementById('detailAssetHitCount').textContent = String(related.length);
+      if (!related.length) {
+        hitCard.style.display = keyword || confirmed.length ? 'block' : 'none';
+        hitBody.innerHTML = confirmed.length
+          ? '<div class="muted">正式资产库暂无匹配项。可清空条件或前往正式资产库扩大检索。</div>'
+          : '<div class="muted">暂无正式资产。评审确认后，这里会显示相关入库用例。</div>';
+        return;
+      }
+      hitCard.style.display = 'block';
+      hitBody.innerHTML = related.map((item) =>
+        '<div class="list-row"><div><div class="result-title">' + escapeHtml(item.caseName) +
+        '</div><div class="result-path">' + escapeHtml(item.app + ' / ' + item.scene + ' / ' + item.feature) +
+        (item.api ? (' · ' + escapeHtml(item.api)) : '') +
+        '</div></div><button class="btn" type="button" data-view="assets">查看</button></div>'
+      ).join('');
+    }
+
+    document.getElementById('btnDetailSearch').addEventListener('click', runDetailSearch);
+    document.getElementById('btnCaseFilter').addEventListener('click', () => {
+      document.getElementById('detailSearchInput').value = document.getElementById('caseFilter').value;
+      document.getElementById('detailSearchType').value = 'case';
+      runDetailSearch();
+    });
+    document.getElementById('detailSearchInput').addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') runDetailSearch();
+    });
+    document.getElementById('caseFilter').addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        document.getElementById('detailSearchInput').value = document.getElementById('caseFilter').value;
+        document.getElementById('detailSearchType').value = 'case';
+        runDetailSearch();
+      }
+    });
+    document.getElementById('btnDetailSearchClear').addEventListener('click', () => {
+      document.getElementById('detailSearchInput').value = '';
+      document.getElementById('caseFilter').value = '';
+      document.getElementById('detailSearchType').value = 'case';
+      runDetailSearch();
+    });
+    document.getElementById('btnDetailRegression').addEventListener('click', () => {
+      const featureName = document.getElementById('detailFeature').textContent.trim();
+      switchView('assets');
+      document.getElementById('assetsFeature').value = featureName;
+      document.getElementById('assetsMoreBody').classList.remove('hidden');
+      document.getElementById('assetsMoreToggleBtn').textContent = '收起';
+      renderAssetsPage();
+      buildRegressionPack();
+      showToast('已按功能点「' + featureName + '」生成回归包预览', { success: true });
+    });
+    document.getElementById('detailAssetHits').addEventListener('click', (event) => {
+      const jump = event.target.closest('[data-view]');
+      if (jump) switchView(jump.dataset.view);
+    });
+
+    const btnDemoBoth = document.getElementById('btnDemoBoth');
+    if (btnDemoBoth) {
+      btnDemoBoth.addEventListener('click', () => {
+        ingestCaseText('demo_history_cases.csv', DEMO_CASES_CSV, currentImportTarget().text);
+        ingestKbText('demo_quote_kb.md', DEMO_KB_MD, currentImportTarget().text);
+        showToast('演示样例已填充，可点「生成地图草稿」', { success: true });
+      });
+    }
+    const gapToggleBtn = document.getElementById('gapPoolToggleBtn');
+    if (gapToggleBtn) {
+      gapToggleBtn.addEventListener('click', (event) => {
+        event.stopPropagation();
+        const body = document.getElementById('gapPoolBody');
+        const hidden = body.classList.toggle('hidden');
+        gapToggleBtn.textContent = hidden ? '展开' : '收起';
+      });
+    }
+    const assetsMoreBtn = document.getElementById('assetsMoreToggleBtn');
+    if (assetsMoreBtn) {
+      assetsMoreBtn.addEventListener('click', () => {
+        const body = document.getElementById('assetsMoreBody');
+        const hidden = body.classList.toggle('hidden');
+        assetsMoreBtn.textContent = hidden ? '展开' : '收起';
+      });
+    }
+    const assetsChips = document.getElementById('assetsQuickChips');
+    if (assetsChips) {
+      assetsChips.addEventListener('click', (event) => {
+        const chip = event.target.closest('[data-chip-type]');
+        if (!chip) return;
+        const type = chip.getAttribute('data-chip-type');
+        const value = chip.getAttribute('data-chip-value');
+        document.getElementById('assetsKeyword').value = '';
+        document.getElementById('assetsDim').value = 'all';
+        document.getElementById('assetsScene').value = type === 'scene' ? value : '';
+        document.getElementById('assetsFeature').value = type === 'feature' ? value : '';
+        document.getElementById('assetsApi').value = type === 'api' ? value : '';
+        document.getElementById('assetsMoreBody').classList.remove('hidden');
+        document.getElementById('assetsMoreToggleBtn').textContent = '收起';
+        renderAssetsPage();
+      });
+    }
+    const openAssetsTop = document.getElementById('btnOpenAssetsTop');
+    if (openAssetsTop) openAssetsTop.addEventListener('click', openFormalAssets);
+
+    refreshHint();
+    updateImportGate();
+    renderReviewQueue();
+    if (typeof renderAssetsPage === 'function') renderAssetsPage();
+    runDetailSearch();
+  </script>
+</body>
+</html>

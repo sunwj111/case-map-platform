@@ -1,0 +1,191 @@
+{
+  "domain": "case_map_platform",
+  "displayName": "用例地图平台",
+  "flowNodes": [
+    {
+      "node": "领域配置管理",
+      "description": "维护领域、流程节点、关键词、风险等级，支持报价先行并预留多领域扩展。",
+      "risk": "高",
+      "keywords": ["领域配置", "domain", "flowNode", "关键词", "风险等级", "多领域", "配置管理", "扩展接口"]
+    },
+    {
+      "node": "历史用例导入",
+      "description": "支持 Excel 批量导入、字段智能映射与导入风险提示。",
+      "risk": "高",
+      "keywords": ["历史用例", "Excel", "导入", "字段映射", "批量", "casename", "缺字段", "解析"]
+    },
+    {
+      "node": "知识库接入",
+      "description": "接入业务流程、状态机、字段与规则等开发知识库文本/Markdown。",
+      "risk": "高",
+      "keywords": ["知识库", "Markdown", "状态机", "字段", "规则", "接入", "txt", "业务逻辑"]
+    },
+    {
+      "node": "用例地图生成与挂载",
+      "description": "基于知识库搭骨架，自动重挂载历史用例并计算置信度。",
+      "risk": "高",
+      "keywords": ["用例地图", "生成", "挂载", "置信度", "自动挂载", "重挂载", "流程节点图", "图谱"]
+    },
+    {
+      "node": "覆盖矩阵分析",
+      "description": "生成状态、字段、规则覆盖矩阵并量化缺口。",
+      "risk": "高",
+      "keywords": ["覆盖矩阵", "状态覆盖", "字段覆盖", "规则覆盖", "盲区", "缺口分析", "覆盖度"]
+    },
+    {
+      "node": "缺口用例池管理",
+      "description": "识别并管理缺口用例，支持评审、编辑与批量入库。",
+      "risk": "高",
+      "keywords": ["缺口用例", "缺口池", "AI生成", "补充用例", "批量入库", "遗漏"]
+    },
+    {
+      "node": "核心回归集管理",
+      "description": "按流程节点聚合高价值回归候选用例并支持确认调整。",
+      "risk": "高",
+      "keywords": ["核心回归", "回归集", "回归包", "最小化回归", "按节点", "回归候选"]
+    },
+    {
+      "node": "人工评审校准",
+      "description": "对自动结果执行确认、调整、废弃与批量评审。",
+      "risk": "高",
+      "keywords": ["评审", "校准", "确认", "调整", "废弃", "抽检", "批量处理", "人工把关"]
+    },
+    {
+      "node": "场景管理",
+      "description": "管理业务场景的创建、启用、停用、归档及其与节点/用例绑定。",
+      "risk": "高",
+      "keywords": ["场景管理", "场景", "scene", "启用", "停用", "归档", "场景绑定"]
+    },
+    {
+      "node": "多维检索与图谱查询",
+      "description": "按关键词、场景、应用、接口、上下游链路查询用例图谱。",
+      "risk": "高",
+      "keywords": ["关键词", "检索", "查询", "应用", "接口", "上下游", "链路", "全文检索", "过滤"]
+    },
+    {
+      "node": "多层级关联追溯",
+      "description": "从指定节点向上/向下追溯多层级关联用例。",
+      "risk": "高",
+      "keywords": ["追溯", "多层级", "关联用例", "upstream", "downstream", "depth", "节点关联", "链路追溯"]
+    },
+    {
+      "node": "用例版本管理",
+      "description": "管理用例版本创建、冻结、生效、对比、回滚与归档。",
+      "risk": "高",
+      "keywords": ["版本管理", "caseVersion", "生效版本", "回滚", "对比", "冻结", "归档版本"]
+    },
+    {
+      "node": "用例生命周期管理",
+      "description": "管理草稿、待评审、已确认、已发布、已废弃等生命周期流转。",
+      "risk": "高",
+      "keywords": ["生命周期", "草稿", "待评审", "已确认", "已发布", "已废弃", "发布入库", "lifecycle"]
+    },
+    {
+      "node": "用例层级查看",
+      "description": "按领域→流程节点→测试依据→用例资产四层树形展示与钻取。",
+      "risk": "中",
+      "keywords": ["层级查看", "树形", "钻取", "领域详情", "节点详情", "层级", "目录"]
+    },
+    {
+      "node": "用例资产入库与复用",
+      "description": "评审通过资产进入正式知识库，支持检索导出与复用。",
+      "risk": "高",
+      "keywords": ["入库", "知识库", "正式全集", "复用", "导出", "资产沉淀"]
+    },
+    {
+      "node": "价值应用赋能",
+      "description": "支撑新需求推荐、版本回归圈选与自动化候选输出。",
+      "risk": "中",
+      "keywords": ["需求推荐", "版本回归", "自动化", "质量运营", "影响范围", "应用赋能"]
+    }
+  ],
+  "stateTransitions": [
+    {"chain": "CaseLifecycle", "source": "草稿(DRAFT)", "target": "待评审(PENDING_REVIEW)", "action": "提交评审", "type": "正向", "node": "用例生命周期管理"},
+    {"chain": "CaseLifecycle", "source": "待评审(PENDING_REVIEW)", "target": "已确认(CONFIRMED)", "action": "评审通过", "type": "正向", "node": "人工评审校准"},
+    {"chain": "CaseLifecycle", "source": "待评审(PENDING_REVIEW)", "target": "草稿(DRAFT)", "action": "退回修改", "type": "回退", "node": "人工评审校准"},
+    {"chain": "CaseLifecycle", "source": "待评审(PENDING_REVIEW)", "target": "已废弃(DEPRECATED)", "action": "评审废弃", "type": "终止", "node": "人工评审校准"},
+    {"chain": "CaseLifecycle", "source": "已确认(CONFIRMED)", "target": "已发布(PUBLISHED)", "action": "发布入库", "type": "正向", "node": "用例资产入库与复用"},
+    {"chain": "CaseLifecycle", "source": "已发布(PUBLISHED)", "target": "已废弃(DEPRECATED)", "action": "下线废弃", "type": "终止", "node": "用例生命周期管理"},
+    {"chain": "CaseLifecycle", "source": "已确认(CONFIRMED)", "target": "待评审(PENDING_REVIEW)", "action": "变更后重新评审", "type": "回退", "node": "用例生命周期管理"},
+    {"chain": "CaseLifecycle", "source": "已废弃(DEPRECATED)", "target": "草稿(DRAFT)", "action": "复活重建", "type": "回退", "node": "用例生命周期管理"},
+    {"chain": "CaseVersion", "source": "编辑中(EDITING)", "target": "已冻结(FROZEN)", "action": "冻结版本", "type": "正向", "node": "用例版本管理"},
+    {"chain": "CaseVersion", "source": "已冻结(FROZEN)", "target": "已生效(ACTIVE)", "action": "设为生效版本", "type": "正向", "node": "用例版本管理"},
+    {"chain": "CaseVersion", "source": "已生效(ACTIVE)", "target": "已归档(ARCHIVED)", "action": "被新版本替换", "type": "生命周期", "node": "用例版本管理"},
+    {"chain": "CaseVersion", "source": "已冻结(FROZEN)", "target": "已作废(VOID)", "action": "作废未生效版本", "type": "终止", "node": "用例版本管理"},
+    {"chain": "CaseVersion", "source": "已归档(ARCHIVED)", "target": "已生效(ACTIVE)", "action": "版本回滚", "type": "回退", "node": "用例版本管理"},
+    {"chain": "ReviewTask", "source": "待处理(OPEN)", "target": "处理中(IN_PROGRESS)", "action": "认领评审", "type": "正向", "node": "人工评审校准"},
+    {"chain": "ReviewTask", "source": "处理中(IN_PROGRESS)", "target": "已完成(DONE)", "action": "提交评审结论", "type": "正向", "node": "人工评审校准"},
+    {"chain": "ReviewTask", "source": "处理中(IN_PROGRESS)", "target": "已取消(CANCELLED)", "action": "取消任务", "type": "终止", "node": "人工评审校准"},
+    {"chain": "ReviewTask", "source": "待处理(OPEN)", "target": "已取消(CANCELLED)", "action": "批量取消", "type": "终止", "node": "人工评审校准"},
+    {"chain": "Scene", "source": "草稿", "target": "启用(ENABLED)", "action": "启用场景", "type": "正向", "node": "场景管理"},
+    {"chain": "Scene", "source": "启用(ENABLED)", "target": "停用(DISABLED)", "action": "停用场景", "type": "异常", "node": "场景管理"},
+    {"chain": "Scene", "source": "停用(DISABLED)", "target": "启用(ENABLED)", "action": "重新启用", "type": "正向", "node": "场景管理"},
+    {"chain": "Scene", "source": "启用(ENABLED)", "target": "已归档(ARCHIVED)", "action": "归档场景", "type": "终止", "node": "场景管理"},
+    {"chain": "MapGenerationJob", "source": "待执行", "target": "解析中", "action": "启动生成", "type": "正向", "node": "用例地图生成与挂载"},
+    {"chain": "MapGenerationJob", "source": "解析中", "target": "挂载中", "action": "完成解析开始挂载", "type": "正向", "node": "用例地图生成与挂载"},
+    {"chain": "MapGenerationJob", "source": "挂载中", "target": "待评审", "action": "生成完成进入评审", "type": "正向", "node": "用例地图生成与挂载"},
+    {"chain": "MapGenerationJob", "source": "待评审", "target": "已完成", "action": "评审闭环完成", "type": "正向", "node": "人工评审校准"},
+    {"chain": "MapGenerationJob", "source": "任意非终态", "target": "失败", "action": "任务异常失败", "type": "异常", "node": "用例地图生成与挂载"},
+    {"chain": "MapGenerationJob", "source": "失败", "target": "待执行", "action": "失败重试", "type": "回退", "node": "用例地图生成与挂载"}
+  ],
+  "fields": [
+    {"entity": "Domain", "field": "domainCode", "meaning": "领域编码", "type": "主键", "node": "领域配置管理"},
+    {"entity": "Domain", "field": "displayName", "meaning": "领域名称", "type": "展示", "node": "领域配置管理"},
+    {"entity": "Domain", "field": "configVersion", "meaning": "领域配置版本", "type": "生命周期", "node": "领域配置管理"},
+    {"entity": "FlowNode", "field": "nodeName", "meaning": "流程节点名称", "type": "展示", "node": "领域配置管理"},
+    {"entity": "FlowNode", "field": "riskLevel", "meaning": "节点风险等级", "type": "枚举", "node": "领域配置管理"},
+    {"entity": "FlowNode", "field": "keywords", "meaning": "节点匹配关键词", "type": "集合", "node": "领域配置管理"},
+    {"entity": "FlowNode", "field": "upstreamNodeCodes", "meaning": "上游节点编码列表", "type": "关联", "node": "多层级关联追溯"},
+    {"entity": "FlowNode", "field": "downstreamNodeCodes", "meaning": "下游节点编码列表", "type": "关联", "node": "多层级关联追溯"},
+    {"entity": "CaseAsset", "field": "caseId", "meaning": "用例ID", "type": "主键", "node": "用例资产入库与复用"},
+    {"entity": "CaseAsset", "field": "caseName", "meaning": "用例名称", "type": "展示", "node": "用例资产入库与复用"},
+    {"entity": "CaseAsset", "field": "flowNode", "meaning": "挂载流程节点", "type": "关联", "node": "用例地图生成与挂载"},
+    {"entity": "CaseAsset", "field": "confidence", "meaning": "自动挂载置信度", "type": "计算", "node": "用例地图生成与挂载"},
+    {"entity": "CaseAsset", "field": "sceneCodes", "meaning": "关联场景编码", "type": "集合", "node": "场景管理"},
+    {"entity": "CaseAsset", "field": "appCodes", "meaning": "关联应用编码", "type": "集合", "node": "多维检索与图谱查询"},
+    {"entity": "CaseAsset", "field": "apiCodes", "meaning": "关联接口编码", "type": "集合", "node": "多维检索与图谱查询"},
+    {"entity": "CaseAsset", "field": "upstreamLinks", "meaning": "上游链路", "type": "关联", "node": "多维检索与图谱查询"},
+    {"entity": "CaseAsset", "field": "downstreamLinks", "meaning": "下游链路", "type": "关联", "node": "多维检索与图谱查询"},
+    {"entity": "CaseAsset", "field": "caseVersion", "meaning": "用例版本号", "type": "生命周期", "node": "用例版本管理"},
+    {"entity": "CaseAsset", "field": "lifecycleStatus", "meaning": "生命周期状态", "type": "状态", "node": "用例生命周期管理"},
+    {"entity": "CaseAsset", "field": "hierarchyLevel", "meaning": "层级位置", "type": "枚举", "node": "用例层级查看"},
+    {"entity": "CaseAsset", "field": "reviewStatus", "meaning": "评审状态", "type": "状态", "node": "人工评审校准"},
+    {"entity": "CaseAsset", "field": "sourceType", "meaning": "来源类型", "type": "枚举", "node": "缺口用例池管理"},
+    {"entity": "CaseAsset", "field": "isCoreRegression", "meaning": "是否核心回归", "type": "枚举", "node": "核心回归集管理"},
+    {"entity": "CaseAsset", "field": "knowledgeSourceVersion", "meaning": "知识库来源版本", "type": "关联", "node": "用例资产入库与复用"},
+    {"entity": "CaseAsset", "field": "originalCaseId", "meaning": "原始用例ID", "type": "关联", "node": "历史用例导入"},
+    {"entity": "CoverageMatrixItem", "field": "coverStatus", "meaning": "覆盖状态", "type": "枚举", "node": "覆盖矩阵分析"},
+    {"entity": "CoverageMatrixItem", "field": "gapPriority", "meaning": "缺口优先级", "type": "枚举", "node": "覆盖矩阵分析"},
+    {"entity": "QueryTraceRequest", "field": "keyword", "meaning": "检索关键词", "type": "输入", "node": "多维检索与图谱查询"},
+    {"entity": "QueryTraceRequest", "field": "depth", "meaning": "追溯深度", "type": "边界", "node": "多层级关联追溯"},
+    {"entity": "QueryTraceRequest", "field": "direction", "meaning": "追溯方向", "type": "枚举", "node": "多层级关联追溯"},
+    {"entity": "Scene", "field": "sceneCode", "meaning": "场景编码", "type": "主键", "node": "场景管理"},
+    {"entity": "Scene", "field": "status", "meaning": "场景状态", "type": "状态", "node": "场景管理"}
+  ],
+  "rules": [
+    {"id": "CMP-R001", "name": "置信度分层挂载", "description": "置信度>=80自动挂载；60-79人工抽检；<60人工确认。", "node": "用例地图生成与挂载", "testType": "规则校验"},
+    {"id": "CMP-R002", "name": "评审池准入", "description": "缺口用例与低置信度用例不得直接进入正式全集，必须进入评审池。", "node": "人工评审校准", "testType": "规则校验"},
+    {"id": "CMP-R003", "name": "测试依据必绑", "description": "每条正式用例至少绑定一种测试依据（状态/字段/规则/场景/接口）。", "node": "用例资产入库与复用", "testType": "规则校验"},
+    {"id": "CMP-R004", "name": "核心回归优选", "description": "优先纳入P0/P1、高风险节点、状态流转、规则校验、数据一致性、历史缺陷相关用例。", "node": "核心回归集管理", "testType": "规则校验"},
+    {"id": "CMP-R005", "name": "生效版本唯一", "description": "同一caseId同时仅允许一个ACTIVE生效版本。", "node": "用例版本管理", "testType": "规则校验"},
+    {"id": "CMP-R006", "name": "生命周期发布约束", "description": "仅CONFIRMED可发布；仅PUBLISHED可作为正式回归基线引用。", "node": "用例生命周期管理", "testType": "状态流转"},
+    {"id": "CMP-R007", "name": "追溯深度上限", "description": "多层级追溯depth默认2，最大不超过配置上限（建议5），超限拦截。", "node": "多层级关联追溯", "testType": "边界值"},
+    {"id": "CMP-R008", "name": "停用场景挂载限制", "description": "场景停用后不可新建挂载，历史挂载只读可查。", "node": "场景管理", "testType": "规则校验"},
+    {"id": "CMP-R009", "name": "链路变更重算", "description": "上下游链路变更后需触发关联用例重算或标记stale。", "node": "多维检索与图谱查询", "testType": "数据一致性"},
+    {"id": "CMP-R010", "name": "入库追溯字段必填", "description": "入库必填knowledgeSourceVersion与originalCaseId。", "node": "用例资产入库与复用", "testType": "规则校验"},
+    {"id": "CMP-R011", "name": "导入缺字段降置信度", "description": "Excel缺字段可容忍，但需降低置信度并提示风险。", "node": "历史用例导入", "testType": "异常流"},
+    {"id": "CMP-R012", "name": "AI结果人工把关", "description": "AI生成用例必须标记sourceType=AI_GAP并经人工评审。", "node": "缺口用例池管理", "testType": "规则校验"},
+    {"id": "CMP-R013", "name": "多维组合查询", "description": "至少支持关键词、场景、应用、接口、上下游链路组合过滤。", "node": "多维检索与图谱查询", "testType": "主流程"},
+    {"id": "CMP-R014", "name": "四层层级主视图", "description": "主视图按领域→流程节点→测试依据→用例资产展示，禁止仅平铺列表。", "node": "用例层级查看", "testType": "展示校验"},
+    {"id": "CMP-R015", "name": "一期边界约束", "description": "一期不改造质保平台、不强依赖实时接口、不建设复杂多级审批。", "node": "价值应用赋能", "testType": "规则校验"},
+    {"id": "CMP-R016", "name": "追溯环路处理", "description": "上下游存在环路时需去重截断并提示，避免无限展开。", "node": "多层级关联追溯", "testType": "异常流"},
+    {"id": "CMP-R017", "name": "版本回滚一致性", "description": "回滚后原ACTIVE归档，目标版本变为ACTIVE，关联回归集引用同步更新。", "node": "用例版本管理", "testType": "数据一致性"},
+    {"id": "CMP-R018", "name": "废弃用例回归引用拦截", "description": "已废弃用例不可被新回归包直接引用为正式基线。", "node": "核心回归集管理", "testType": "异常流"}
+  ],
+  "testTypes": [
+    {"name": "图谱查询", "keywords": ["检索", "查询", "关键词", "过滤", "图谱"]},
+    {"name": "关联追溯", "keywords": ["追溯", "上下游", "多层级", "关联"]},
+    {"name": "版本管理", "keywords": ["版本", "回滚", "生效", "冻结"]},
+    {"name": "生命周期", "keywords": ["生命周期", "发布", "废弃", "草稿", "评审"]}
+  ]
+}
