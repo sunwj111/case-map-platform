@@ -1188,9 +1188,7 @@
         <label class="ws-field">
           <span>租户</span>
           <select id="tenantSelect" aria-label="租户">
-            <option value="beike">贝壳家装事业线</option>
-            <option value="lease">租赁事业线</option>
-            <option value="aftersale">售后事业线</option>
+            <option value="platform" selected>用例地图平台</option>
           </select>
         </label>
         <label class="ws-field">
@@ -1715,9 +1713,12 @@
               <div>
                 <label>目标领域</label>
                 <select id="importDomain">
-                  <option>家装</option>
-                  <option>租赁</option>
-                  <option>售后</option>
+                  <option>收房</option>
+                  <option selected>家装</option>
+                  <option>出房</option>
+                  <option>家服</option>
+                  <option>灵之</option>
+                  <option>企信</option>
                 </select>
               </div>
               <div>
@@ -2060,9 +2061,12 @@
                 <label>L1 业务领域</label>
                 <select id="assetsDomain">
                   <option value="">全部领域</option>
+                  <option>收房</option>
                   <option>家装</option>
-                  <option>租赁</option>
-                  <option>售后</option>
+                  <option>出房</option>
+                  <option>家服</option>
+                  <option>灵之</option>
+                  <option>企信</option>
                 </select>
               </div>
               <div class="form-field">
@@ -2341,8 +2345,8 @@
           <div class="cascade-field">
             <label for="masterDomain">领域</label>
             <select id="masterDomain">
-              <option value="家装">家装</option>
               <option value="收房">收房</option>
+              <option value="家装" selected>家装</option>
               <option value="出房">出房</option>
               <option value="家服">家服</option>
               <option value="灵之">灵之</option>
@@ -2609,9 +2613,12 @@
     function deriveGroup(item) {
       if (item.group) return item.group;
       const domainName = item.domain || '';
+      if (domainName === '收房') return '收房业务测试组';
       if (domainName === '家装') return '智能家装测试组';
-      if (domainName === '租赁') return '租赁业务测试组';
-      if (domainName === '售后') return '售后服务测试组';
+      if (domainName === '出房') return '出房业务测试组';
+      if (domainName === '家服') return '家服业务测试组';
+      if (domainName === '灵之') return '灵之智能测试组';
+      if (domainName === '企信') return '企信平台测试组';
       return '平台质量组';
     }
 
@@ -6305,7 +6312,10 @@
     }
 
     ['importDomain', 'importApp'].forEach((id) => {
-      document.getElementById(id).addEventListener('change', resetImportAssets);
+      document.getElementById(id).addEventListener('change', () => {
+        if (id === 'importDomain') syncImportAppsByDomain(document.getElementById('importDomain').value);
+        resetImportAssets();
+      });
     });
     document.getElementById('caseFile').addEventListener('change', () => {
       importState.cases = false;
@@ -6334,13 +6344,48 @@
     function locateImportTarget() {
       const value = document.getElementById('importTargetSearch').value.trim();
       if (!value) return;
-      if (['家装', '租赁', '售后'].includes(value)) {
+      const domainList = ['收房', '家装', '出房', '家服', '灵之', '企信'];
+      const appByDomain = {
+        '收房': ['评估', '收房签约', '交割'],
+        '家装': ['报价', '量房', '设计', '合同'],
+        '出房': ['房源', '带看', '出房签约'],
+        '家服': ['保洁', '维修', '预约调度'],
+        '灵之': ['智能报价', '方案推荐', '智能折扣'],
+        '企信': ['消息触达', '审批流', '待办协同']
+      };
+      if (domainList.includes(value)) {
         document.getElementById('importDomain').value = value;
-      } else if (['报价', '量房', '设计', '合同'].includes(value)) {
-        document.getElementById('importDomain').value = '家装';
-        document.getElementById('importApp').value = value;
+        syncImportAppsByDomain(value);
+      } else {
+        const matchedDomain = Object.keys(appByDomain).find((domainName) =>
+          (appByDomain[domainName] || []).includes(value)
+        );
+        if (matchedDomain) {
+          document.getElementById('importDomain').value = matchedDomain;
+          syncImportAppsByDomain(matchedDomain);
+          document.getElementById('importApp').value = value;
+        }
       }
       refreshHint();
+    }
+
+    function syncImportAppsByDomain(domainName) {
+      const appSelect = document.getElementById('importApp');
+      if (!appSelect) return;
+      const appByDomain = {
+        '收房': ['评估', '收房签约', '交割'],
+        '家装': ['报价', '量房', '设计', '合同'],
+        '出房': ['房源', '带看', '出房签约'],
+        '家服': ['保洁', '维修', '预约调度'],
+        '灵之': ['智能报价', '方案推荐', '智能折扣'],
+        '企信': ['消息触达', '审批流', '待办协同']
+      };
+      const apps = appByDomain[domainName] || ['报价'];
+      const current = appSelect.value;
+      appSelect.innerHTML = apps.map((appName) =>
+        '<option' + (appName === current ? ' selected' : '') + '>' + appName + '</option>'
+      ).join('');
+      if (!apps.includes(current)) appSelect.value = apps[0];
     }
 
     document.getElementById('btnImportLocate').addEventListener('click', locateImportTarget);
@@ -7564,6 +7609,7 @@
     refreshRoleUI();
     refreshHint();
     setImportMode('standard');
+    syncImportAppsByDomain(document.getElementById('importDomain').value || '家装');
     renderReviewQueue();
     if (typeof renderAssetsPage === 'function') renderAssetsPage();
     renderSyncPage();
