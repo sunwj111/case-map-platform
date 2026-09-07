@@ -1,6 +1,6 @@
 # 层级 / 功能点地图服务（Java / Spring Boot）
 
-领域 / 系统 / 场景 / 功能点 正式后端，对应 **M1-S01 ~ M1-S05、M2-S07、M3-S01 ~ M3-S03**。
+领域 / 系统 / 场景 / 功能点与资产生产正式后端，对应 **M1-S01 ~ M1-S05、M2-S07、M3-S01 ~ M3-S03、B-01 标准模式**。
 
 > 技术栈：Java 17 · Spring Boot 3.3 · 本地 JSON 存储（可后续换 MySQL + MyBatis-Plus）
 
@@ -40,6 +40,27 @@ cd services/hierarchy
 | GET | `/api/v1/cases?featureKey=` |
 | GET | `/api/v1/tech-mappings/flow-nodes` |
 | GET | `/api/v1/tech-mappings/resolve?feature=&scene=` |
+| POST | `/api/v1/produce/batches` |
+| GET | `/api/v1/produce/batches/{batchId}` |
+| POST | `/api/v1/produce/batches/{batchId}/cases` |
+| POST | `/api/v1/produce/batches/{batchId}/knowledge` |
+| POST | `/api/v1/produce/batches/{batchId}/knowledge/extract` |
+| POST | `/api/v1/produce/batches/{batchId}/knowledge/text` |
+
+## 资产生产标准模式（B-01）
+
+- 创建批次时校验领域和系统，只开放 `mode=standard`。
+- 标准模式固定要求历史用例和知识库两项输入。
+- 批次状态持久化到 `data/produce/import_batches.json`。
+- 双源导入完成后才能校准关键字，确认关键字后才能生成地图草稿。
+- 历史用例支持 CSV、XLSX、XLS、XMind，包含模糊表头映射、导入风险和原始用例 ID 追溯。
+- 知识库支持 TXT、MD、Markdown、XLSX、XLS、XMind；Excel/XMind 转成可继续抽取的 Markdown 草稿。
+- XMind 同时支持新版 `content.json` 和旧版 `content.xml`，限制解压内容、主题数与层级，并禁用 XML 外部实体。
+- 自然语言和结构化 Markdown 可抽取场景、功能点、规则、流程节点候选，保留来源、置信度和来源版本。
+- 支持直接粘贴知识文本，也支持对已上传知识文件重新抽取。
+- 文件元数据记录格式、大小、SHA-256、行数和工作表信息。
+- 文件重新导入后自动清除旧的关键字确认和地图草稿状态。
+- OpenAPI：[`openapi/produce-import.yaml`](openapi/produce-import.yaml)。
 
 ## 正式资产与技术映射（M2-S07 / M3-S01 ~ M3-S03）
 

@@ -1,0 +1,10 @@
+package com.casemap.hierarchy.produce;
+
+public enum ImportBatchStatus {
+    WAITING_FOR_CASES_AND_KNOWLEDGE,
+    WAITING_FOR_CASES,
+    WAITING_FOR_KNOWLEDGE,
+    READY_FOR_KEYWORD_CALIBRATION,
+    READY_FOR_MAP_DRAFT,
+    MAP_DRAFT_GENERATED
+}

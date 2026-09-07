@@ -4,12 +4,20 @@ server:
 spring:
   application:
     name: hierarchy-service
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 25MB
   web:
     resources:
       static-locations: classpath:/static/
 
 hierarchy:
   data-file: data/hierarchy_store.json
+
+produce:
+  batch-file: data/produce/import_batches.json
+  max-cases-per-batch: 10000
 
 management:
   endpoints:

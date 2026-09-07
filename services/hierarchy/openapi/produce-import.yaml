@@ -1,0 +1,382 @@
+openapi: 3.0.3
+info:
+  title: Case Map Produce Import API
+  version: 0.1.0
+  description: 资产生产标准模式的批次与双源导入门禁契约。
+servers:
+  - url: http://localhost:8787
+paths:
+  /api/v1/produce/batches:
+    post:
+      summary: 创建标准模式导入批次
+      operationId: createImportBatch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateImportBatchRequest"
+      responses:
+        "201":
+          description: 批次创建成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportBatch"
+        "400":
+          description: 目标或生产模式无效
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /api/v1/produce/batches/{batchId}:
+    get:
+      summary: 查询导入批次及标准模式门禁
+      operationId: getImportBatch
+      parameters:
+        - name: batchId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 批次状态
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportBatch"
+        "404":
+          description: 批次不存在
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /api/v1/produce/batches/{batchId}/cases:
+    post:
+      summary: 上传并解析历史用例文件
+      operationId: importCaseFile
+      parameters:
+        - name: batchId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: CSV、XLSX、XLS 或 XMind
+      responses:
+        "200":
+          description: 用例解析结果
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CaseFileParseResult"
+        "400":
+          description: 文件为空、格式不支持或内容无法解析
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /api/v1/produce/batches/{batchId}/knowledge:
+    post:
+      summary: 上传并读取知识库文件
+      operationId: importKnowledgeFile
+      parameters:
+        - name: batchId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: TXT、MD、Markdown、XLSX、XLS 或 XMind
+      responses:
+        "200":
+          description: 知识库读取结果
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KnowledgeFileParseResult"
+        "400":
+          description: 文件为空、格式不支持或内容无法解析
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /api/v1/produce/batches/{batchId}/knowledge/extract:
+    post:
+      summary: 从已上传知识库中抽取关键字候选
+      operationId: extractKnowledgeCandidates
+      parameters:
+        - name: batchId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 场景、功能点、规则和流程节点候选
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KnowledgeExtractionResult"
+        "400":
+          description: 尚未上传知识库或内容无法抽取
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /api/v1/produce/batches/{batchId}/knowledge/text:
+    post:
+      summary: 粘贴自然语言知识并抽取关键字候选
+      operationId: extractPastedKnowledge
+      parameters:
+        - name: batchId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/KnowledgeTextRequest"
+      responses:
+        "200":
+          description: 场景、功能点、规则和流程节点候选
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KnowledgeExtractionResult"
+        "400":
+          description: 文本为空或内容无法抽取
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+components:
+  schemas:
+    CreateImportBatchRequest:
+      type: object
+      required: [domain, system]
+      properties:
+        domain:
+          type: string
+          example: 家装
+        system:
+          type: string
+          example: 报价
+        mode:
+          type: string
+          enum: [standard]
+          default: standard
+          example: standard
+    ImportBatch:
+      type: object
+      required:
+        - id
+        - domain
+        - system
+        - mode
+        - status
+        - casesRequired
+        - knowledgeRequired
+        - missingInputs
+      properties:
+        id:
+          type: string
+          format: uuid
+        domain:
+          type: string
+        system:
+          type: string
+        mode:
+          type: string
+          enum: [standard]
+        status:
+          type: string
+          enum:
+            - WAITING_FOR_CASES_AND_KNOWLEDGE
+            - WAITING_FOR_CASES
+            - WAITING_FOR_KNOWLEDGE
+            - READY_FOR_KEYWORD_CALIBRATION
+            - READY_FOR_MAP_DRAFT
+            - MAP_DRAFT_GENERATED
+        casesRequired:
+          type: boolean
+        knowledgeRequired:
+          type: boolean
+        casesImported:
+          type: boolean
+        knowledgeImported:
+          type: boolean
+        keywordsConfirmed:
+          type: boolean
+        mapDraftGenerated:
+          type: boolean
+        readyForKeywordCalibration:
+          type: boolean
+        readyForMapDraft:
+          type: boolean
+        missingInputs:
+          type: array
+          items:
+            type: string
+            enum: [cases, knowledge]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        caseImport:
+          $ref: "#/components/schemas/CaseFileParseResult"
+        knowledgeImport:
+          $ref: "#/components/schemas/KnowledgeFileParseResult"
+        keywordExtraction:
+          $ref: "#/components/schemas/KnowledgeExtractionResult"
+    ImportFileMetadata:
+      type: object
+      properties:
+        fileName:
+          type: string
+        format:
+          type: string
+        size:
+          type: integer
+          format: int64
+        sha256:
+          type: string
+        rowCount:
+          type: integer
+        sheetName:
+          type: string
+          nullable: true
+        sheetCount:
+          type: integer
+          nullable: true
+    ParsedCaseRow:
+      type: object
+      properties:
+        originalCaseId:
+          type: string
+        caseName:
+          type: string
+        step:
+          type: string
+        expected:
+          type: string
+        scene:
+          type: string
+        feature:
+          type: string
+        module:
+          type: string
+        sourceRowNumber:
+          type: integer
+    ImportRisk:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        rowNumber:
+          type: integer
+          nullable: true
+    CaseFileParseResult:
+      type: object
+      properties:
+        metadata:
+          $ref: "#/components/schemas/ImportFileMetadata"
+        rows:
+          type: array
+          items:
+            $ref: "#/components/schemas/ParsedCaseRow"
+        risks:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImportRisk"
+    KnowledgeFileParseResult:
+      type: object
+      properties:
+        metadata:
+          $ref: "#/components/schemas/ImportFileMetadata"
+        text:
+          type: string
+        lineCount:
+          type: integer
+        risks:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImportRisk"
+    KnowledgeTextRequest:
+      type: object
+      required: [text]
+      properties:
+        text:
+          type: string
+        sourceName:
+          type: string
+          default: pasted-knowledge.md
+    KeywordCandidate:
+      type: object
+      properties:
+        text:
+          type: string
+        source:
+          type: string
+        confidence:
+          type: integer
+          minimum: 0
+          maximum: 100
+    KnowledgeExtractionResult:
+      type: object
+      properties:
+        scenes:
+          type: array
+          items:
+            $ref: "#/components/schemas/KeywordCandidate"
+        features:
+          type: array
+          items:
+            $ref: "#/components/schemas/KeywordCandidate"
+        rules:
+          type: array
+          items:
+            $ref: "#/components/schemas/KeywordCandidate"
+        nodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/KeywordCandidate"
+        mode:
+          type: string
+          enum: [nl, structured+nl]
+        sourceVersion:
+          type: string
+    Problem:
+      type: object
+      required: [detail]
+      properties:
+        detail:
+          type: string
