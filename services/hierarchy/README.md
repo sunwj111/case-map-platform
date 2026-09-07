@@ -1,6 +1,6 @@
 # 层级 / 功能点地图服务（Java / Spring Boot）
 
-领域 / 系统 / 场景 / 功能点 正式后端，对应 **M1-S01 ~ M1-S03**。
+领域 / 系统 / 场景 / 功能点 正式后端，对应 **M1-S01 ~ M1-S03、M2-S07、M3-S01 ~ M3-S03**。
 
 > 技术栈：Java 17 · Spring Boot 3.3 · 本地 JSON 存储（可后续换 MySQL + MyBatis-Plus）
 

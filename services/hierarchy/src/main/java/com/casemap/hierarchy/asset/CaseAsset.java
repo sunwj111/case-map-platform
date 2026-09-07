@@ -1,5 +1,6 @@
 package com.casemap.hierarchy.asset;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -20,6 +21,7 @@ public class CaseAsset {
     private String api;
     private Integer confidence;
 
+    @JsonIgnore
     public boolean isPublishedOfficial() {
         return STATUS_CONFIRMED.equals(status) && !LIFECYCLE_ARCHIVED.equals(lifecycle);
     }
