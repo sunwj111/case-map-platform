@@ -71,5 +71,5 @@ FeatureMapDTO
 
 ## 后续
 
-- **M1-S04** `FeatureMapAssembler`：按 `featureKey` 聚合多源数据输出本 DTO  
+- **M1-S04** ~~`FeatureMapAssembler`~~：已实现（`FeatureMapAssembler.assemble`）
 - **M1-S08** `GET /api/v1/feature-maps/{featureKey}`：对外查询

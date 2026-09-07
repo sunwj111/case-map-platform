@@ -1,6 +1,6 @@
 # 层级 / 功能点地图服务（Java / Spring Boot）
 
-领域 / 系统 / 场景 / 功能点 正式后端，对应 **M1-S01 ~ M1-S03、M2-S07、M3-S01 ~ M3-S03**。
+领域 / 系统 / 场景 / 功能点 正式后端，对应 **M1-S01 ~ M1-S05、M2-S07、M3-S01 ~ M3-S03**。
 
 > 技术栈：Java 17 · Spring Boot 3.3 · 本地 JSON 存储（可后续换 MySQL + MyBatis-Plus）
 
@@ -55,12 +55,13 @@ cd services/hierarchy
 | 产物 | 路径 |
 |---|---|
 | Java DTO | `com.casemap.hierarchy.featuremap.FeatureMapDto` |
+| 组装器 | `FeatureMapAssembler`（M1-S04 / M1-S05） |
 | MapNode 投影 | `FeatureMapNodeProjector` |
 | 规范 + DOM 对照 | [`docs/feature_map_dto_spec.md`](../../docs/feature_map_dto_spec.md) |
 | OpenAPI | [`openapi/feature-map.yaml`](openapi/feature-map.yaml) |
 | TypeScript | [`contracts/feature-map.ts`](contracts/feature-map.ts) |
 
-下一故事：**M1-S04 FeatureMapAssembler**（按 featureKey 组装完整 DTO）。
+下一故事：**M1-S08** `GET /feature-maps/{featureKey}`（对外查询；可选再补 M1-S06 summary 细化）。
 
 ## 说明
 

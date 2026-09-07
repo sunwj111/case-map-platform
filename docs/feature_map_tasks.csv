@@ -2,8 +2,8 @@
 Story,M1-S01,[M1-S01] 定义 featureKey 命名与路由规则,M1 功能点地图引擎,M1-E1,地图数据协议,定义功能点地图统一数据结构与标识规则,P0,MVP,Sprint 1,0.5,,后端,规则为领域/系统/场景/功能点；支持URL编解码；提供3个报价域示例key,已完成
 Story,M1-S02,[M1-S02] 定义 FeatureMapDTO 主结构,M1 功能点地图引擎,M1-E1,地图数据协议,定义功能点地图统一数据结构与标识规则,P0,MVP,Sprint 1,1,M1-S01,后端,DTO含meta/spine/businessView/techView/riskView/summary；字段与原型DOM有对照表；OpenAPI/TS类型已提交,已完成
 Story,M1-S03,[M1-S03] 定义 MapNode 统一节点模型,M1 功能点地图引擎,M1-E1,地图数据协议,定义功能点地图统一数据结构与标识规则,P0,MVP,Sprint 1,0.5,M1-S02,后端,节点含id/type/title/status/confidence/payload；前端列组件可统一消费MapNode,已完成
-Story,M1-S04,[M1-S04] 实现 FeatureMapAssembler 主流程,M1 功能点地图引擎,M1-E2,地图组装服务,从多数据源聚合生成功能点地图,P0,MVP,Sprint 1,2,M1-S02;M2-S07;M3-S03,后端,输入featureKey输出完整DTO；数据源缺失有降级不抛500；组装逻辑有单测,待开始
-Story,M1-S05,[M1-S05] 组装 spine 业务脊柱数据,M1 功能点地图引擎,M1-E2,地图组装服务,从多数据源聚合生成功能点地图,P0,MVP,Sprint 1,0.5,M1-S04,后端,返回domain/app/feature/scene/valueTags；返回neighborFeatures,待开始
+Story,M1-S04,[M1-S04] 实现 FeatureMapAssembler 主流程,M1 功能点地图引擎,M1-E2,地图组装服务,从多数据源聚合生成功能点地图,P0,MVP,Sprint 1,2,M1-S02;M2-S07;M3-S03,后端,输入featureKey输出完整DTO；数据源缺失有降级不抛500；组装逻辑有单测,已完成
+Story,M1-S05,[M1-S05] 组装 spine 业务脊柱数据,M1 功能点地图引擎,M1-E2,地图组装服务,从多数据源聚合生成功能点地图,P0,MVP,Sprint 1,0.5,M1-S04,后端,返回domain/app/feature/scene/valueTags；返回neighborFeatures,已完成
 Story,M1-S06,[M1-S06] 组装 summary 质量摘要数据,M1 功能点地图引擎,M1-E2,地图组装服务,从多数据源聚合生成功能点地图,P0,MVP,Sprint 3,1,M1-S04;M4-S01,后端,返回linkedCaseCount/priorityDistribution/automationCoverage；数字与正式资产统计一致,待开始
 Story,M1-S07,[M1-S07] 节点置信度与来源标记,M1 功能点地图引擎,M1-E2,地图组装服务,从多数据源聚合生成功能点地图,P1,MVP,Sprint 3,0.5,M1-S04,后端,低置信节点status=review；meta.dataSources列出数据来源,待开始
 Story,M1-S08,[M1-S08] 实现 GET /feature-maps/{featureKey},M1 功能点地图引擎,M1-E3,地图查询 API,对外提供功能点地图查询能力,P0,MVP,Sprint 1,1,M1-S04,后端,200返回完整JSON；404功能点不存在；响应字段与OpenAPI一致,待开始

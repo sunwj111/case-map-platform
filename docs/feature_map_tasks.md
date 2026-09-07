@@ -67,13 +67,17 @@
 | M1-S07 | 节点置信度与来源标记 | P1 | 0.5d | M1-S04 |
 
 **M1-S04 验收标准**
-- [ ] 输入 featureKey，输出完整 FeatureMapDTO
-- [ ] 数据源缺失时有降级字段，不抛 500
-- [ ] 组装逻辑有单元测试
+- [x] 输入 featureKey，输出完整 FeatureMapDTO
+- [x] 数据源缺失时有降级字段，不抛 500
+- [x] 组装逻辑有单元测试
+
+> 实现：`com.casemap.hierarchy.featuremap.FeatureMapAssembler`
 
 **M1-S05 验收标准**
-- [ ] 返回 domain、app、feature、scene、valueTags
-- [ ] 返回 neighborFeatures（同场景功能点）
+- [x] 返回 domain、app、feature、scene、valueTags
+- [x] 返回 neighborFeatures（同场景功能点）
+
+> 实现：`FeatureMapAssembler#buildSpine`
 
 **M1-S06 验收标准**
 - [ ] 返回 linkedCaseCount、priorityDistribution、automationCoverage
