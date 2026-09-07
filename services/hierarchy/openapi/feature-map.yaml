@@ -1,0 +1,264 @@
+openapi: 3.0.3
+info:
+  title: Case Map · FeatureMap API
+  version: 0.1.0
+  description: |
+    FeatureMapDTO（M1-S02）与查询契约。
+    组装实现见 M1-S04；查询 API 见 M1-S08。
+paths:
+  /api/v1/feature-maps/{featureKey}:
+    get:
+      summary: 按 featureKey 查询功能点地图
+      operationId: getFeatureMap
+      parameters:
+        - name: featureKey
+          in: path
+          required: true
+          description: URL 编码后的 领域/系统/场景/功能点
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 完整 FeatureMapDTO
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeatureMapDto'
+        '404':
+          description: 功能点不存在
+components:
+  schemas:
+    FeatureMapDto:
+      type: object
+      required: [meta, spine, businessView, techView, riskView, summary]
+      properties:
+        meta:
+          $ref: '#/components/schemas/FeatureMapMeta'
+        spine:
+          $ref: '#/components/schemas/BusinessSpine'
+        businessView:
+          $ref: '#/components/schemas/BusinessView'
+        techView:
+          $ref: '#/components/schemas/TechView'
+        riskView:
+          $ref: '#/components/schemas/RiskView'
+        summary:
+          $ref: '#/components/schemas/QualitySummary'
+        consumers:
+          type: array
+          items:
+            $ref: '#/components/schemas/MapConsumer'
+    FeatureMapMeta:
+      type: object
+      required: [mapId, featureKey, version]
+      properties:
+        mapId: { type: string }
+        featureKey: { type: string }
+        version: { type: string }
+        baseline: { type: string }
+        updatedAt: { type: string }
+        qualityOwner: { type: string }
+        dataSources:
+          type: array
+          items: { type: string }
+    BusinessSpine:
+      type: object
+      required: [domain, app, featureName, sceneName]
+      properties:
+        domain: { type: string }
+        app: { type: string }
+        processName: { type: string }
+        featureName: { type: string }
+        sceneName: { type: string }
+        valueTags:
+          type: array
+          items: { type: string }
+        neighborFeatures:
+          type: array
+          items:
+            $ref: '#/components/schemas/NeighborFeature'
+    NeighborFeature:
+      type: object
+      required: [featureKey, featureName]
+      properties:
+        featureKey: { type: string }
+        featureName: { type: string }
+    BusinessView:
+      type: object
+      properties:
+        scenarios:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScenarioItem'
+        cases:
+          type: array
+          items:
+            $ref: '#/components/schemas/CaseItem'
+        scripts:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScriptItem'
+        dataTemplates:
+          type: array
+          items:
+            $ref: '#/components/schemas/DataTemplateItem'
+        executions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExecutionItem'
+    ScenarioItem:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        coverageStatus: { type: string, enum: [covered, partial, gap] }
+        caseCount: { type: integer }
+    CaseItem:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        priority: { type: string }
+        testScenario: { type: string }
+        confidence: { type: integer }
+        mountAdvice: { type: string }
+        api: { type: string }
+    ScriptItem:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        type: { type: string }
+        status: { type: string }
+        linkedCaseId: { type: string }
+    DataTemplateItem:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        linkedScenarioId: { type: string }
+    ExecutionItem:
+      type: object
+      properties:
+        id: { type: string }
+        label: { type: string }
+        results:
+          type: array
+          items: { type: string }
+        lastRunAt: { type: string }
+    TechView:
+      type: object
+      properties:
+        source: { type: string }
+        services:
+          type: array
+          items:
+            $ref: '#/components/schemas/ServiceItem'
+        flowNodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FlowNodeItem'
+        apis:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApiItem'
+        tables:
+          type: array
+          items: { type: string }
+        messages:
+          type: array
+          items: { type: string }
+        codeModules:
+          type: array
+          items:
+            $ref: '#/components/schemas/CodeModuleItem'
+    ServiceItem:
+      type: object
+      properties:
+        name: { type: string }
+        role: { type: string }
+    FlowNodeItem:
+      type: object
+      properties:
+        name: { type: string }
+        risk: { type: string }
+        isPrimary: { type: boolean }
+    ApiItem:
+      type: object
+      properties:
+        method: { type: string }
+        path: { type: string }
+        label: { type: string }
+        relation: { type: string }
+        controller: { type: string }
+        confidence: { type: integer }
+    CodeModuleItem:
+      type: object
+      properties:
+        name: { type: string }
+        type: { type: string }
+    RiskView:
+      type: object
+      properties:
+        rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/RuleItem'
+        defects:
+          type: array
+          items:
+            $ref: '#/components/schemas/DefectItem'
+        tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/RiskTagItem'
+    RuleItem:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        source: { type: string }
+    DefectItem:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        severity: { type: string }
+        openedAt: { type: string }
+    RiskTagItem:
+      type: object
+      properties:
+        type: { type: string }
+        label: { type: string }
+        level: { type: string }
+    QualitySummary:
+      type: object
+      properties:
+        linkedCaseCount: { type: integer }
+        priorityDistribution:
+          type: object
+          additionalProperties: true
+        automationCoverage: { type: number, format: double }
+        defectCount30d: { type: integer }
+        gapCount: { type: integer }
+        coverageStatus: { type: string }
+    MapConsumer:
+      type: object
+      properties:
+        platform: { type: string }
+        usage: { type: string }
+    MapNode:
+      type: object
+      required: [id, type, title]
+      description: 统一节点模型（M1-S03）
+      properties:
+        id: { type: string }
+        type:
+          type: string
+          enum: [feature, neighbor, scene, case, api, rule, script, defect, data, execution, service, module]
+        title: { type: string }
+        status:
+          type: string
+          enum: [ready, review, missing, deprecated]
+        confidence: { type: integer, nullable: true }
+        payload: {}

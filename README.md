@@ -2,6 +2,22 @@
 
 基于《用例地图平台建设方案-2.pptx》与能力要求生成。
 
+## 正式服务（进行中）
+
+| 服务 | 说明 |
+|---|---|
+| [`services/hierarchy`](services/hierarchy/README.md) | **Java / Spring Boot**：层级 + FeatureMapDTO |
+| [`docs/feature_key_spec.md`](docs/feature_key_spec.md) | featureKey 规范（M1-S01） |
+| [`docs/feature_map_dto_spec.md`](docs/feature_map_dto_spec.md) | FeatureMapDTO / MapNode（M1-S02 / M1-S03） |
+
+```bash
+export JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk-17.0.2.jdk/Contents/Home
+cd services/hierarchy
+./mvnw spring-boot:run
+```
+
+> 早期 Python 试验版在 `services/hierarchy-python/`，非正式交付。
+
 ## 交付物
 
 | 文件 | 说明 |

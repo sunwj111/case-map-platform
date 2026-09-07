@@ -1,7 +1,7 @@
 ﻿工作项类型,Story ID,标题,模块,Epic ID,Epic 名称,Epic 目标,优先级,阶段,Sprint,估时(天),依赖,主责角色,验收标准,状态
-Story,M1-S01,[M1-S01] 定义 featureKey 命名与路由规则,M1 功能点地图引擎,M1-E1,地图数据协议,定义功能点地图统一数据结构与标识规则,P0,MVP,Sprint 1,0.5,,后端,规则为领域/系统/场景/功能点；支持URL编解码；提供3个报价域示例key,待开始
-Story,M1-S02,[M1-S02] 定义 FeatureMapDTO 主结构,M1 功能点地图引擎,M1-E1,地图数据协议,定义功能点地图统一数据结构与标识规则,P0,MVP,Sprint 1,1,M1-S01,后端,DTO含meta/spine/businessView/techView/riskView/summary；字段与原型DOM有对照表；OpenAPI/TS类型已提交,待开始
-Story,M1-S03,[M1-S03] 定义 MapNode 统一节点模型,M1 功能点地图引擎,M1-E1,地图数据协议,定义功能点地图统一数据结构与标识规则,P0,MVP,Sprint 1,0.5,M1-S02,后端,节点含id/type/title/status/confidence/payload；前端列组件可统一消费MapNode,待开始
+Story,M1-S01,[M1-S01] 定义 featureKey 命名与路由规则,M1 功能点地图引擎,M1-E1,地图数据协议,定义功能点地图统一数据结构与标识规则,P0,MVP,Sprint 1,0.5,,后端,规则为领域/系统/场景/功能点；支持URL编解码；提供3个报价域示例key,已完成
+Story,M1-S02,[M1-S02] 定义 FeatureMapDTO 主结构,M1 功能点地图引擎,M1-E1,地图数据协议,定义功能点地图统一数据结构与标识规则,P0,MVP,Sprint 1,1,M1-S01,后端,DTO含meta/spine/businessView/techView/riskView/summary；字段与原型DOM有对照表；OpenAPI/TS类型已提交,已完成
+Story,M1-S03,[M1-S03] 定义 MapNode 统一节点模型,M1 功能点地图引擎,M1-E1,地图数据协议,定义功能点地图统一数据结构与标识规则,P0,MVP,Sprint 1,0.5,M1-S02,后端,节点含id/type/title/status/confidence/payload；前端列组件可统一消费MapNode,已完成
 Story,M1-S04,[M1-S04] 实现 FeatureMapAssembler 主流程,M1 功能点地图引擎,M1-E2,地图组装服务,从多数据源聚合生成功能点地图,P0,MVP,Sprint 1,2,M1-S02;M2-S07;M3-S03,后端,输入featureKey输出完整DTO；数据源缺失有降级不抛500；组装逻辑有单测,待开始
 Story,M1-S05,[M1-S05] 组装 spine 业务脊柱数据,M1 功能点地图引擎,M1-E2,地图组装服务,从多数据源聚合生成功能点地图,P0,MVP,Sprint 1,0.5,M1-S04,后端,返回domain/app/feature/scene/valueTags；返回neighborFeatures,待开始
 Story,M1-S06,[M1-S06] 组装 summary 质量摘要数据,M1 功能点地图引擎,M1-E2,地图组装服务,从多数据源聚合生成功能点地图,P0,MVP,Sprint 3,1,M1-S04;M4-S01,后端,返回linkedCaseCount/priorityDistribution/automationCoverage；数字与正式资产统计一致,待开始
@@ -13,7 +13,7 @@ Story,M2-S03,[M2-S03] 邻接功能点点击切换,M2 业务资产链,M2-E1,业�
 Story,M2-S04,[M2-S04] 场景列表聚合逻辑,M2 业务资产链,M2-E2,场景列,展示功能点下业务场景及覆盖情况,P0,MVP,Sprint 2,0.5,M1-S04,后端,从正式资产testScenario去重；无testScenario时回退scene名,待开始
 Story,M2-S05,[M2-S05] 实现 ScenarioColumn 组件,M2 业务资产链,M2-E2,场景列,展示功能点下业务场景及覆盖情况,P0,MVP,Sprint 2,0.5,M2-S04,前端,场景列表与计数展示；支持选中高亮,待开始
 Story,M2-S06,[M2-S06] 场景选中过滤用例,M2 业务资产链,M2-E2,场景列,展示功能点下业务场景及覆盖情况,P1,二期,Backlog,0.5,M2-S05;M2-S08,前端,选中场景后用例列只显示该场景用例；取消选中恢复全部,待开始
-Story,M2-S07,[M2-S07] 功能点用例查询（正式资产）,M2 业务资产链,M2-E3,用例列,展示功能点挂载的正式用例资产,P0,MVP,Sprint 1,1,,后端,仅返回已确认非归档用例；支持按feature+scene过滤,待开始
+Story,M2-S07,[M2-S07] 功能点用例查询（正式资产）,M2 业务资产链,M2-E3,用例列,展示功能点挂载的正式用例资产,P0,MVP,Sprint 1,1,,后端,仅返回已确认非归档用例；支持按feature+scene过滤,已完成
 Story,M2-S08,[M2-S08] 实现 CaseColumn 组件,M2 业务资产链,M2-E3,用例列,展示功能点挂载的正式用例资产,P0,MVP,Sprint 2,1,M2-S07,前端,展示用例ID/名称/优先级/测试场景；支持列内单选高亮,待开始
 Story,M2-S09,[M2-S09] 用例快捷过滤,M2 业务资产链,M2-E3,用例列,展示功能点挂载的正式用例资产,P0,MVP,Sprint 2,0.5,M2-S08,前端,输入关键字过滤用例名称；无匹配时显示空态,待开始
 Story,M2-S10,[M2-S10] 脚本关联与推导逻辑,M2 业务资产链,M2-E4,脚本列,展示用例关联的自动化脚本,P0,MVP,Sprint 2,0.5,M2-S07;M3-S03,后端,有用例脚本时展示真实脚本；无脚本时由api.path推导json名,待开始
@@ -21,9 +21,9 @@ Story,M2-S11,[M2-S11] 实现 ScriptColumn 组件,M2 业务资产链,M2-E4,脚本
 Story,M2-S12,[M2-S12] 实现 DataColumn 组件,M2 业务资产链,M2-E5,数据与执行列,补齐测试数据模板与执行历史,P1,二期,Backlog,0.5,M2-S07,前端,展示数据模板ID/名称；MVP可用静态mock数据,待开始
 Story,M2-S13,[M2-S13] 实现 ExecutionColumn 组件,M2 业务资产链,M2-E5,数据与执行列,补齐测试数据模板与执行历史,P1,二期,Backlog,1,自动化平台,前端,展示近3次执行结果；对接自动化平台真实数据,待开始
 Story,M2-S14,[M2-S14] 数据模板与场景绑定,M2 业务资产链,M2-E5,数据与执行列,补齐测试数据模板与执行历史,P1,二期,Backlog,0.5,M2-S12,前端,数据模板可关联到场景；选中场景时高亮对应数据,待开始
-Story,M3-S01,[M3-S01] 接入 feature_api_map 数据源,M3 技术映射,M3-E1,知识库映射接入,将功能点与接口、流程节点关联,P0,MVP,Sprint 1,1,,后端,按功能点名命中接口映射；主接口优先排序,待开始
-Story,M3-S02,[M3-S02] 接入 quote.json flowNodes,M3 技术映射,M3-E1,知识库映射接入,将功能点与接口、流程节点关联,P0,MVP,Sprint 1,0.5,,后端,读取flowNodes配置；与API映射节点合并去重,待开始
-Story,M3-S03,[M3-S03] 实现 resolveApiEntries 服务化,M3 技术映射,M3-E1,知识库映射接入,将功能点与接口、流程节点关联,P0,MVP,Sprint 1,1,M3-S01;M3-S02,后端,返回apis/flowNodes/service/source；无映射时有回退接口,待开始
+Story,M3-S01,[M3-S01] 接入 feature_api_map 数据源,M3 技术映射,M3-E1,知识库映射接入,将功能点与接口、流程节点关联,P0,MVP,Sprint 1,1,,后端,按功能点名命中接口映射；主接口优先排序,已完成
+Story,M3-S02,[M3-S02] 接入 quote.json flowNodes,M3 技术映射,M3-E1,知识库映射接入,将功能点与接口、流程节点关联,P0,MVP,Sprint 1,0.5,,后端,读取flowNodes配置；与API映射节点合并去重,已完成
+Story,M3-S03,[M3-S03] 实现 resolveApiEntries 服务化,M3 技术映射,M3-E1,知识库映射接入,将功能点与接口、流程节点关联,P0,MVP,Sprint 1,1,M3-S01;M3-S02,后端,返回apis/flowNodes/service/source；无映射时有回退接口,已完成
 Story,M3-S04,[M3-S04] 实现 TechMappingStrip 组件,M3 技术映射,M3-E2,技术映射展示,页面展示技术链路,P0,MVP,Sprint 2,1,M3-S03,前端,五列技术信息横向展示；映射来源标签展示,待开始
 Story,M3-S05,[M3-S05] 展示应用/流程节点/接口,M3 技术映射,M3-E2,技术映射展示,页面展示技术链路,P0,MVP,Sprint 2,0.5,M3-S04,前端,应用/流程节点/接口chip正确渲染；接口数量提示正确,待开始
 Story,M3-S06,[M3-S06] 展示数据表/消息/代码模块,M3 技术映射,M3-E2,技术映射展示,页面展示技术链路,P1,二期,Backlog,0.5,M3-S04,前端,表/消息/代码模块可展示；无数据时显示暂无,待开始

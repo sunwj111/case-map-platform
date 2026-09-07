@@ -265,6 +265,16 @@
     }
     state.selectedNodeId = null;
     state.map = null;
+    state.featureId = null;
+  }
+
+  function runCurrentLayout() {
+    if (!state.cy || !state.map) return;
+    const featureId = state.featureId || buildElements(state.map).featureId;
+    state.cy.layout(layoutOptions(state.layout, featureId)).run();
+    state.cy.one('layoutstop', function() {
+      if (state.cy) state.cy.fit(undefined, 56);
+    });
   }
 
   function mount(map, hooks) {
@@ -274,12 +284,17 @@
       return false;
     }
     state.hooks = hooks || {};
-    state.map = map;
+    // 先销毁旧实例；须在 destroy 之后再写回 map，否则切换布局时 state.map 为空会直接 return
     destroy();
+    state.map = map;
     const container = document.getElementById('p0GraphCy');
     if (!container || !map) return false;
 
+    const layoutSelect = document.getElementById('p0GraphLayout');
+    if (layoutSelect && layoutSelect.value) state.layout = layoutSelect.value;
+
     const elements = buildElements(map);
+    state.featureId = elements.featureId;
     state.cy = global.cytoscape({
       container: container,
       elements: elements.nodes.concat(elements.edges),
@@ -414,10 +429,7 @@
     if (layoutSelect) {
       layoutSelect.addEventListener('change', function() {
         state.layout = layoutSelect.value;
-        if (!state.cy || !state.map) return;
-        const elements = buildElements(state.map);
-        state.cy.layout(layoutOptions(state.layout, elements.featureId)).run();
-        state.cy.one('layoutstop', function() { state.cy.fit(undefined, 56); });
+        runCurrentLayout();
       });
     }
 
@@ -434,9 +446,7 @@
       sparseBtn.addEventListener('click', function() {
         state.sparse = !state.sparse;
         sparseBtn.textContent = state.sparse ? '更疏布局' : '更密布局';
-        if (!state.cy || !state.map) return;
-        const elements = buildElements(state.map);
-        state.cy.layout(layoutOptions(state.layout, elements.featureId)).run();
+        runCurrentLayout();
       });
     }
 

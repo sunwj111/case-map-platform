@@ -1,0 +1,18 @@
+server:
+  port: 8787
+
+spring:
+  application:
+    name: hierarchy-service
+  web:
+    resources:
+      static-locations: classpath:/static/
+
+hierarchy:
+  data-file: data/hierarchy_store.json
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

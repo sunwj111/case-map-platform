@@ -1180,10 +1180,12 @@
       <span class="brand-sub">公司级资产目录与评审</span>
     </div>
     <div class="topbar-right">
+      <!-- DEMO: 顶栏加载示例入口已注释
       <div class="topbar-actions">
         <button class="btn-ghost primary" type="button" id="btnLoadDemo">加载示例数据</button>
         <button class="btn-ghost" type="button" id="btnLoadQuoteReviewTop">加载报价真实地图</button>
       </div>
+      -->
       <div class="workspace-bar" title="当前工作空间">
         <label class="ws-field">
           <span>租户</span>
@@ -1214,6 +1216,7 @@
       </div>
     </div>
   </div>
+  <!-- DEMO: 演示横幅已注释
   <div class="demo-banner" id="demoBanner">
     <div class="demo-banner-main">
       <div>
@@ -1229,6 +1232,7 @@
       <button class="btn" type="button" id="btnReloadDemo">重载演示数据</button>
     </div>
   </div>
+  -->
   <div class="shell">
     <aside class="sider">
       <div class="logo">用例地图
@@ -1448,7 +1452,7 @@
                 <button class="btn" type="button" id="p0GraphZoomIn">＋</button>
                 <button class="btn" type="button" id="p0GraphZoomOut">－</button>
               </div>
-              <div class="p0-graph-hint" id="p0GraphHint">选择有样例数据的功能点后，将在此渲染交互图谱。</div>
+              <div class="p0-graph-hint" id="p0GraphHint">选择功能点后，将在此渲染交互图谱。</div>
               <div class="p0-graph-wrap" id="p0GraphWrap">
                 <div id="p0GraphCy"></div>
                 <div class="p0-graph-tip" id="p0GraphTip"></div>
@@ -1695,6 +1699,7 @@
           <div id="importGateHint"></div>
         </div>
 
+        <!-- DEMO: 导入页示例包入口已注释
         <details class="help-details" id="importSamplePack">
           <summary>演示用：加载示例包（非正式入口）</summary>
           <div class="muted mt-8">任意应用正式流程仍用下方上传。示例包仅便于走通评审 / 缺口确认。</div>
@@ -1705,6 +1710,7 @@
             <button class="chip-btn" type="button" id="btnProduceCasesOnlyDemo">仅用例模式演示</button>
           </div>
         </details>
+        -->
 
         <div class="card">
           <div class="card-hd"><span>1. 选择导入目标与生产模式</span></div>
@@ -1770,10 +1776,10 @@
               </details>
               <div class="mt-12 flex">
                 <button class="btn primary" id="btnImportCases">导入历史用例</button>
-                <button class="btn" id="btnDemoCases" type="button">填入示例</button>
+                <!-- DEMO: <button class="btn" id="btnDemoCases" type="button">填入示例</button> -->
               </div>
               <div class="muted mt-12" id="caseImportMsg"></div>
-              <div class="preview-box" id="casePreview">尚未导入。可上传 CSV / Excel / XMind，或点「填入示例」。</div>
+              <div class="preview-box" id="casePreview">尚未导入。请上传 CSV / Excel / XMind。</div>
             </div>
           </div>
 
@@ -1795,9 +1801,11 @@
               <div class="mt-12 flex">
                 <button class="btn primary" id="btnImportKb">导入/抽取知识库</button>
                 <button class="btn" id="btnExtractKbNl" type="button">从粘贴文本抽取</button>
+                <!-- DEMO:
                 <button class="btn" id="btnDemoKb" type="button">填入示例</button>
                 <button class="btn" id="btnDemoKbNl" type="button">填入白话示例</button>
                 <button class="btn" type="button" id="btnDemoBoth">两项一起填</button>
+                -->
               </div>
               <div class="muted mt-12" id="kbImportMsg"></div>
               <div class="preview-box" id="kbPreview">尚未导入。可上传 txt/md，或粘贴自然语言后点「从粘贴文本抽取」。</div>
@@ -1854,7 +1862,7 @@
               <span id="keywordsPageDesc"></span>
               <span id="keywordTipText"></span>
               <select id="keywordPhaseSelect"><option value="calibrate">calibrate</option><option value="stable">stable</option></select>
-              <button type="button" id="btnImportLoadFullDemo"></button>
+              <button type="button" id="btnImportLoadFullDemo" class="hidden" aria-hidden="true"></button>
             </div>
           </div>
         </div>
@@ -1885,6 +1893,7 @@
           <div class="flex">
             <button class="btn primary" id="btnBatchConfirm" disabled>批量确认当前结果</button>
             <button class="btn" id="btnBatchConfirmPoolA" type="button" disabled title="仅用例模式：一键确认 A 池">批量确认 A 池</button>
+            <!-- DEMO: 评审页示例包已注释
             <details class="help-details" style="margin:0">
               <summary class="chip-btn" style="list-style:none;cursor:pointer">加载示例包</summary>
               <div class="example-chips mt-8">
@@ -1892,6 +1901,7 @@
                 <button class="chip-btn" type="button" id="btnLoadQuoteReview">报价全量真实地图</button>
               </div>
             </details>
+            -->
           </div>
         </div>
 
@@ -2209,10 +2219,12 @@
             <button class="btn" type="button" id="btnRunSyncInc">增量同步</button>
           </div>
         </div>
+        <!-- DEMO:
         <details class="help-details">
           <summary>示例说明</summary>
           下方 3 个源代表质保用例库 / 开发知识库 / 需求系统；日志里已有冲突与增量样例。点「增量同步」可追加一条新日志。
         </details>
+        -->
         <div class="sync-grid mt-12" id="syncCards"></div>
         <div class="card mt-12">
           <div class="card-hd"><span>最近同步日志</span><span class="tag" id="syncLogCount">0</span></div>
@@ -2249,10 +2261,12 @@
           <span class="flow-step">已废弃</span>
           <span style="margin-left:4px">缺口在评审关闭，不进入正式资产</span>
         </div>
+        <!-- DEMO:
         <details class="help-details">
           <summary>示例说明</summary>
           加载示例后会有已发布基线与「已发布 / 评审中 / 已归档」对比。点指标可筛选列表；单条可归档或废弃。
         </details>
+        -->
         <div class="grid-4 mt-12" id="baselineMetricsBody">
           <div class="stat"><div class="label">当前基线</div><div class="value" id="baselineCurrent" style="font-size:18px">未发布</div>
             <div class="sub" id="baselineCurrentInline">未发布</div></div>
@@ -2485,6 +2499,7 @@
               <button class="btn primary" type="button" id="btnAnalyzeImpact">分析影响面</button>
               <button class="btn" type="button" id="btnImpactToRegression">一键生成建议回归包</button>
             </div>
+            <!-- DEMO: 变更影响示例芯片已注释
             <details class="help-details">
               <summary>可点示例变更</summary>
               <div class="example-chips" id="impactExampleChips">
@@ -2494,8 +2509,9 @@
                 <button class="chip-btn" type="button" data-impact-example="数量价汇总">功能点：数量价汇总</button>
               </div>
             </details>
+            -->
             <div class="impact-box" id="impactResult">
-              <div class="muted">输入变更后点击分析，或展开上方示例芯片。将基于正式资产中的接口/功能点做示意匹配。</div>
+              <div class="muted">输入变更后点击分析。将基于正式资产中的接口/功能点做匹配。</div>
             </div>
           </div>
         </div>
@@ -2909,7 +2925,7 @@
       renderOverviewCrumb();
 
       if (!cards.length) {
-        grid.innerHTML = '<div class="overview-empty">暂无匹配结果。请先选择上级类目，或点「加载示例 / 加载报价真实地图」。</div>';
+        grid.innerHTML = '<div class="overview-empty">暂无匹配结果。请先选择上级类目，或完成资产导入与评审。</div>';
         refreshHint();
         return;
       }
@@ -3238,7 +3254,7 @@
       const file = document.getElementById('caseFile').files[0];
       const target = document.getElementById('importTargetHint').textContent;
       if (!file) {
-        document.getElementById('caseImportMsg').textContent = '请先选择 CSV / Excel / XMind 文件，或点「填入示例」。';
+        document.getElementById('caseImportMsg').textContent = '请先选择 CSV / Excel / XMind 文件。';
         return;
       }
       if (!window.P0FileParsers) {
@@ -3290,9 +3306,11 @@
       document.getElementById('kbImportMsg').textContent = '请先选择知识库文件（txt/md/xmind/xlsx），或在文本框粘贴自然语言后抽取。';
     });
 
-    const DEMO_CASES_CSV = "casename,step,expected_results,scene\nTC-QT-001 首次下新生成报价单,管家端发起首次下新报价,生成 quotationsCode 且主记录落库,报价触发与报价单生成\nTC-QT-002 续约场景重新获取报价,续约单点击重新获取,生成新报价单并关联原合同,报价触发与报价单生成\nTC-QT-003 改价发起报价接口,调用改价接口传入原报价单号,生成改价类型报价单,报价触发与报价单生成\nTC-QT-004 报价类型枚举覆盖,分别创建新签/续约/续约BOM,quotationsType 枚举正确落库,报价触发与报价单生成\nTC-SC-001 SFBJ场景取销售价,场景编码=SFBJ 触发报价,priceSourceType=销售价,报价场景识别与价格来源\nTC-SC-002 LFBJ场景取目录价,场景编码=LFBJ 触发报价,priceSourceType=目录价,报价场景识别与价格来源\nTC-SC-003 JZBJ场景销售价加税,场景编码=JZBJ 触发报价,priceSourceType=销售价加税,报价场景识别与价格来源\nTC-SC-004 未知场景拦截,传入未配置场景编码 XP_UNKNOWN,接口拒绝并提示场景非法,报价场景识别与价格来源\nTC-PR-001 功能区间必填校验,清空功能区间后提交参数,拦截并提示功能区间不能为空,参数解析与输入精度\nTC-PR-002 单价为空拦截,行项目 unitPrice 置空,拦截并提示单价非法,参数解析与输入精度\nTC-PR-003 数量非法拦截,amount 传入负数,拦截并提示数量非法,参数解析与输入精度\nTC-PR-004 operateType必填,operateType 缺失,拦截并提示 operateType 不能为空,参数解析与输入精度\nTC-PR-005 输入精度四舍五入,单价输入 12.345,落库精度为 12.35,参数解析与输入精度\nTC-PR-006 定制二级分类校验,定制 ADD 物品缺少二级展示分类,拦截并提示二级分类必填,参数解析与输入精度\nTC-MT-001 套餐包标配自动带出,选择套餐包主物料,自动带出标配 SKU 列表,物料处理与自动带出\nTC-MT-002 增购升级带出配件,主物料增购并勾选升级,配件按规则自动带出,物料处理与自动带出\nTC-MT-003 同类SPU拦截,同 SPU 再次添加,拦截同类 SPU 重复,物料处理与自动带出\nTC-MT-004 uniqueCode去重,重复提交相同 uniqueCode 物品,第二次添加被拒绝,物料处理与自动带出\nTC-MT-005 配件比例计算,主物品数量=4 比例=0.5,配件数量=2.00,物料处理与自动带出\nTC-MT-006 配件缺父SKU拦截,配件标签物品无父 SKU,拦截并提示配件参数不完整,物料处理与自动带出\nTC-AM-001 数量价汇总R002,QUANTITY_PRICE 单价100 数量3,总价=300.00,金额计算与汇总\nTC-AM-002 固定价汇总R001,FIXED_PRICE 单价1280,总价=1280 不乘数量,金额计算与汇总\nTC-AM-003 租赁价汇总R003,租赁物品数量2 单价50 周期12,总价=1200.00,金额计算与汇总\nTC-AM-004 去利润价R004,totalPrice=1100 profitRate=0.1,noProfitPrice=1000.00,金额计算与汇总\nTC-AM-005 硬装软装分组汇总,同时存在硬装基础与软装增项,按 itemGroup 分组金额正确,金额计算与汇总\nTC-AM-006 四舍五入找平R014,多行金额累加产生分位差,最终汇总四舍五入到2位并找平,金额计算与汇总\nTC-AM-007 数量为0边界,QUANTITY_PRICE amount=0,行总价=0.00 且可进入后续校验,金额计算与汇总\nTC-AM-008 含税不含税切换,切换含税展示,含税/不含税金额与明细一致,金额计算与汇总\nTC-CS-001 造价单明细落库,报价计算完成后保存,DesignCost 与 quotationsDetailList 落库一致,造价单生成与明细落库\nTC-CS-002 扩展包明细落库,含扩展包的报价保存,扩展包明细写入造价扩展表,造价单生成与明细落库\nTC-CS-003 UPDATE数量0置CANCEL,UPDATE 物品 amount=0 后提交,逻辑删除并状态置 CANCEL,造价单生成与明细落库\nTC-AU-001 提交审核状态流转,造价单从待提交点击提交,checkStatus 变为待审核(10),造价提交与审核\nTC-AU-002 审核通过状态流转,待审核单审核通过,checkStatus 变为审核通过(20),造价提交与审核\nTC-AU-003 审核拒绝回退待提交,待审核单审核拒绝,状态到审核拒绝(30)并可编辑回退待提交(0),造价提交与审核\nTC-AU-004 自动审核通过判定,满足免审条件且无驳回记录,系统自动审核通过,造价提交与审核\nTC-AU-005 抽审进入人工审核,命中抽审比例,不自动通过并进入待人工审核,造价提交与审核\nTC-AU-006 重复提交幂等,同一造价单连续提交两次,第二次被幂等拦截不产生重复审核单,造价提交与审核\nTC-LF-001 审核通过库存预占,审核通过后检查库存,lockStockType 变为已预占,生命周期与外部联动\nTC-LF-002 合同作废致报价失效,关联合同作废,报价单变为已失效(50)并释放预占,生命周期与外部联动\nTC-LF-003 超时失效通知下游,超过 validTime 未签约,状态失效并发送 MQ 通知,生命周期与外部联动\nTC-LF-004 地址变更联动刷新,签约前变更房屋地址,触发报价失效并提示重新获取,生命周期与外部联动";
+    // DEMO: 示例用例 CSV 已注释（原长字符串已移除）
+    const DEMO_CASES_CSV = "";
 
-    const DEMO_KB_MD = "# 家装报价知识库（贴近真实主链）\n\n## 业务场景\n- 报价触发与报价单生成\n- 报价场景识别与价格来源\n- 参数解析与输入精度\n- 物料处理与自动带出\n- 金额计算与汇总\n- 造价单生成与明细落库\n- 造价提交与审核\n- 生命周期与外部联动\n\n## 功能点\n- 报价单生成\n- 报价类型识别\n- 场景价格来源映射\n- 参数必填校验\n- 输入精度校验\n- 物料自动带出\n- 配件比例校验\n- uniqueCode去重\n- 数量价汇总\n- 固定价汇总\n- 租赁价汇总\n- 去利润价计算\n- 分组汇总\n- 造价明细落库\n- 提交审核\n- 自动审核判定\n- 审核拒绝回退\n- 库存预占与失效\n\n## 规则\n1. R001 固定价物品总价：totalPriceRule=FIXED_PRICE 时总价=单价\n2. R002 数量价物品总价：QUANTITY_PRICE 时总价=round(unitPrice*amount,2)\n3. R003 租赁物品总价：总价=round(amount*unitPrice*rentalCycle,2)\n4. R004 去利润总价：noProfitPrice=round(totalPrice/(1+profitRate),2)\n5. R005 分组汇总：按 itemGroup 汇总硬装/软装基础和增项金额\n6. R006 场景价格来源：SFBJ/LFBJ/JZBJ 等场景映射目录价、销售价或销售价加税\n7. R007 自动审核判定：产品版本、改价标签、复审、驳回记录、抽审比例共同决定是否自动通过\n8. R008 基础参数校验：功能区间、单价、数量、operateType 不能为空或非法\n9. R009 定制二级分类校验：定制设计 ADD/UPDATE 物品的二级展示分类必须有值\n10. R010 配件参数校验：配件标签物品必须有关联父 SKU 和比例\n11. R011 uniqueCode 去重：同一条物品信息不可重复添加\n12. R012 配件比例校验：配件数量=round(比例*主物品数量,2)\n13. R013 UPDATE 数量为0：UPDATE 且 amount=0 时逻辑删除并置 CANCEL\n14. R014 通用数值四舍五入：每步计算四舍五入到2位并支持金额找平\n15. DesignCost 审核拒绝后回退到待提交\n16. 审核通过后可触发库存预占；超时/合同作废可致失效\n";
+    // DEMO: 示例知识库 MD 已注释（原长字符串已移除）
+    const DEMO_KB_MD = "";
 
     const CASE_STOP_WORDS = new Set([
       'tc', 'quote', 'audit', 'submit', 'test', 'case', 'the', 'and',
@@ -5608,15 +5626,17 @@
       updateNavBadges();
     }
 
-    document.getElementById('btnDemoCases').addEventListener('click', () => {
-      ingestCaseText('demo_history_cases.csv', DEMO_CASES_CSV, currentImportTarget().text);
-    });
+    // DEMO: 填入示例按钮已注释，绑定一并关闭
+    // document.getElementById('btnDemoCases').addEventListener('click', () => {
+    //   ingestCaseText('demo_history_cases.csv', DEMO_CASES_CSV, currentImportTarget().text);
+    // });
 
-    document.getElementById('btnDemoKb').addEventListener('click', () => {
-      ingestKbText('demo_quote_kb.md', DEMO_KB_MD, currentImportTarget().text);
-    });
+    // document.getElementById('btnDemoKb').addEventListener('click', () => {
+    //   ingestKbText('demo_quote_kb.md', DEMO_KB_MD, currentImportTarget().text);
+    // });
 
-    const DEMO_KB_NL = '家装报价主链路包括：报价触发与报价单生成、报价场景识别与价格来源、参数解析与输入精度、物料处理与自动带出、金额计算与汇总、造价单生成与明细落库、造价提交与审核、生命周期与外部联动。\n系统支持数量价汇总、固定价汇总、租赁价汇总、去利润价计算、分组汇总、自动审核判定、审核拒绝回退、库存预占与失效。\n单价为空必须拦截；功能区间不能为空；审核拒绝后应当回退到待提交；uniqueCode 不可重复添加。';
+    // DEMO: 白话知识库示例已注释
+    const DEMO_KB_NL = "";
 
     const btnExtractKbNl = document.getElementById('btnExtractKbNl');
     if (btnExtractKbNl) {
@@ -5630,15 +5650,16 @@
         showToast('已从自然语言抽出场景/功能点/规则，请修改后确认', { success: true });
       });
     }
-    const btnDemoKbNl = document.getElementById('btnDemoKbNl');
-    if (btnDemoKbNl) {
-      btnDemoKbNl.addEventListener('click', () => {
-        const nlInput = document.getElementById('kbNlInput');
-        if (nlInput) nlInput.value = DEMO_KB_NL;
-        ingestKbText('demo_knowledge_nl.txt', DEMO_KB_NL, currentImportTarget().text);
-        showToast('已填入白话知识库并完成抽取', { success: true });
-      });
-    }
+    // DEMO:
+    // const btnDemoKbNl = document.getElementById('btnDemoKbNl');
+    // if (btnDemoKbNl) {
+    //   btnDemoKbNl.addEventListener('click', () => {
+    //     const nlInput = document.getElementById('kbNlInput');
+    //     if (nlInput) nlInput.value = DEMO_KB_NL;
+    //     ingestKbText('demo_knowledge_nl.txt', DEMO_KB_NL, currentImportTarget().text);
+    //     showToast('已填入白话知识库并完成抽取', { success: true });
+    //   });
+    // }
     const btnConfirmKbExtract = document.getElementById('btnConfirmKbExtract');
     if (btnConfirmKbExtract) {
       btnConfirmKbExtract.addEventListener('click', () => {
@@ -6032,18 +6053,19 @@
         showToast('已导出最小 flowNodes JSON', { success: true });
       });
     }
-    const btnProduceCasesOnlyDemo = document.getElementById('btnProduceCasesOnlyDemo');
-    if (btnProduceCasesOnlyDemo) {
-      btnProduceCasesOnlyDemo.addEventListener('click', () => {
-        setImportMode('casesOnly');
-        ingestCaseText('demo_cases_only.csv', DEMO_CASES_CSV, currentImportTarget().text);
-        importState.casesOnly.clustersConfirmed = true;
-        generateReviewQueueCasesOnly();
-        updateImportGate();
-        openProduce('review');
-        showToast('仅用例演示已生成，可筛选 A 池并批量确认', { success: true });
-      });
-    }
+    // DEMO: 仅用例模式演示入口已注释
+    // const btnProduceCasesOnlyDemo = document.getElementById('btnProduceCasesOnlyDemo');
+    // if (btnProduceCasesOnlyDemo) {
+    //   btnProduceCasesOnlyDemo.addEventListener('click', () => {
+    //     setImportMode('casesOnly');
+    //     ingestCaseText('demo_cases_only.csv', DEMO_CASES_CSV, currentImportTarget().text);
+    //     importState.casesOnly.clustersConfirmed = true;
+    //     generateReviewQueueCasesOnly();
+    //     updateImportGate();
+    //     openProduce('review');
+    //     showToast('仅用例演示已生成，可筛选 A 池并批量确认', { success: true });
+    //   });
+    // }
 
     document.getElementById('btnGoReview').addEventListener('click', () => {
       if (!reviewState.generated) return;
@@ -6299,8 +6321,8 @@
       if (reviewPool) reviewPool.value = '';
       document.getElementById('caseImportMsg').textContent = '';
       document.getElementById('kbImportMsg').textContent = '';
-      document.getElementById('casePreview').textContent = '尚未导入。可点「使用演示样例」或选择本地 Excel/CSV。';
-      document.getElementById('kbPreview').textContent = '尚未导入。可点「使用演示样例」或选择本地 txt/md。';
+      document.getElementById('casePreview').textContent = '尚未导入。请选择本地 CSV / Excel / XMind。';
+      document.getElementById('kbPreview').textContent = '尚未导入。请选择本地 txt/md，或粘贴自然语言后抽取。';
       document.getElementById('importResultTag').textContent = '草稿';
       document.getElementById('importResultTag').className = 'tag blue';
       document.getElementById('reviewPageDesc').textContent = isCasesOnlyMode()
@@ -6553,14 +6575,15 @@
       if (jump) switchView(jump.dataset.view);
     });
 
-    const btnDemoBoth = document.getElementById('btnDemoBoth');
-    if (btnDemoBoth) {
-      btnDemoBoth.addEventListener('click', () => {
-        ingestCaseText('demo_history_cases.csv', DEMO_CASES_CSV, currentImportTarget().text);
-        ingestKbText('demo_quote_kb.md', DEMO_KB_MD, currentImportTarget().text);
-        showToast('演示样例已填充，可点「生成地图草稿」', { success: true });
-      });
-    }
+    // DEMO: 两项一起填已注释
+    // const btnDemoBoth = document.getElementById('btnDemoBoth');
+    // if (btnDemoBoth) {
+    //   btnDemoBoth.addEventListener('click', () => {
+    //     ingestCaseText('demo_history_cases.csv', DEMO_CASES_CSV, currentImportTarget().text);
+    //     ingestKbText('demo_quote_kb.md', DEMO_KB_MD, currentImportTarget().text);
+    //     showToast('演示样例已填充，可点「生成地图草稿」', { success: true });
+    //   });
+    // }
     const gapToggleBtn = document.getElementById('gapPoolToggleBtn');
     if (gapToggleBtn) {
       gapToggleBtn.addEventListener('click', (event) => {
@@ -6612,15 +6635,16 @@
         assetsMoreFilterBtn.textContent = willOpen ? '收起层级' : '更多层级';
       });
     }
-    const btnDemoLinksToggle = document.getElementById('btnDemoLinksToggle');
-    if (btnDemoLinksToggle) {
-      btnDemoLinksToggle.addEventListener('click', () => {
-        const banner = document.getElementById('demoBanner');
-        if (!banner) return;
-        const opened = banner.classList.toggle('links-open');
-        btnDemoLinksToggle.textContent = opened ? '收起跳转' : '快捷跳转';
-      });
-    }
+    // DEMO: 演示横幅快捷跳转已注释
+    // const btnDemoLinksToggle = document.getElementById('btnDemoLinksToggle');
+    // if (btnDemoLinksToggle) {
+    //   btnDemoLinksToggle.addEventListener('click', () => {
+    //     const banner = document.getElementById('demoBanner');
+    //     if (!banner) return;
+    //     const opened = banner.classList.toggle('links-open');
+    //     btnDemoLinksToggle.textContent = opened ? '收起跳转' : '快捷跳转';
+    //   });
+    // }
     const assetsChips = document.getElementById('assetsQuickChips');
     if (assetsChips) {
       assetsChips.addEventListener('click', (event) => {
@@ -6650,12 +6674,13 @@
     }
     const openAssetsTop = document.getElementById('btnOpenAssetsTop');
     if (openAssetsTop) openAssetsTop.addEventListener('click', openFormalAssets);
-    const btnLoadQuoteReview = document.getElementById('btnLoadQuoteReview');
-    if (btnLoadQuoteReview) {
-      btnLoadQuoteReview.addEventListener('click', () => {
-        loadQuoteReviewFromFile({ openReview: true });
-      });
-    }
+    // DEMO: 评审页加载报价真实地图已注释
+    // const btnLoadQuoteReview = document.getElementById('btnLoadQuoteReview');
+    // if (btnLoadQuoteReview) {
+    //   btnLoadQuoteReview.addEventListener('click', () => {
+    //     loadQuoteReviewFromFile({ openReview: true });
+    //   });
+    // }
 
     const platformState = {
       tenant: 'beike',
@@ -7252,7 +7277,7 @@
           '" data-tags="' + escapeHtml((item.testScenario || '') + ' ' + item.feature) + '">' +
           '<div class="id">' + escapeHtml(item.id) + ' · ' + escapeHtml(item.testScenario || '主路径') + '</div>' +
           '<div class="name">' + escapeHtml(item.caseName) + '</div></div>'
-        ).join('') || '<div class="muted">暂无正式资产，请先确认入库或加载示例。</div>';
+        ).join('') || '<div class="muted">暂无正式资产，请先确认入库。</div>';
       }
       filterDetailCasesByScenario(fallbackScenes[0] || '');
       bindDetailSceneInteraction();
@@ -7338,6 +7363,9 @@
     }
 
     function seedFullDemo(options) {
+      // DEMO: 演示灌数入口已关闭
+      showToast('演示数据入口已关闭，请通过正式导入上传用例与知识库');
+      return;
       const opts = options || {};
       const silent = !!opts.silent;
       document.getElementById('importDomain').value = '家装';
@@ -7502,45 +7530,46 @@
     if (btnOpenParamDetail) btnOpenParamDetail.addEventListener('click', () => openFeatureDetail('参数必填校验', '参数解析与输入精度'));
     const btnOpenAuditDetail = document.getElementById('btnOpenAuditDetail');
     if (btnOpenAuditDetail) btnOpenAuditDetail.addEventListener('click', () => openFeatureDetail('提交审核', '造价提交与审核'));
-    document.getElementById('btnLoadDemo').addEventListener('click', () => seedFullDemo());
-    const btnReloadDemo = document.getElementById('btnReloadDemo');
-    if (btnReloadDemo) btnReloadDemo.addEventListener('click', () => seedFullDemo());
-    const btnOverviewLoadDemo = document.getElementById('btnOverviewLoadDemo');
-    if (btnOverviewLoadDemo) btnOverviewLoadDemo.addEventListener('click', () => seedFullDemo());
-    const btnImportLoadFullDemo = document.getElementById('btnImportLoadFullDemo');
-    if (btnImportLoadFullDemo) btnImportLoadFullDemo.addEventListener('click', () => seedFullDemo());
-    const btnLoadQuoteReviewBanner = document.getElementById('btnLoadQuoteReviewBanner');
-    if (btnLoadQuoteReviewBanner) {
-      btnLoadQuoteReviewBanner.addEventListener('click', () => loadQuoteReviewFromFile({ openReview: true }));
-    }
-    const btnLoadQuoteReviewTop = document.getElementById('btnLoadQuoteReviewTop');
-    if (btnLoadQuoteReviewTop) {
-      btnLoadQuoteReviewTop.addEventListener('click', () => loadQuoteReviewFromFile({ openReview: true }));
-    }
-    const btnOverviewLoadQuoteReview = document.getElementById('btnOverviewLoadQuoteReview');
-    if (btnOverviewLoadQuoteReview) {
-      btnOverviewLoadQuoteReview.addEventListener('click', () => loadQuoteReviewFromFile({ openReview: true }));
-    }
-    const btnOverviewLoadCostAudit = document.getElementById('btnOverviewLoadCostAudit');
-    if (btnOverviewLoadCostAudit) {
-      btnOverviewLoadCostAudit.addEventListener('click', () => applyCostAuditDelivery({ openReview: true }));
-    }
-    const btnProduceLoadCostAudit = document.getElementById('btnProduceLoadCostAudit');
-    if (btnProduceLoadCostAudit) {
-      btnProduceLoadCostAudit.addEventListener('click', () => applyCostAuditDelivery({ openReview: true }));
-    }
-    const btnProduceLoadCostAuditGaps = document.getElementById('btnProduceLoadCostAuditGaps');
-    if (btnProduceLoadCostAuditGaps) {
-      btnProduceLoadCostAuditGaps.addEventListener('click', () => applyCostAuditDelivery({ openReview: true, focusGap: true }));
-    }
-    const btnReviewLoadCostAudit = document.getElementById('btnReviewLoadCostAudit');
-    if (btnReviewLoadCostAudit) {
-      btnReviewLoadCostAudit.addEventListener('click', () => applyCostAuditDelivery({ openReview: true, focusGap: true }));
-    }
-    const btnImportLoadQuoteSample = document.getElementById('btnImportLoadQuoteSample');
-    if (btnImportLoadQuoteSample) {
-      btnImportLoadQuoteSample.addEventListener('click', () => loadQuoteReviewFromFile({ openReview: true }));
-    }
+    // DEMO: 加载示例 / 真实地图 / 造价审核示例入口已全部注释
+    // document.getElementById('btnLoadDemo').addEventListener('click', () => seedFullDemo());
+    // const btnReloadDemo = document.getElementById('btnReloadDemo');
+    // if (btnReloadDemo) btnReloadDemo.addEventListener('click', () => seedFullDemo());
+    // const btnOverviewLoadDemo = document.getElementById('btnOverviewLoadDemo');
+    // if (btnOverviewLoadDemo) btnOverviewLoadDemo.addEventListener('click', () => seedFullDemo());
+    // const btnImportLoadFullDemo = document.getElementById('btnImportLoadFullDemo');
+    // if (btnImportLoadFullDemo) btnImportLoadFullDemo.addEventListener('click', () => seedFullDemo());
+    // const btnLoadQuoteReviewBanner = document.getElementById('btnLoadQuoteReviewBanner');
+    // if (btnLoadQuoteReviewBanner) {
+    //   btnLoadQuoteReviewBanner.addEventListener('click', () => loadQuoteReviewFromFile({ openReview: true }));
+    // }
+    // const btnLoadQuoteReviewTop = document.getElementById('btnLoadQuoteReviewTop');
+    // if (btnLoadQuoteReviewTop) {
+    //   btnLoadQuoteReviewTop.addEventListener('click', () => loadQuoteReviewFromFile({ openReview: true }));
+    // }
+    // const btnOverviewLoadQuoteReview = document.getElementById('btnOverviewLoadQuoteReview');
+    // if (btnOverviewLoadQuoteReview) {
+    //   btnOverviewLoadQuoteReview.addEventListener('click', () => loadQuoteReviewFromFile({ openReview: true }));
+    // }
+    // const btnOverviewLoadCostAudit = document.getElementById('btnOverviewLoadCostAudit');
+    // if (btnOverviewLoadCostAudit) {
+    //   btnOverviewLoadCostAudit.addEventListener('click', () => applyCostAuditDelivery({ openReview: true }));
+    // }
+    // const btnProduceLoadCostAudit = document.getElementById('btnProduceLoadCostAudit');
+    // if (btnProduceLoadCostAudit) {
+    //   btnProduceLoadCostAudit.addEventListener('click', () => applyCostAuditDelivery({ openReview: true }));
+    // }
+    // const btnProduceLoadCostAuditGaps = document.getElementById('btnProduceLoadCostAuditGaps');
+    // if (btnProduceLoadCostAuditGaps) {
+    //   btnProduceLoadCostAuditGaps.addEventListener('click', () => applyCostAuditDelivery({ openReview: true, focusGap: true }));
+    // }
+    // const btnReviewLoadCostAudit = document.getElementById('btnReviewLoadCostAudit');
+    // if (btnReviewLoadCostAudit) {
+    //   btnReviewLoadCostAudit.addEventListener('click', () => applyCostAuditDelivery({ openReview: true, focusGap: true }));
+    // }
+    // const btnImportLoadQuoteSample = document.getElementById('btnImportLoadQuoteSample');
+    // if (btnImportLoadQuoteSample) {
+    //   btnImportLoadQuoteSample.addEventListener('click', () => loadQuoteReviewFromFile({ openReview: true }));
+    // }
     const btnPanoramaGotoQuote = document.getElementById('btnPanoramaGotoQuote');
     if (btnPanoramaGotoQuote) {
       btnPanoramaGotoQuote.addEventListener('click', () => {
@@ -7619,8 +7648,9 @@
     if (typeof renderOverview === 'function') renderOverview();
     // 默认进入资产生产：造价审核包可在导入页一键接入；全景只投影已确认资产
     switchView('produce', { produceStep: 'import' });
-    const demoBanner = document.getElementById('demoBanner');
-    if (demoBanner) demoBanner.classList.add('show');
+    // DEMO: 不再默认展示演示横幅
+    // const demoBanner = document.getElementById('demoBanner');
+    // if (demoBanner) demoBanner.classList.add('show');
   </script>
 </body>
 </html>

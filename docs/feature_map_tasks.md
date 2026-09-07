@@ -35,18 +35,23 @@
 | M1-S03 | 定义 MapNode 统一节点模型 | P0 | 0.5d | M1-S02 |
 
 **M1-S01 验收标准**
-- [ ] 规则为 `领域/系统/场景/功能点`，文档与代码一致
-- [ ] 支持 URL 编解码，特殊字符有转义方案
-- [ ] 提供 3 个报价域示例 key
+- [x] 规则为 `领域/系统/场景/功能点`，文档与代码一致
+- [x] 支持 URL 编解码，特殊字符有转义方案
+- [x] 提供 3 个报价域示例 key
 
+> 实现位置：`services/hierarchy/`（**Java / Spring Boot**）· 规范：`docs/feature_key_spec.md`
 **M1-S02 验收标准**
-- [ ] DTO 包含 meta、spine、businessView、techView、riskView、summary
-- [ ] 字段与原型 DOM 有对照表
-- [ ] OpenAPI / TypeScript 类型已提交
+- [x] DTO 包含 meta、spine、businessView、techView、riskView、summary
+- [x] 字段与原型 DOM 有对照表
+- [x] OpenAPI / TypeScript 类型已提交
+
+> 实现：`com.casemap.hierarchy.featuremap.FeatureMapDto` · 规范：[`docs/feature_map_dto_spec.md`](feature_map_dto_spec.md) · OpenAPI：`services/hierarchy/openapi/feature-map.yaml` · TS：`services/hierarchy/contracts/feature-map.ts`
 
 **M1-S03 验收标准**
-- [ ] 节点含 id、type、title、status、confidence、payload
-- [ ] 前端列组件可统一消费 MapNode
+- [x] 节点含 id、type、title、status、confidence、payload
+- [x] 前端列组件可统一消费 MapNode
+
+> 实现：`MapNode` + `FeatureMapNodeProjector`
 
 ---
 
@@ -156,8 +161,10 @@
 | M2-S09 | 用例快捷过滤 | P0 | 0.5d | M2-S08 |
 
 **M2-S07 验收标准**
-- [ ] 仅返回 status=已确认、非归档用例
-- [ ] 支持按 feature + scene 过滤
+- [x] 仅返回 status=已确认、非归档用例
+- [x] 支持按 feature + scene 过滤
+
+> 实现：`GET /api/v1/cases` · `CaseQueryService`
 
 **M2-S08 验收标准**
 - [ ] 展示用例 ID、名称、优先级、测试场景
@@ -225,16 +232,18 @@
 | M3-S03 | 实现 resolveApiEntries 服务化 | P0 | 1d | M3-S01, M3-S02 |
 
 **M3-S01 验收标准**
-- [ ] 按功能点名命中接口映射
-- [ ] 主接口优先排序
+- [x] 按功能点名命中接口映射
+- [x] 主接口优先排序
 
 **M3-S02 验收标准**
-- [ ] 读取 flowNodes 配置
-- [ ] 与 API 映射节点合并去重
+- [x] 读取 flowNodes 配置
+- [x] 与 API 映射节点合并去重
 
 **M3-S03 验收标准**
-- [ ] 返回 apis、flowNodes、service、source
-- [ ] 无映射时有回退接口
+- [x] 返回 apis、flowNodes、service、source
+- [x] 无映射时有回退接口
+
+> 实现：`GET /api/v1/tech-mappings/resolve`、`GET /api/v1/tech-mappings/flow-nodes` · `ApiResolveService`
 
 ---
 

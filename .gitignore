@@ -10,3 +10,9 @@ node_modules/
 dist/
 tmp/
 *.local
+services/hierarchy/data/hierarchy_store.json
+services/hierarchy/target/
+services/hierarchy-python/
+__pycache__/
+*.pyc
+.pytest_cache/

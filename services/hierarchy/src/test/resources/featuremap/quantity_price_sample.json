@@ -1,0 +1,100 @@
+{
+  "meta": {
+    "mapId": "fm_quantity_price",
+    "featureKey": "家装/报价/金额计算与汇总/数量价汇总",
+    "version": "1.0.0",
+    "baseline": "BL-20260720-01",
+    "updatedAt": "2025-05-21",
+    "qualityOwner": "张三",
+    "dataSources": ["正式资产库", "家装报价核心接口清单.md", "quote.json"]
+  },
+  "spine": {
+    "domain": "家装",
+    "app": "报价",
+    "processName": "报价流程",
+    "featureName": "数量价汇总",
+    "sceneName": "金额计算与汇总",
+    "valueTags": ["核心链路", "金额计算", "高风险"],
+    "neighborFeatures": [
+      { "featureKey": "家装/报价/金额计算与汇总/固定价汇总", "featureName": "固定价汇总" },
+      { "featureKey": "家装/报价/金额计算与汇总/去利润价计算", "featureName": "去利润价计算" },
+      { "featureKey": "家装/报价/金额计算与汇总/分组汇总", "featureName": "分组汇总" }
+    ]
+  },
+  "businessView": {
+    "scenarios": [
+      { "id": "SC-001", "name": "正常报价", "coverageStatus": "covered", "caseCount": 2 },
+      { "id": "SC-002", "name": "优惠报价", "coverageStatus": "covered", "caseCount": 1 },
+      { "id": "SC-003", "name": "边界校验", "coverageStatus": "partial", "caseCount": 2 }
+    ],
+    "cases": [
+      { "id": "TC-001", "name": "标准方案数量价计算正确", "priority": "P0", "testScenario": "正常报价", "confidence": 92, "mountAdvice": "自动挂载", "api": "POST /quotation/offer" },
+      { "id": "TC-002", "name": "优惠折扣后数量价正确", "priority": "P0", "testScenario": "优惠报价", "confidence": 88, "mountAdvice": "自动挂载", "api": "POST /quotation/offer" },
+      { "id": "TC-003", "name": "金额为负拦截", "priority": "P1", "testScenario": "边界校验", "confidence": 85, "mountAdvice": "自动挂载", "api": "POST /quotation/offer" },
+      { "id": "TC-004", "name": "数量为0边界", "priority": "P1", "testScenario": "边界校验", "confidence": 72, "mountAdvice": "待抽检", "api": "POST /quotation/offer" }
+    ],
+    "scripts": [
+      { "id": "SCRIPT-001", "name": "quotation_offer.json", "type": "API", "status": "executable", "linkedCaseId": "TC-001" },
+      { "id": "SCRIPT-002", "name": "quotation_discount.json", "type": "API", "status": "executable", "linkedCaseId": "TC-002" }
+    ],
+    "dataTemplates": [
+      { "id": "DT-001", "name": "标准装修方案", "linkedScenarioId": "SC-001" },
+      { "id": "DT-002", "name": "优惠活动数据", "linkedScenarioId": "SC-002" }
+    ],
+    "executions": [
+      { "id": "EXEC-001", "label": "近 3 次", "results": ["pass", "pass", "pass"], "lastRunAt": "2025-05-20" },
+      { "id": "EXEC-002", "label": "近 3 次", "results": ["pass", "fail", "pass"], "lastRunAt": "2025-05-18" }
+    ]
+  },
+  "riskView": {
+    "rules": [
+      { "id": "R002", "name": "数量价汇总规则", "source": "知识库" },
+      { "id": "R014", "name": "四舍五入规则", "source": "知识库" },
+      { "id": "R018", "name": "金额不可为负", "source": "判定表" }
+    ],
+    "defects": [
+      { "id": "BUG-231", "title": "优惠叠加重复扣减", "severity": "P1", "openedAt": "2025-05-10" },
+      { "id": "BUG-188", "title": "边界金额溢出", "severity": "P2", "openedAt": "2025-05-05" }
+    ],
+    "tags": [
+      { "type": "risk", "label": "高风险", "level": "high" },
+      { "type": "usage", "label": "高频", "level": "medium" },
+      { "type": "chain", "label": "核心链路", "level": "high" }
+    ]
+  },
+  "techView": {
+    "source": "知识库 · 家装报价核心接口清单",
+    "services": [
+      { "name": "jz_quotation", "role": "primary" },
+      { "name": "promotion-svc", "role": "secondary" }
+    ],
+    "flowNodes": [
+      { "name": "金额计算与汇总", "risk": "高", "isPrimary": true },
+      { "name": "报价触发与报价单生成", "risk": "高", "isPrimary": false }
+    ],
+    "apis": [
+      { "method": "POST", "path": "/quotation/offer", "label": "POST /quotation/offer", "relation": "主接口", "controller": "QuotationApi#offerQuotations", "confidence": 95 },
+      { "method": "POST", "path": "/quotation/bim/offer", "label": "POST /quotation/bim/offer", "relation": "主接口", "controller": "QuotationBimApi#offerQuotations", "confidence": 90 }
+    ],
+    "tables": ["t_quote", "t_quote_item", "jz_design_cost_detail"],
+    "messages": ["quote.created", "design.cost.submitted"],
+    "codeModules": [
+      { "name": "QuoteService#calcQuantityPrice", "type": "service" },
+      { "name": "PriceCalculator", "type": "calculator" }
+    ]
+  },
+  "summary": {
+    "linkedCaseCount": 42,
+    "priorityDistribution": { "P0": 12, "P1": 18, "P2": 8, "P3": 4, "P0Rate": 0.28, "P1Rate": 0.43, "P2Rate": 0.19, "P3Rate": 0.10 },
+    "automationCoverage": 0.78,
+    "defectCount30d": 8,
+    "gapCount": 2,
+    "coverageStatus": "partial"
+  },
+  "consumers": [
+    { "platform": "自动化测试平台", "usage": "按功能点拉取回归包" },
+    { "platform": "造数 / 数据平台", "usage": "绑定测试数据模板" },
+    { "platform": "研发代码分析", "usage": "接口 / 模块影响反查" },
+    { "platform": "质量报告", "usage": "覆盖率与缺陷趋势" }
+  ]
+}
