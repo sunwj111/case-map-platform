@@ -12,6 +12,7 @@ public class FeatureMapMeta {
     private String updatedAt;
     private String qualityOwner;
     private List<String> dataSources = new ArrayList<>();
+    private boolean synthetic;
 
     public String getMapId() {
         return mapId;
@@ -67,5 +68,13 @@ public class FeatureMapMeta {
 
     public void setDataSources(List<String> dataSources) {
         this.dataSources = dataSources;
+    }
+
+    public boolean isSynthetic() {
+        return synthetic;
+    }
+
+    public void setSynthetic(boolean synthetic) {
+        this.synthetic = synthetic;
     }
 }

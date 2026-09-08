@@ -41,6 +41,7 @@ FeatureMapDTO
 | `meta.qualityOwner` | `#ownerInfo` |
 | `meta.updatedAt` | `#updatedAt` |
 | `meta.dataSources` | 技术映射来源补充 |
+| `meta.synthetic` | 无层级节点、按正式资产或主数据合成 |
 | `spine.domain` / `app` / `featureName` / `sceneName` | `#spineBox`、`#pageTitle`、面包屑 |
 | `spine.valueTags` | `#spineBox` 价值标签 |
 | `spine.neighborFeatures` | `#spineBox` 邻接列表 |
@@ -72,4 +73,6 @@ FeatureMapDTO
 ## 后续
 
 - **M1-S04** ~~`FeatureMapAssembler`~~：已实现（`FeatureMapAssembler.assemble`）
-- **M1-S08** `GET /api/v1/feature-maps/{featureKey}`：对外查询
+- **M1-S08 / E-08** ~~`GET /api/v1/feature-maps/{featureKey}`~~：已实现（`FeatureMapQueryService` + `FeatureMapController`）
+- **E-06 / E-07** ~~资产链与技术/风险摘要~~：已实现（正式用例 + 推导脚本/数据模板；执行与缺陷标记 unavailable；规则/表来自 quote 知识库）
+- **E-09** ~~无样例功能点合成地图~~：已实现（无层级节点时按正式资产/主数据合成，`meta.synthetic=true`）

@@ -50,6 +50,9 @@ class HierarchyServiceTest {
         String encoded = FeatureKey.encodeForUrl(key);
         assertTrue(!encoded.contains("/"));
         assertEquals(key, FeatureKey.decodeFromUrl(encoded));
+        assertEquals(key, FeatureKey.fromPathVariable(key));
+        assertEquals(key, FeatureKey.fromPathVariable("/" + key));
+        assertEquals(key, FeatureKey.fromPathVariable(encoded));
     }
 
     @Test

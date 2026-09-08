@@ -6,7 +6,7 @@ Story,M1-S04,[M1-S04] 实现 FeatureMapAssembler 主流程,M1 功能点地图引
 Story,M1-S05,[M1-S05] 组装 spine 业务脊柱数据,M1 功能点地图引擎,M1-E2,地图组装服务,从多数据源聚合生成功能点地图,P0,MVP,Sprint 1,0.5,M1-S04,后端,返回domain/app/feature/scene/valueTags；返回neighborFeatures,已完成
 Story,M1-S06,[M1-S06] 组装 summary 质量摘要数据,M1 功能点地图引擎,M1-E2,地图组装服务,从多数据源聚合生成功能点地图,P0,MVP,Sprint 3,1,M1-S04;M4-S01,后端,返回linkedCaseCount/priorityDistribution/automationCoverage；数字与正式资产统计一致,待开始
 Story,M1-S07,[M1-S07] 节点置信度与来源标记,M1 功能点地图引擎,M1-E2,地图组装服务,从多数据源聚合生成功能点地图,P1,MVP,Sprint 3,0.5,M1-S04,后端,低置信节点status=review；meta.dataSources列出数据来源,待开始
-Story,M1-S08,[M1-S08] 实现 GET /feature-maps/{featureKey},M1 功能点地图引擎,M1-E3,地图查询 API,对外提供功能点地图查询能力,P0,MVP,Sprint 1,1,M1-S04,后端,200返回完整JSON；404功能点不存在；响应字段与OpenAPI一致,待开始
+Story,M1-S08,[M1-S08] 实现 GET /feature-maps/{featureKey},M1 功能点地图引擎,M1-E3,地图查询 API,对外提供功能点地图查询能力,P0,MVP,Sprint 1,1,M1-S04,后端,200返回完整JSON；404功能点不存在；响应字段与OpenAPI一致,已完成
 Story,M2-S01,[M2-S01] 实现 BusinessSpine 组件,M2 业务资产链,M2-E1,业务脊柱,展示功能点在业务层级中的位置,P0,MVP,Sprint 2,1,M1-S02,前端,展示域/系统/功能点/场景/价值标签；当前功能点高亮,待开始
 Story,M2-S02,[M2-S02] 展示邻接功能点列表,M2 业务资产链,M2-E1,业务脊柱,展示功能点在业务层级中的位置,P0,MVP,Sprint 2,0.5,M2-S01,前端,同场景其他功能点列表展示；无邻接时显示空态,待开始
 Story,M2-S03,[M2-S03] 邻接功能点点击切换,M2 业务资产链,M2-E1,业务脊柱,展示功能点在业务层级中的位置,P0,MVP,Sprint 2,0.5,M2-S02;M6-S05,前端,点击邻接功能点地图切换且URL更新；场景上下文保持不变,待开始

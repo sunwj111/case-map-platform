@@ -9,6 +9,7 @@ public class ExecutionItem {
     private String label;
     private List<String> results = new ArrayList<>();
     private String lastRunAt;
+    private String source;
 
     public String getId() {
         return id;
@@ -40,5 +41,13 @@ public class ExecutionItem {
 
     public void setLastRunAt(String lastRunAt) {
         this.lastRunAt = lastRunAt;
+    }
+
+    public String getSource() {
+        return source;
+    }
+
+    public void setSource(String source) {
+        this.source = source;
     }
 }

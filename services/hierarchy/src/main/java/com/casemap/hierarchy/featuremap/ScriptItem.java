@@ -7,6 +7,7 @@ public class ScriptItem {
     private String type;
     private String status;
     private String linkedCaseId;
+    private String source;
 
     public String getId() {
         return id;
@@ -46,5 +47,13 @@ public class ScriptItem {
 
     public void setLinkedCaseId(String linkedCaseId) {
         this.linkedCaseId = linkedCaseId;
+    }
+
+    public String getSource() {
+        return source;
+    }
+
+    public void setSource(String source) {
+        this.source = source;
     }
 }

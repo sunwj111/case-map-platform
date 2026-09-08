@@ -9,6 +9,12 @@ public class CaseItem {
     private Integer confidence;
     private String mountAdvice;
     private String api;
+    private String originalCaseId;
+    private String step;
+    private String expected;
+    private String flowNode;
+    private String sourceType;
+    private String source;
 
     public String getId() {
         return id;
@@ -64,5 +70,53 @@ public class CaseItem {
 
     public void setApi(String api) {
         this.api = api;
+    }
+
+    public String getOriginalCaseId() {
+        return originalCaseId;
+    }
+
+    public void setOriginalCaseId(String originalCaseId) {
+        this.originalCaseId = originalCaseId;
+    }
+
+    public String getStep() {
+        return step;
+    }
+
+    public void setStep(String step) {
+        this.step = step;
+    }
+
+    public String getExpected() {
+        return expected;
+    }
+
+    public void setExpected(String expected) {
+        this.expected = expected;
+    }
+
+    public String getFlowNode() {
+        return flowNode;
+    }
+
+    public void setFlowNode(String flowNode) {
+        this.flowNode = flowNode;
+    }
+
+    public String getSourceType() {
+        return sourceType;
+    }
+
+    public void setSourceType(String sourceType) {
+        this.sourceType = sourceType;
+    }
+
+    public String getSource() {
+        return source;
+    }
+
+    public void setSource(String source) {
+        this.source = source;
     }
 }

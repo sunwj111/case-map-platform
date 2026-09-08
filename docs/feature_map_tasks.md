@@ -80,8 +80,8 @@
 > 实现：`FeatureMapAssembler#buildSpine`
 
 **M1-S06 验收标准**
-- [ ] 返回 linkedCaseCount、priorityDistribution、automationCoverage
-- [ ] 数字与正式资产统计一致
+- [x] 返回 linkedCaseCount、priorityDistribution、automationCoverage
+- [x] 数字与正式资产统计一致
 
 **M1-S07 验收标准**
 - [ ] 低置信节点 status=review
@@ -98,9 +98,9 @@
 | M1-S08 | 实现 GET /feature-maps/{featureKey} | P0 | 1d | M1-S04 |
 
 **M1-S08 验收标准**
-- [ ] 200 返回完整地图 JSON
-- [ ] 404 功能点不存在
-- [ ] 响应字段与 OpenAPI 一致
+- [x] 200 返回完整地图 JSON
+- [x] 404 功能点不存在
+- [x] 响应字段与 OpenAPI 一致
 
 ---
 

@@ -18,8 +18,11 @@ featureKey = {领域}/{系统}/{场景}/{功能点}
 
 | 场景 | 做法 |
 |---|---|
-| Path | `/api/v1/hierarchy/features/{urlencoded_featureKey}` |
+| Path | `/api/v1/hierarchy/features/{domain}/{system}/{scene}/{feature}`，每段单独编码，斜杠保留 |
+| Path | `/api/v1/feature-maps/{domain}/{system}/{scene}/{feature}`，规则同上 |
 | Query | `?featureKey={urlencoded_featureKey}` |
+
+不要把整段 featureKey 的 `/` 编码成 `%2F` 再塞进单个 path segment，Tomcat 会按非法路径拒绝。
 
 编解码方法（Java）：
 

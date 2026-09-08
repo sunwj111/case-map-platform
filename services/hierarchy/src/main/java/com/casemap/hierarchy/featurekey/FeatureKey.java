@@ -86,6 +86,21 @@ public final class FeatureKey {
         return parse(decoded).toKey();
     }
 
+    /**
+     * 解析路径变量中的 featureKey。
+     * 兼容未编码的四级路径、整段百分号编码，以及 Spring {@code {*featureKey}} 可能带上的前导斜杠。
+     */
+    public static String fromPathVariable(String featureKey) {
+        String raw = featureKey == null ? "" : featureKey.trim();
+        if (raw.startsWith(SEPARATOR)) {
+            raw = raw.substring(1);
+        }
+        if (raw.contains("%")) {
+            return decodeFromUrl(raw);
+        }
+        return parse(raw).toKey();
+    }
+
     public static List<String> exampleQuoteKeys() {
         return Arrays.asList(
                 "家装/报价/金额计算与汇总/数量价汇总",

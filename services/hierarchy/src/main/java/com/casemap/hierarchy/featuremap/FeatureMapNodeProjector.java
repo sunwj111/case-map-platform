@@ -56,11 +56,13 @@ public final class FeatureMapNodeProjector {
             }
             for (DataTemplateItem template : business.getDataTemplates()) {
                 MapNode node = new MapNode("data:" + template.getId(), MapNodeType.data, template.getName());
+                node.setStatus("unavailable".equals(template.getSource()) ? MapNodeStatus.missing : MapNodeStatus.ready);
                 node.setPayload(template);
                 nodes.add(node);
             }
             for (ExecutionItem execution : business.getExecutions()) {
                 MapNode node = new MapNode("execution:" + execution.getId(), MapNodeType.execution, execution.getLabel());
+                node.setStatus("unavailable".equals(execution.getSource()) ? MapNodeStatus.missing : MapNodeStatus.ready);
                 node.setPayload(execution);
                 nodes.add(node);
             }

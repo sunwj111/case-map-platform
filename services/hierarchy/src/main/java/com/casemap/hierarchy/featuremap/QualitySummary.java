@@ -11,6 +11,8 @@ public class QualitySummary {
     private int defectCount30d;
     private int gapCount;
     private String coverageStatus;
+    private String metricSource;
+    private String defectSource;
 
     public int getLinkedCaseCount() {
         return linkedCaseCount;
@@ -58,5 +60,21 @@ public class QualitySummary {
 
     public void setCoverageStatus(String coverageStatus) {
         this.coverageStatus = coverageStatus;
+    }
+
+    public String getMetricSource() {
+        return metricSource;
+    }
+
+    public void setMetricSource(String metricSource) {
+        this.metricSource = metricSource;
+    }
+
+    public String getDefectSource() {
+        return defectSource;
+    }
+
+    public void setDefectSource(String defectSource) {
+        this.defectSource = defectSource;
     }
 }

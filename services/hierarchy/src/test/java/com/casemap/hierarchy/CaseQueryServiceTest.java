@@ -62,4 +62,27 @@ class CaseQueryServiceTest {
     void missingFeatureRejected() {
         assertThrows(IllegalArgumentException.class, () -> service.query(null, null, "金额计算与汇总"));
     }
+
+    @Test
+    void queryDoesNotFallbackAcrossScenes() {
+        CaseQueryService.CaseQueryResult result =
+                service.query("家装/报价/造价提交与审核/人工审核", null, null);
+        assertEquals(0, result.getTotal());
+    }
+
+    @Test
+    void queryForMapUsesExactFeatureKeyFirst() {
+        CaseQueryService.CaseQueryResult result =
+                service.queryForMap("家装/报价/造价审核/人工审核");
+        assertEquals(1, result.getTotal());
+        assertTrue(result.containsId("CA-301"));
+    }
+
+    @Test
+    void queryForMapFallsBackToSameSystemFeatureName() {
+        CaseQueryService.CaseQueryResult result =
+                service.queryForMap("家装/报价/造价提交与审核/人工审核");
+        assertEquals(1, result.getTotal());
+        assertTrue(result.containsId("CA-301"));
+    }
 }

@@ -5,6 +5,7 @@ public class DataTemplateItem {
     private String id;
     private String name;
     private String linkedScenarioId;
+    private String source;
 
     public String getId() {
         return id;
@@ -28,5 +29,13 @@ public class DataTemplateItem {
 
     public void setLinkedScenarioId(String linkedScenarioId) {
         this.linkedScenarioId = linkedScenarioId;
+    }
+
+    public String getSource() {
+        return source;
+    }
+
+    public void setSource(String source) {
+        this.source = source;
     }
 }

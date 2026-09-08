@@ -199,7 +199,9 @@
         "造价提交与审核"
       ],
       "features": [
-        "提交审核"
+        "提交审核",
+        "审核列表与详情",
+        "人工审核"
       ],
       "relation": "查询接口",
       "controller": "CostAuditApi#findList"
@@ -214,7 +216,8 @@
         "造价提交与审核"
       ],
       "features": [
-        "提交审核"
+        "提交审核",
+        "审核列表与详情"
       ],
       "relation": "配套接口",
       "controller": "CostAuditApi#count"
@@ -231,7 +234,11 @@
         "造价提交与审核"
       ],
       "features": [
-        "提交审核"
+        "提交审核",
+        "接单",
+        "转派",
+        "催审",
+        "人工审核"
       ],
       "relation": "配套接口",
       "controller": "CostAuditApi#accept/transform/urgentReview"

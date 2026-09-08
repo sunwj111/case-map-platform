@@ -113,8 +113,7 @@ public class HierarchyController {
 
     @GetMapping("/hierarchy/features/{*featureKey}")
     public HierarchyNode feature(@PathVariable("featureKey") String featureKey) {
-        String raw = featureKey.startsWith("/") ? featureKey.substring(1) : featureKey;
-        String key = raw.contains("%") ? FeatureKey.decodeFromUrl(raw) : FeatureKey.parse(raw).toKey();
+        String key = FeatureKey.fromPathVariable(featureKey);
         return store.getByFeatureKey(key)
                 .orElseThrow(() -> new NotFoundException("功能点不存在：" + key));
     }

@@ -51,6 +51,33 @@ public class CaseQueryService {
         return new CaseQueryResult(resolvedFeature, resolvedScene, resolvedKey, store.getSource(), matched);
     }
 
+    /**
+     * 地图组装用查询：先精确匹配 featureKey，再按同领域/系统下的功能点名回退。
+     * 用于造价审核等无层级样例、但已有正式资产的功能点。
+     */
+    public CaseQueryResult queryForMap(String featureKey) {
+        CaseQueryResult exact = query(featureKey, null, null);
+        if (!exact.getItems().isEmpty()) {
+            return exact;
+        }
+        FeatureKey parts = FeatureKey.parse(featureKey);
+        String systemPrefix = parts.domain() + FeatureKey.SEPARATOR + parts.system() + FeatureKey.SEPARATOR;
+        List<CaseAsset> matched = new ArrayList<>();
+        for (CaseAsset asset : store.listAll()) {
+            if (!asset.isPublishedOfficial()) {
+                continue;
+            }
+            if (!parts.feature().equals(asset.getFeatureName())) {
+                continue;
+            }
+            String assetKey = asset.getFeatureKey();
+            if (assetKey != null && assetKey.startsWith(systemPrefix)) {
+                matched.add(asset);
+            }
+        }
+        return new CaseQueryResult(parts.feature(), parts.scene(), parts.toKey(), store.getSource(), matched);
+    }
+
     private static boolean matchesFeature(CaseAsset asset, String feature, String featureKey) {
         if (featureKey != null && featureKey.equals(asset.getFeatureKey())) {
             return true;

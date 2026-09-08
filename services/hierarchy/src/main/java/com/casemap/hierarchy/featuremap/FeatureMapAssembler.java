@@ -3,6 +3,7 @@ package com.casemap.hierarchy.featuremap;
 import com.casemap.hierarchy.asset.CaseAsset;
 import com.casemap.hierarchy.asset.CaseQueryService;
 import com.casemap.hierarchy.featurekey.FeatureKey;
+import com.casemap.hierarchy.knowledge.QuoteKnowledgeCatalog;
 import com.casemap.hierarchy.model.HierarchyNode;
 import com.casemap.hierarchy.model.NodeLevel;
 import com.casemap.hierarchy.model.NodeStatus;
@@ -18,13 +19,11 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 
 /**
- * 功能点地图组装主流程（M1-S04 / M1-S05）。
+ * 功能点地图组装主流程（E-04 / E-06 / E-07 / E-09）。
  * 多数据源聚合；任一源缺失时降级填充，不抛出 500。
  */
 @Service
@@ -32,20 +31,34 @@ public class FeatureMapAssembler {
 
     private static final String MAP_VERSION = "1.0.0";
     private static final String DEFAULT_BASELINE = "BL-DRAFT";
-    private static final String PROCESS_NAME = "报价流程";
+    private static final String SYNTHETIC_VERSION = "1.0.0-synthetic";
+    private static final String SOURCE_OFFICIAL_CASES = "official-case-assets";
+    private static final String SOURCE_DERIVED_CASE = "derived-from-official-case";
+    private static final String SOURCE_DERIVED_TECH = "derived-from-tech-mapping";
+    private static final String SOURCE_DERIVED_SCENE = "derived-from-scene";
+    private static final String SOURCE_UNAVAILABLE = "unavailable";
 
     private final HierarchyStore hierarchyStore;
     private final CaseQueryService caseQueryService;
     private final ApiResolveService apiResolveService;
+    private final QuoteKnowledgeCatalog knowledgeCatalog;
+    private final QualitySummaryService qualitySummaryService;
+    private final RuleRiskService ruleRiskService;
 
     public FeatureMapAssembler(
             HierarchyStore hierarchyStore,
             CaseQueryService caseQueryService,
-            ApiResolveService apiResolveService
+            ApiResolveService apiResolveService,
+            QuoteKnowledgeCatalog knowledgeCatalog,
+            QualitySummaryService qualitySummaryService,
+            RuleRiskService ruleRiskService
     ) {
         this.hierarchyStore = hierarchyStore;
         this.caseQueryService = caseQueryService;
         this.apiResolveService = apiResolveService;
+        this.knowledgeCatalog = knowledgeCatalog;
+        this.qualitySummaryService = qualitySummaryService;
+        this.ruleRiskService = ruleRiskService;
     }
 
     public FeatureMapDto assemble(String featureKeyInput) {
@@ -60,12 +73,20 @@ public class FeatureMapAssembler {
         TechMappingResult tech = safeTech(featureKey, parts, dataSources);
 
         FeatureMapDto map = new FeatureMapDto();
-        map.setMeta(buildMeta(featureKey, featureNode.orElse(null), dataSources));
         map.setSpine(buildSpine(parts, featureNode.orElse(null), dataSources));
-        map.setBusinessView(buildBusinessView(cases, tech));
-        map.setTechView(buildTechView(tech));
-        map.setRiskView(buildRiskView(cases, tech, map.getSpine()));
-        map.setSummary(buildSummary(cases, map.getBusinessView()));
+        map.setBusinessView(buildBusinessView(parts, cases, tech, dataSources));
+        map.setTechView(buildTechView(parts, tech, dataSources));
+        QualitySummary summary = qualitySummaryService.summarize(cases, map.getBusinessView());
+        dataSources.add(QualitySummaryService.METRIC_SOURCE);
+        dataSources.add("defects:" + QualitySummaryService.DEFECT_SOURCE_UNAVAILABLE);
+        map.setSummary(summary);
+        map.setRiskView(ruleRiskService.build(parts, cases, tech, map.getSpine(), summary));
+        if (map.getRiskView().getRules().isEmpty()) {
+            dataSources.add("rules:unmatched");
+        } else {
+            dataSources.add(knowledgeCatalog.getSource());
+        }
+        map.setMeta(buildMeta(featureKey, featureNode.orElse(null), dataSources));
         map.setConsumers(defaultConsumers());
         return map;
     }
@@ -85,7 +106,7 @@ public class FeatureMapAssembler {
 
     private List<CaseAsset> safeCases(String featureKey, List<String> dataSources) {
         try {
-            CaseQueryService.CaseQueryResult result = caseQueryService.query(featureKey, null, null);
+            CaseQueryService.CaseQueryResult result = caseQueryService.queryForMap(featureKey);
             dataSources.add(result.getSource() == null ? "正式资产库" : result.getSource());
             return result.getItems();
         } catch (RuntimeException ex) {
@@ -120,11 +141,16 @@ public class FeatureMapAssembler {
     }
 
     private FeatureMapMeta buildMeta(String featureKey, HierarchyNode featureNode, List<String> dataSources) {
+        boolean synthetic = featureNode == null;
         FeatureMapMeta meta = new FeatureMapMeta();
-        meta.setMapId(mapIdOf(featureKey));
+        meta.setMapId(synthetic ? "fm_synth_" + slug(featureKey) : mapIdOf(featureKey));
         meta.setFeatureKey(featureKey);
-        meta.setVersion(MAP_VERSION);
+        meta.setVersion(synthetic ? SYNTHETIC_VERSION : MAP_VERSION);
         meta.setBaseline(DEFAULT_BASELINE);
+        meta.setSynthetic(synthetic);
+        if (synthetic) {
+            dataSources.add(0, "synthetic");
+        }
         meta.setUpdatedAt(featureNode != null && featureNode.getUpdatedAt() != null
                 ? featureNode.getUpdatedAt()
                 : LocalDate.now().toString());
@@ -144,7 +170,9 @@ public class FeatureMapAssembler {
         spine.setApp(parts.system());
         spine.setSceneName(parts.scene());
         spine.setFeatureName(parts.feature());
-        spine.setProcessName(PROCESS_NAME);
+        spine.setProcessName(parts.scene().contains("审核") || parts.feature().contains("审核")
+                ? "审核流程"
+                : "报价流程");
         spine.setValueTags(buildValueTags(parts, featureNode));
         spine.setNeighborFeatures(buildNeighbors(parts, featureNode, dataSources));
         return spine;
@@ -167,6 +195,10 @@ public class FeatureMapAssembler {
         }
         if (parts.scene().contains("审核") || parts.feature().contains("审核")) {
             tags.add("审核");
+        }
+        if (parts.scene().contains("造价审核") || parts.feature().contains("造价审核")
+                || parts.scene().equals("造价审核")) {
+            tags.add("造价审核");
         }
         tags.add("核心链路");
         return new ArrayList<>(tags);
@@ -212,7 +244,12 @@ public class FeatureMapAssembler {
         }
     }
 
-    private BusinessView buildBusinessView(List<CaseAsset> cases, TechMappingResult tech) {
+    private BusinessView buildBusinessView(
+            FeatureKey parts,
+            List<CaseAsset> cases,
+            TechMappingResult tech,
+            List<String> dataSources
+    ) {
         BusinessView view = new BusinessView();
         Map<String, ScenarioItem> scenarios = new LinkedHashMap<>();
         List<CaseItem> caseItems = new ArrayList<>();
@@ -222,14 +259,7 @@ public class FeatureMapAssembler {
             String scenarioName = asset.getTestScenario() == null || asset.getTestScenario().isBlank()
                     ? "未分类场景"
                     : asset.getTestScenario();
-            ScenarioItem scenario = scenarios.computeIfAbsent(scenarioName, name -> {
-                ScenarioItem item = new ScenarioItem();
-                item.setId("SC-" + slug(name));
-                item.setName(name);
-                item.setCoverageStatus("covered");
-                item.setCaseCount(0);
-                return item;
-            });
+            ScenarioItem scenario = scenarios.computeIfAbsent(scenarioName, name -> newScenario(name, "covered"));
             scenario.setCaseCount(scenario.getCaseCount() + 1);
 
             CaseItem caseItem = new CaseItem();
@@ -240,12 +270,24 @@ public class FeatureMapAssembler {
             caseItem.setConfidence(asset.getConfidence());
             caseItem.setMountAdvice(mountAdvice(asset.getConfidence()));
             caseItem.setApi(asset.getApi());
+            caseItem.setOriginalCaseId(asset.getOriginalCaseId());
+            caseItem.setStep(asset.getStep());
+            caseItem.setExpected(asset.getExpected());
+            caseItem.setFlowNode(asset.getFlowNode());
+            caseItem.setSourceType(asset.getSourceType());
+            caseItem.setSource(SOURCE_OFFICIAL_CASES);
             caseItems.add(caseItem);
 
-            ScriptItem script = deriveScript(asset, tech);
+            ScriptItem script = deriveScriptFromCase(asset, tech);
             if (script != null) {
                 scripts.add(script);
             }
+        }
+
+        if (scenarios.isEmpty()) {
+            ScenarioItem gapScene = newScenario(parts.scene(), "gap");
+            scenarios.put(gapScene.getName(), gapScene);
+            dataSources.add("scenarios:gap");
         }
 
         for (ScenarioItem scenario : scenarios.values()) {
@@ -258,41 +300,103 @@ public class FeatureMapAssembler {
             }
         }
 
+        if (scripts.isEmpty()) {
+            scripts.addAll(deriveScriptsFromTech(tech));
+            if (!scripts.isEmpty()) {
+                dataSources.add("scripts:" + SOURCE_DERIVED_TECH);
+            }
+        } else {
+            dataSources.add("scripts:" + SOURCE_DERIVED_CASE);
+        }
+
+        List<DataTemplateItem> templates = new ArrayList<>();
+        for (ScenarioItem scenario : scenarios.values()) {
+            DataTemplateItem template = new DataTemplateItem();
+            template.setId("DT-" + scenario.getId());
+            if (scenario.getCaseCount() == 0) {
+                template.setName(scenario.getName() + "测试数据（待补）");
+                template.setSource(SOURCE_DERIVED_SCENE);
+            } else {
+                template.setName(scenario.getName() + "测试数据");
+                template.setSource(SOURCE_DERIVED_CASE);
+            }
+            template.setLinkedScenarioId(scenario.getId());
+            templates.add(template);
+        }
+        dataSources.add("data-templates:" + (cases.isEmpty() ? SOURCE_DERIVED_SCENE : SOURCE_DERIVED_CASE));
+
+        ExecutionItem execution = new ExecutionItem();
+        execution.setId("EXEC-UNAVAILABLE");
+        execution.setLabel("执行平台未接入");
+        execution.setResults(List.of());
+        execution.setLastRunAt(null);
+        execution.setSource(SOURCE_UNAVAILABLE);
+        dataSources.add("executions:" + SOURCE_UNAVAILABLE);
+
         view.setScenarios(new ArrayList<>(scenarios.values()));
         view.setCases(caseItems);
         view.setScripts(scripts);
-        view.setDataTemplates(List.of());
-        view.setExecutions(List.of());
+        view.setDataTemplates(templates);
+        view.setExecutions(List.of(execution));
         return view;
     }
 
-    private ScriptItem deriveScript(CaseAsset asset, TechMappingResult tech) {
+    private ScriptItem deriveScriptFromCase(CaseAsset asset, TechMappingResult tech) {
         String apiLabel = asset.getApi();
+        String source = SOURCE_DERIVED_CASE;
         if ((apiLabel == null || apiLabel.isBlank()) && tech != null && !tech.getApis().isEmpty()) {
             apiLabel = tech.getApis().get(0).getLabel();
+            source = SOURCE_DERIVED_TECH;
         }
         if (apiLabel == null || apiLabel.isBlank()) {
             return null;
         }
-        String path = apiLabel;
-        int slash = apiLabel.lastIndexOf(' ');
-        if (slash >= 0) {
-            path = apiLabel.substring(slash + 1);
-        }
-        String fileName = path.replaceFirst("^/", "").replace('/', '_') + ".json";
-        ScriptItem script = new ScriptItem();
-        script.setId("SCRIPT-" + asset.getId());
-        script.setName(fileName);
-        script.setType("API");
-        script.setStatus("derived");
-        script.setLinkedCaseId(asset.getId());
+        ScriptItem script = scriptFromApiLabel("SCRIPT-" + asset.getId(), apiLabel, asset.getId(), source);
         return script;
     }
 
-    private TechView buildTechView(TechMappingResult tech) {
+    private List<ScriptItem> deriveScriptsFromTech(TechMappingResult tech) {
+        if (tech == null || tech.getApis() == null || tech.getApis().isEmpty()) {
+            return List.of();
+        }
+        List<ScriptItem> scripts = new ArrayList<>();
+        int index = 1;
+        LinkedHashSet<String> seen = new LinkedHashSet<>();
+        for (ResolvedApi api : tech.getApis()) {
+            String label = api.getLabel() == null || api.getLabel().isBlank()
+                    ? (api.getMethod() + " " + api.getPath()).trim()
+                    : api.getLabel();
+            if (!seen.add(label)) {
+                continue;
+            }
+            scripts.add(scriptFromApiLabel("SCRIPT-TECH-" + index, label, null, SOURCE_DERIVED_TECH));
+            index++;
+        }
+        return scripts;
+    }
+
+    private static ScriptItem scriptFromApiLabel(String id, String apiLabel, String linkedCaseId, String source) {
+        String path = apiLabel;
+        int space = apiLabel.lastIndexOf(' ');
+        if (space >= 0) {
+            path = apiLabel.substring(space + 1);
+        }
+        String fileName = path.replaceFirst("^/", "").replace('/', '_') + ".json";
+        ScriptItem script = new ScriptItem();
+        script.setId(id);
+        script.setName(fileName);
+        script.setType("API");
+        script.setStatus("derived");
+        script.setLinkedCaseId(linkedCaseId);
+        script.setSource(source);
+        return script;
+    }
+
+    private TechView buildTechView(FeatureKey parts, TechMappingResult tech, List<String> dataSources) {
         TechView view = new TechView();
         if (tech == null) {
             view.setSource("unavailable");
+            dataSources.add("tech-view:unavailable");
             return view;
         }
         view.setSource(tech.getSource() == null ? "tech-mapping" : tech.getSource());
@@ -303,16 +407,22 @@ public class FeatureMapAssembler {
             view.setServices(List.of(primary));
         }
         List<FlowNodeItem> flowNodes = new ArrayList<>();
+        List<String> flowNodeNames = new ArrayList<>();
         for (ResolvedFlowNode node : tech.getFlowNodes()) {
             FlowNodeItem item = new FlowNodeItem();
             item.setName(node.getName());
             item.setRisk(node.getRisk());
             item.setPrimary(node.isPrimary());
             flowNodes.add(item);
+            if (node.getName() != null && !node.getName().isBlank()) {
+                flowNodeNames.add(node.getName());
+            }
         }
         view.setFlowNodes(flowNodes);
 
         List<ApiItem> apis = new ArrayList<>();
+        List<CodeModuleItem> modules = new ArrayList<>();
+        LinkedHashSet<String> moduleNames = new LinkedHashSet<>();
         for (ResolvedApi api : tech.getApis()) {
             ApiItem item = new ApiItem();
             item.setMethod(api.getMethod());
@@ -322,83 +432,35 @@ public class FeatureMapAssembler {
             item.setController(api.getController());
             item.setConfidence(api.isFallback() ? 40 : 90);
             apis.add(item);
-        }
-        view.setApis(apis);
-        view.setTables(List.of());
-        view.setMessages(List.of());
-        view.setCodeModules(List.of());
-        return view;
-    }
-
-    private RiskView buildRiskView(List<CaseAsset> cases, TechMappingResult tech, BusinessSpine spine) {
-        RiskView view = new RiskView();
-        view.setRules(List.of());
-        view.setDefects(List.of());
-        List<RiskTagItem> tags = new ArrayList<>();
-        boolean highRisk = tech != null && tech.getFlowNodes().stream()
-                .anyMatch(node -> node.getRisk() != null && node.getRisk().contains("高"));
-        if (highRisk) {
-            tags.add(tag("risk", "高风险", "high"));
-        }
-        if (spine.getValueTags().contains("核心链路")) {
-            tags.add(tag("chain", "核心链路", "high"));
-        }
-        if (cases.isEmpty()) {
-            tags.add(tag("gap", "无正式用例", "medium"));
-        }
-        view.setTags(tags);
-        return view;
-    }
-
-    private QualitySummary buildSummary(List<CaseAsset> cases, BusinessView businessView) {
-        QualitySummary summary = new QualitySummary();
-        summary.setLinkedCaseCount(cases.size());
-
-        Map<String, Object> distribution = new LinkedHashMap<>();
-        int p0 = 0;
-        int p1 = 0;
-        int p2 = 0;
-        int p3 = 0;
-        for (CaseAsset asset : cases) {
-            String priority = asset.getPriority() == null ? "" : asset.getPriority().toUpperCase(Locale.ROOT);
-            if (priority.startsWith("P0")) {
-                p0++;
-            } else if (priority.startsWith("P1")) {
-                p1++;
-            } else if (priority.startsWith("P2")) {
-                p2++;
-            } else if (priority.startsWith("P3")) {
-                p3++;
+            if (api.getController() != null && !api.getController().isBlank() && moduleNames.add(api.getController())) {
+                CodeModuleItem module = new CodeModuleItem();
+                module.setName(api.getController());
+                module.setType("controller");
+                modules.add(module);
             }
         }
-        int total = Math.max(cases.size(), 1);
-        distribution.put("P0", p0);
-        distribution.put("P1", p1);
-        distribution.put("P2", p2);
-        distribution.put("P3", p3);
-        distribution.put("P0Rate", roundRate(p0, total));
-        distribution.put("P1Rate", roundRate(p1, total));
-        distribution.put("P2Rate", roundRate(p2, total));
-        distribution.put("P3Rate", roundRate(p3, total));
-        summary.setPriorityDistribution(distribution);
+        view.setApis(apis);
+        view.setCodeModules(modules);
 
-        long withApi = cases.stream()
-                .filter(asset -> asset.getApi() != null && !asset.getApi().isBlank())
-                .count();
-        summary.setAutomationCoverage(cases.isEmpty() ? 0.0 : roundRate((int) withApi, cases.size()));
-        summary.setDefectCount30d(0);
-        long gapScenes = businessView.getScenarios().stream()
-                .filter(scenario -> "gap".equals(scenario.getCoverageStatus()))
-                .count();
-        summary.setGapCount((int) gapScenes);
-        if (cases.isEmpty()) {
-            summary.setCoverageStatus("gap");
-        } else if (gapScenes > 0 || summary.getAutomationCoverage() < 0.7) {
-            summary.setCoverageStatus("partial");
+        List<String> tables = knowledgeCatalog.findTables(parts.scene(), flowNodeNames);
+        view.setTables(tables);
+        if (tables.isEmpty()) {
+            dataSources.add("tables:unavailable");
         } else {
-            summary.setCoverageStatus("covered");
+            dataSources.add("tables:" + knowledgeCatalog.getSource());
         }
-        return summary;
+        view.setMessages(List.of());
+        dataSources.add("messages:" + SOURCE_UNAVAILABLE);
+        return view;
+    }
+
+    private static ScenarioItem newScenario(String name, String coverageStatus) {
+        ScenarioItem item = new ScenarioItem();
+        item.setId("SC-" + slug(name));
+        item.setName(name);
+        item.setCoverageStatus(coverageStatus);
+        item.setCaseCount(0);
+        return item;
     }
 
     private static List<MapConsumer> defaultConsumers() {
@@ -412,14 +474,6 @@ public class FeatureMapAssembler {
         MapConsumer item = new MapConsumer();
         item.setPlatform(platform);
         item.setUsage(usage);
-        return item;
-    }
-
-    private static RiskTagItem tag(String type, String label, String level) {
-        RiskTagItem item = new RiskTagItem();
-        item.setType(type);
-        item.setLabel(label);
-        item.setLevel(level);
         return item;
     }
 
@@ -446,12 +500,5 @@ public class FeatureMapAssembler {
 
     private static String stringMeta(Object value) {
         return value == null ? null : String.valueOf(value);
-    }
-
-    private static double roundRate(int count, int total) {
-        if (total <= 0) {
-            return 0.0;
-        }
-        return Math.round((count * 1000.0) / total) / 1000.0;
     }
 }

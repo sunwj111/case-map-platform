@@ -1,6 +1,6 @@
 # 层级 / 功能点地图服务（Java / Spring Boot）
 
-领域 / 系统 / 场景 / 功能点与资产生产正式后端，对应 **M1-S01 ~ M1-S05、M2-S07、M3-S01 ~ M3-S03、B-01 ~ B-06、B-08，以及 C-01 草稿生成**。
+领域 / 系统 / 场景 / 功能点与资产生产正式后端，对应 **M1-S01 ~ M1-S05、M1-S08、M2-S07、M3-S01 ~ M3-S03、B-01 ~ B-06、B-08，以及 C-01 ~ C-04、C-07**。
 
 > 技术栈：Java 17 · Spring Boot 3.3 · 本地 JSON 存储（可后续换 MySQL + MyBatis-Plus）
 
@@ -38,6 +38,7 @@ cd services/hierarchy
 | POST | `/api/v1/feature-keys/decode` |
 | GET | `/api/v1/cases?feature=&scene=` |
 | GET | `/api/v1/cases?featureKey=` |
+| GET | `/api/v1/feature-maps/{featureKey}` |
 | GET | `/api/v1/tech-mappings/flow-nodes` |
 | GET | `/api/v1/tech-mappings/resolve?feature=&scene=` |
 | POST | `/api/v1/produce/batches` |
@@ -73,12 +74,13 @@ cd services/hierarchy
 - 地图草稿自动生成持久化评审队列，支持批次、状态、类型和关键词筛选。
 - 支持单条调整、确认、废弃和操作留痕；知识缺口必须补齐步骤与预期后才能确认。
 - 支持批量确认并逐条返回失败原因。
-- 已确认用例可发布到持久化正式资产库，并立即通过 `/api/v1/cases` 查询。
+- 已确认用例可发布到持久化正式资产库，并立即通过 `/api/v1/cases` 与 `/api/v1/feature-maps/{featureKey}` 查询。
 - 正式资产保留原始用例 ID、知识来源版本、评审来源类型、批次和评审项 ID。
 - 文件元数据记录格式、大小、SHA-256、行数和工作表信息。
 - 文件重新导入后自动清除旧的关键字确认和地图草稿状态。
 - OpenAPI：[`openapi/produce-import.yaml`](openapi/produce-import.yaml)。
 - 正式功能验证页：http://127.0.0.1:8787/produce.html
+- 功能点地图查询验证页：http://127.0.0.1:8787/feature-map.html
 
 ## 正式资产与技术映射（M2-S07 / M3-S01 ~ M3-S03）
 
@@ -94,13 +96,16 @@ cd services/hierarchy
 | 产物 | 路径 |
 |---|---|
 | Java DTO | `com.casemap.hierarchy.featuremap.FeatureMapDto` |
-| 组装器 | `FeatureMapAssembler`（M1-S04 / M1-S05） |
+| 组装器 | `FeatureMapAssembler`（M1-S04 / M1-S05 / E-04 / E-06 / E-07） |
+| 查询服务 | `FeatureMapQueryService` + `GET /api/v1/feature-maps/{featureKey}`（M1-S08 / E-08 / E-09） |
+| 质量摘要 | `QualitySummaryService`（I-01 地图侧口径） |
+| 规则风险 | `RuleRiskService` + `QuoteKnowledgeCatalog`（I-02 地图侧） |
 | MapNode 投影 | `FeatureMapNodeProjector` |
 | 规范 + DOM 对照 | [`docs/feature_map_dto_spec.md`](../../docs/feature_map_dto_spec.md) |
 | OpenAPI | [`openapi/feature-map.yaml`](openapi/feature-map.yaml) |
 | TypeScript | [`contracts/feature-map.ts`](contracts/feature-map.ts) |
 
-下一故事：**M1-S08** `GET /feature-maps/{featureKey}`（对外查询；可选再补 M1-S06 summary 细化）。
+下一故事：**E-10** 来源、置信度和 stale 状态；或 **F** 功能点详情三视图消费已查询的 FeatureMapDTO。
 
 ## 说明
 

@@ -4,7 +4,7 @@ info:
   version: 0.1.0
   description: |
     FeatureMapDTO（M1-S02）与查询契约。
-    组装实现见 M1-S04；查询 API 见 M1-S08。
+    组装实现见 M1-S04 / E-04；查询 API 见 M1-S08 / E-08。
 paths:
   /api/v1/feature-maps/{featureKey}:
     get:
@@ -14,20 +14,39 @@ paths:
         - name: featureKey
           in: path
           required: true
-          description: URL 编码后的 领域/系统/场景/功能点
+          description: |
+            领域/系统/场景/功能点。路径按四级分段编码，斜杠保留为路径分隔符。
+            层级节点存在，或正式资产/主数据可合成时返回 200（单源缺失降级填充）。
           schema:
             type: string
       responses:
         '200':
-          description: 完整 FeatureMapDTO
+          description: |
+            完整 FeatureMapDTO。层级树中存在该功能点，或正式资产/主数据可合成时均返回 200。
+            无层级节点的合成地图 `meta.synthetic=true`。
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/FeatureMapDto'
+        '400':
+          description: featureKey 非法
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
         '404':
-          description: 功能点不存在
+          description: 功能点不存在（无层级节点、无正式用例、也无直接接口映射）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
 components:
   schemas:
+    ErrorBody:
+      type: object
+      required: [detail]
+      properties:
+        detail: { type: string }
     FeatureMapDto:
       type: object
       required: [meta, spine, businessView, techView, riskView, summary]
@@ -61,6 +80,9 @@ components:
         dataSources:
           type: array
           items: { type: string }
+        synthetic:
+          type: boolean
+          description: 无层级节点、按正式资产或主数据动态合成时为 true
     BusinessSpine:
       type: object
       required: [domain, app, featureName, sceneName]
@@ -123,6 +145,12 @@ components:
         confidence: { type: integer }
         mountAdvice: { type: string }
         api: { type: string }
+        originalCaseId: { type: string }
+        step: { type: string }
+        expected: { type: string }
+        flowNode: { type: string }
+        sourceType: { type: string }
+        source: { type: string }
     ScriptItem:
       type: object
       properties:
@@ -131,12 +159,14 @@ components:
         type: { type: string }
         status: { type: string }
         linkedCaseId: { type: string }
+        source: { type: string }
     DataTemplateItem:
       type: object
       properties:
         id: { type: string }
         name: { type: string }
         linkedScenarioId: { type: string }
+        source: { type: string }
     ExecutionItem:
       type: object
       properties:
@@ -146,6 +176,7 @@ components:
           type: array
           items: { type: string }
         lastRunAt: { type: string }
+        source: { type: string }
     TechView:
       type: object
       properties:
@@ -242,6 +273,8 @@ components:
         defectCount30d: { type: integer }
         gapCount: { type: integer }
         coverageStatus: { type: string }
+        metricSource: { type: string }
+        defectSource: { type: string }
     MapConsumer:
       type: object
       properties:

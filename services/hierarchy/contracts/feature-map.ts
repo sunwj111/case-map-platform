@@ -26,6 +26,7 @@ export interface FeatureMapMeta {
   updatedAt?: string;
   qualityOwner?: string;
   dataSources?: string[];
+  synthetic?: boolean;
 }
 
 export interface NeighborFeature {
@@ -58,6 +59,12 @@ export interface CaseItem {
   confidence?: number;
   mountAdvice?: string;
   api?: string;
+  originalCaseId?: string;
+  step?: string;
+  expected?: string;
+  flowNode?: string;
+  sourceType?: string;
+  source?: string;
 }
 
 export interface ScriptItem {
@@ -66,12 +73,14 @@ export interface ScriptItem {
   type?: string;
   status?: string;
   linkedCaseId?: string;
+  source?: string;
 }
 
 export interface DataTemplateItem {
   id: string;
   name: string;
   linkedScenarioId?: string;
+  source?: string;
 }
 
 export interface ExecutionItem {
@@ -79,6 +88,7 @@ export interface ExecutionItem {
   label: string;
   results?: string[];
   lastRunAt?: string;
+  source?: string;
 }
 
 export interface BusinessView {
@@ -156,6 +166,8 @@ export interface QualitySummary {
   defectCount30d?: number;
   gapCount?: number;
   coverageStatus?: string;
+  metricSource?: string;
+  defectSource?: string;
 }
 
 export interface MapConsumer {
