@@ -1,6 +1,6 @@
 # 层级 / 功能点地图服务（Java / Spring Boot）
 
-领域 / 系统 / 场景 / 功能点与资产生产正式后端，对应 **M1-S01 ~ M1-S05、M2-S07、M3-S01 ~ M3-S03、B-01 标准模式**。
+领域 / 系统 / 场景 / 功能点与资产生产正式后端，对应 **M1-S01 ~ M1-S05、M2-S07、M3-S01 ~ M3-S03、B-01 ~ B-06、B-08，以及 C-01 草稿生成**。
 
 > 技术栈：Java 17 · Spring Boot 3.3 · 本地 JSON 存储（可后续换 MySQL + MyBatis-Plus）
 
@@ -46,6 +46,14 @@ cd services/hierarchy
 | POST | `/api/v1/produce/batches/{batchId}/knowledge` |
 | POST | `/api/v1/produce/batches/{batchId}/knowledge/extract` |
 | POST | `/api/v1/produce/batches/{batchId}/knowledge/text` |
+| POST | `/api/v1/produce/batches/{batchId}/keywords/confirm` |
+| POST | `/api/v1/produce/batches/{batchId}/draft` |
+| GET | `/api/v1/reviews` |
+| PATCH | `/api/v1/reviews/{reviewId}` |
+| POST | `/api/v1/reviews/{reviewId}/confirm` |
+| POST | `/api/v1/reviews/{reviewId}/discard` |
+| POST | `/api/v1/reviews/batch/confirm` |
+| POST | `/api/v1/reviews/batches/{batchId}/publish` |
 
 ## 资产生产标准模式（B-01）
 
@@ -58,9 +66,19 @@ cd services/hierarchy
 - XMind 同时支持新版 `content.json` 和旧版 `content.xml`，限制解压内容、主题数与层级，并禁用 XML 外部实体。
 - 自然语言和结构化 Markdown 可抽取场景、功能点、规则、流程节点候选，保留来源、置信度和来源版本。
 - 支持直接粘贴知识文本，也支持对已上传知识文件重新抽取。
+- 粘贴知识会与已上传文件合并，不再覆盖原始知识库。
+- Markdown 表格、接口路径和 Java 调用链可提取为功能点与流程节点候选。
+- 关键字确认后按历史字段和知识命中计算置信度，生成自动挂载、待抽检、人工确认三类用例。
+- 知识库中未被历史用例覆盖的功能点生成缺口候选。
+- 地图草稿自动生成持久化评审队列，支持批次、状态、类型和关键词筛选。
+- 支持单条调整、确认、废弃和操作留痕；知识缺口必须补齐步骤与预期后才能确认。
+- 支持批量确认并逐条返回失败原因。
+- 已确认用例可发布到持久化正式资产库，并立即通过 `/api/v1/cases` 查询。
+- 正式资产保留原始用例 ID、知识来源版本、评审来源类型、批次和评审项 ID。
 - 文件元数据记录格式、大小、SHA-256、行数和工作表信息。
 - 文件重新导入后自动清除旧的关键字确认和地图草稿状态。
 - OpenAPI：[`openapi/produce-import.yaml`](openapi/produce-import.yaml)。
+- 正式功能验证页：http://127.0.0.1:8787/produce.html
 
 ## 正式资产与技术映射（M2-S07 / M3-S01 ~ M3-S03）
 

@@ -58,10 +58,43 @@ class NaturalLanguageKnowledgeExtractorTest {
     }
 
     @Test
+    void extractsMarkdownTablesAndTechnicalCallChainWithoutSeparatorNoise() {
+        String knowledge = """
+                ## 二、总体调用链
+                CostAuditApi → CostAuditRpcService → DesignCostService → DesignCostDao
+
+                ## 三、涉及接口清单
+                | 接口 | 方法 | 说明 |
+                |---|---|---|
+                | `/costAudit/findList` | `findList` | 查询造价审核列表 |
+                | `/costAudit/accept` | `accept` | 接单 |
+                """;
+
+        KnowledgeExtractionResult result = extractor.extract(knowledge, "markdown-version");
+
+        assertTrue(result.nodes().stream().anyMatch(item -> "CostAuditApi".equals(item.text())));
+        assertTrue(result.nodes().stream().anyMatch(item -> "DesignCostService".equals(item.text())));
+        assertTrue(result.features().stream().anyMatch(item -> "/costAudit/findList".equals(item.text())));
+        assertTrue(result.features().stream().noneMatch(item -> item.text().contains("---")));
+    }
+
+    @Test
+    void keepsShortNaturalLanguageAsFallbackFeature() {
+        KnowledgeExtractionResult result = extractor.extract("造价审核接口", "short-version");
+
+        assertEquals(1, result.features().size());
+        assertEquals("造价审核接口", result.features().get(0).text());
+    }
+
+    @Test
     void rejectsBlankKnowledge() {
         assertThrows(
                 IllegalArgumentException.class,
                 () -> extractor.extract(" ", "source-version")
+        );
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> extractor.extract("5", "source-version")
         );
     }
 }

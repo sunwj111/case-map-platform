@@ -19,19 +19,19 @@ public class NaturalLanguageKnowledgeExtractor {
             "我们", "系统", "用户", "测试", "用例", "知识库", "流程", "业务", "说明", "如下", "包括",
             "主要", "相关", "一般", "时候", "之后", "之前", "通过", "完成", "支持"
     );
-    private static final Pattern SECTION_PATTERN = Pattern.compile("^#{1,3}\\s*(.+?)\\s*$", Pattern.MULTILINE);
+    private static final Pattern SECTION_PATTERN = Pattern.compile("^(#{1,3})\\s*(.+?)\\s*$", Pattern.MULTILINE);
     private static final Pattern SCENE_LEAD = Pattern.compile("^(?:业务)?场景[:：]\\s*(.+)$");
     private static final Pattern FEATURE_LEAD = Pattern.compile("^(?:功能点|功能|能力|模块)[:：]\\s*(.+)$");
     private static final Pattern RULE_LEAD = Pattern.compile("^(?:规则|约束|校验)[:：]\\s*(.+)$");
     private static final Pattern NODE_LEAD = Pattern.compile("^(?:流程节点|节点)[:：]\\s*(.+)$");
-    private static final Pattern INCLUDE_PATTERN = Pattern.compile(
-            "(?:包括|涵盖|链路(?:为|是)?|流程(?:为|是)?|环节(?:有|包括)?|主要(?:有|包括))[:：]?\\s*([^\\n。；;]{4,80})"
-    );
     private static final Pattern FEATURE_PATTERN = Pattern.compile(
             "(?:支持|提供|完成|实现|负责|用于)\\s*([\\u4e00-\\u9fa5A-Za-z0-9]{2,16})"
     );
     private static final Pattern RULE_PATTERN = Pattern.compile(
             "([\\u4e00-\\u9fa5A-Za-z0-9]{2,20}(?:必须|不可|不能|应当|禁止)[^\\n。；;]{0,20})"
+    );
+    private static final Pattern TECHNICAL_NODE_PATTERN = Pattern.compile(
+            "\\b([A-Z][A-Za-z0-9]*(?:ServiceImpl|Service|Controller|Api|Dao|Adaptor|Client|Manager))\\b"
     );
 
     public KnowledgeExtractionResult extract(String text, String sourceVersion) {
@@ -46,7 +46,18 @@ public class NaturalLanguageKnowledgeExtractor {
         CandidateBag nodes = new CandidateBag();
         boolean hasSections = extractSections(sourceText, scenes, features, rules, nodes);
         extractFreeText(sourceText, scenes, features, rules, nodes);
+        extractMarkdownTables(sourceText, features, rules);
+        extractTechnicalNodes(sourceText, nodes);
         removeCrossCategoryDuplicates(scenes, features);
+        if (scenes.isEmpty() && features.isEmpty() && rules.isEmpty() && nodes.isEmpty()) {
+            String shortKnowledge = cleanItem(sourceText);
+            if (!shortKnowledge.isEmpty()) {
+                features.add(shortKnowledge, "短文本·功能点", 65);
+            }
+        }
+        if (scenes.isEmpty() && features.isEmpty() && rules.isEmpty() && nodes.isEmpty()) {
+            throw new IllegalArgumentException("未从知识文本中抽取到有效候选，请上传知识文件或补充业务描述");
+        }
 
         return new KnowledgeExtractionResult(
                 scenes.values(24),
@@ -68,7 +79,12 @@ public class NaturalLanguageKnowledgeExtractor {
         Matcher matcher = SECTION_PATTERN.matcher(text);
         List<Section> sections = new ArrayList<>();
         while (matcher.find()) {
-            sections.add(new Section(matcher.group(1).trim(), matcher.start(), matcher.end()));
+            sections.add(new Section(
+                    matcher.group(2).trim(),
+                    matcher.group(1).length(),
+                    matcher.start(),
+                    matcher.end()
+            ));
         }
         for (int sectionIndex = 0; sectionIndex < sections.size(); sectionIndex++) {
             Section section = sections.get(sectionIndex);
@@ -82,6 +98,16 @@ public class NaturalLanguageKnowledgeExtractor {
                     .toList();
 
             String title = section.title();
+            String normalizedTitle = cleanItem(title);
+            if (!normalizedTitle.isEmpty()
+                    && normalizedTitle.matches(".*(?:流程|场景|审核|提交|计算|状态机).*")) {
+                scenes.add(normalizedTitle, "章节标题·场景", 82);
+            }
+            if (section.level() >= 3
+                    && !normalizedTitle.isEmpty()
+                    && !normalizedTitle.matches(".*(?:接口清单|RPC 接口|涉及接口|调用链).*")) {
+                features.add(normalizedTitle, "章节标题·功能点", 86);
+            }
             if (title.matches(".*(?:流程节点|节点).*")) {
                 items.forEach(item -> nodes.add(item, "章节·节点", 90));
             } else if (title.matches(".*(?:场景|流程|环节|阶段).*")) {
@@ -112,7 +138,11 @@ public class NaturalLanguageKnowledgeExtractor {
     ) {
         for (String line : text.split("\\R")) {
             String compactLine = FileParsingSupport.compact(line);
-            if (compactLine.isEmpty() || compactLine.startsWith("#")) {
+            if (compactLine.isEmpty()
+                    || compactLine.startsWith("#")
+                    || compactLine.startsWith("|")
+                    || compactLine.startsWith("```")
+                    || compactLine.matches("^[-:|\\s]+$")) {
                 continue;
             }
             if (addLeadCandidates(compactLine, NODE_LEAD, nodes, "行首·节点")) {
@@ -145,19 +175,6 @@ public class NaturalLanguageKnowledgeExtractor {
             }
         }
 
-        Matcher includeMatcher = INCLUDE_PATTERN.matcher(text);
-        while (includeMatcher.find()) {
-            for (String item : splitList(includeMatcher.group(1))) {
-                if (isRule(item)) {
-                    rules.add(item, "句式·规则", 72);
-                } else if (item.length() <= 16) {
-                    scenes.add(item, "句式·场景", 68);
-                } else {
-                    features.add(item, "句式·功能点", 68);
-                }
-            }
-        }
-
         Matcher featureMatcher = FEATURE_PATTERN.matcher(text);
         while (featureMatcher.find()) {
             String feature = cleanItem(featureMatcher.group(1));
@@ -169,6 +186,38 @@ public class NaturalLanguageKnowledgeExtractor {
         Matcher ruleMatcher = RULE_PATTERN.matcher(text);
         while (ruleMatcher.find()) {
             rules.add(ruleMatcher.group(1), "句式·规则", 75);
+        }
+    }
+
+    private static void extractMarkdownTables(String text, CandidateBag features, CandidateBag rules) {
+        for (String line : text.split("\\R")) {
+            String compactLine = line.trim();
+            if (!compactLine.startsWith("|") || compactLine.matches("^\\|?[\\s:|-]+\\|?$")) {
+                continue;
+            }
+            List<String> cells = Arrays.stream(compactLine.split("\\|"))
+                    .map(NaturalLanguageKnowledgeExtractor::cleanItem)
+                    .filter(cell -> !cell.isEmpty())
+                    .toList();
+            if (cells.isEmpty() || cells.stream().allMatch(cell ->
+                    cell.matches(".*(?:接口|方法|说明|系统|调用类|方式|作用|校验|外部调用|拦截条件).*"))) {
+                continue;
+            }
+            String firstCell = cells.get(0).replace("`", "");
+            if (firstCell.startsWith("/")) {
+                features.add(firstCell, "表格·功能点", 82);
+            }
+            String joinedCells = String.join("：", cells);
+            if (isRule(joinedCells)) {
+                rules.add(joinedCells, "表格·规则", 80);
+            }
+        }
+    }
+
+    private static void extractTechnicalNodes(String text, CandidateBag nodes) {
+        Matcher nodeMatcher = TECHNICAL_NODE_PATTERN.matcher(text);
+        while (nodeMatcher.find()) {
+            nodes.add(nodeMatcher.group(1), "调用链·节点", 88);
         }
     }
 
@@ -196,14 +245,25 @@ public class NaturalLanguageKnowledgeExtractor {
     }
 
     private static String cleanItem(String rawValue) {
-        String value = FileParsingSupport.compact(rawValue)
+        String compactValue = FileParsingSupport.compact(rawValue);
+        if (compactValue.startsWith("```") || compactValue.matches(".*[│▼].*")) {
+            return "";
+        }
+        String value = compactValue
+                .replace("**", "")
+                .replace("`", "")
                 .replaceFirst("^(?:包括|涵盖|主要有|主要是)[:：]?\\s*", "")
+                .replaceFirst("^[一二三四五六七八九十]+[、.．]\\s*", "")
                 .replaceFirst("^[-*+•·\\d.、)\\]】\\s]+", "")
                 .replaceFirst("^[（(]?\\d+[）).、]\\s*", "")
                 .replaceFirst("^[Rrｒ]\\d+[\\s:：-]*", "")
                 .replaceFirst("[:：]\\s*$", "")
                 .replaceFirst("[。；;]+$", "");
-        if (value.length() < 2 || value.length() > 40 || STOP_WORDS.contains(value)) {
+        if (value.length() < 2
+                || value.length() > 40
+                || value.startsWith("|")
+                || value.matches("^[-:|\\s]+$")
+                || STOP_WORDS.contains(value)) {
             return "";
         }
         if (value.matches("^(?:注|说明|例如|比如).*")) {
@@ -218,13 +278,17 @@ public class NaturalLanguageKnowledgeExtractor {
 
     private static void removeCrossCategoryDuplicates(CandidateBag scenes, CandidateBag features) {
         for (String scene : scenes.texts()) {
-            if (scene.matches(".*(?:场景|流程|环节|阶段|审核|提交).*")) {
+            KeywordCandidate sceneCandidate = scenes.get(scene);
+            KeywordCandidate featureCandidate = features.get(scene);
+            if (featureCandidate != null
+                    && scene.matches(".*(?:场景|流程|环节|阶段|审核|提交).*")
+                    && sceneCandidate.confidence() >= featureCandidate.confidence()) {
                 features.remove(scene);
             }
         }
     }
 
-    private record Section(String title, int headingStart, int bodyStart) {
+    private record Section(String title, int level, int headingStart, int bodyStart) {
     }
 
     private static final class CandidateBag {
@@ -245,8 +309,16 @@ public class NaturalLanguageKnowledgeExtractor {
             candidates.remove(text);
         }
 
+        KeywordCandidate get(String text) {
+            return candidates.get(text);
+        }
+
         Set<String> texts() {
             return Set.copyOf(candidates.keySet());
+        }
+
+        boolean isEmpty() {
+            return candidates.isEmpty();
         }
 
         List<KeywordCandidate> values(int limit) {

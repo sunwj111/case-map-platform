@@ -17,7 +17,11 @@ hierarchy:
 
 produce:
   batch-file: data/produce/import_batches.json
+  review-file: data/produce/review_queue.json
   max-cases-per-batch: 10000
+
+case-assets:
+  runtime-file: data/produce/case_assets.json
 
 management:
   endpoints:

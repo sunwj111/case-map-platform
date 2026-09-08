@@ -16,12 +16,15 @@ public class ImportBatch {
     private boolean knowledgeImported;
     private boolean keywordsConfirmed;
     private boolean mapDraftGenerated;
+    private boolean reviewQueueGenerated;
+    private int publishedCount;
     private boolean readyForKeywordCalibration;
     private boolean readyForMapDraft;
     private List<String> missingInputs = new ArrayList<>();
     private CaseFileParseResult caseImport;
     private KnowledgeFileParseResult knowledgeImport;
     private KnowledgeExtractionResult keywordExtraction;
+    private MapDraftResult mapDraft;
     private String createdAt;
     private String updatedAt;
 
@@ -38,7 +41,11 @@ public class ImportBatch {
             missingInputs.add("knowledge");
         }
 
-        if (mapDraftGenerated) {
+        if (publishedCount > 0) {
+            status = ImportBatchStatus.ASSETS_PUBLISHED;
+        } else if (reviewQueueGenerated) {
+            status = ImportBatchStatus.REVIEW_IN_PROGRESS;
+        } else if (mapDraftGenerated) {
             status = ImportBatchStatus.MAP_DRAFT_GENERATED;
         } else if (readyForMapDraft) {
             status = ImportBatchStatus.READY_FOR_MAP_DRAFT;
@@ -141,6 +148,22 @@ public class ImportBatch {
         this.mapDraftGenerated = mapDraftGenerated;
     }
 
+    public boolean isReviewQueueGenerated() {
+        return reviewQueueGenerated;
+    }
+
+    public void setReviewQueueGenerated(boolean reviewQueueGenerated) {
+        this.reviewQueueGenerated = reviewQueueGenerated;
+    }
+
+    public int getPublishedCount() {
+        return publishedCount;
+    }
+
+    public void setPublishedCount(int publishedCount) {
+        this.publishedCount = publishedCount;
+    }
+
     public boolean isReadyForKeywordCalibration() {
         return readyForKeywordCalibration;
     }
@@ -187,6 +210,14 @@ public class ImportBatch {
 
     public void setKeywordExtraction(KnowledgeExtractionResult keywordExtraction) {
         this.keywordExtraction = keywordExtraction;
+    }
+
+    public MapDraftResult getMapDraft() {
+        return mapDraft;
+    }
+
+    public void setMapDraft(MapDraftResult mapDraft) {
+        this.mapDraft = mapDraft;
     }
 
     public String getCreatedAt() {

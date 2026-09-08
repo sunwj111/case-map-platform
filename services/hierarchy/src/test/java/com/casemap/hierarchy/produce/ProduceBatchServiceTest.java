@@ -1,5 +1,6 @@
 package com.casemap.hierarchy.produce;
 
+import com.casemap.hierarchy.asset.CaseAssetStore;
 import com.casemap.hierarchy.store.HierarchyStore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,6 +23,7 @@ class ProduceBatchServiceTest {
     private ObjectMapper objectMapper;
     private Path batchFile;
     private ProduceBatchService produceBatchService;
+    private ReviewQueueStore reviewQueueStore;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -36,13 +38,25 @@ class ProduceBatchServiceTest {
 
         ImportBatchStore importBatchStore = new ImportBatchStore(objectMapper, batchFile.toString());
         importBatchStore.init();
+        reviewQueueStore = new ReviewQueueStore(
+                objectMapper,
+                tempDirectory.resolve("produce/review_queue.json").toString()
+        );
+        reviewQueueStore.init();
+        ReviewService reviewService = new ReviewService(
+                reviewQueueStore,
+                importBatchStore,
+                new CaseAssetStore(objectMapper)
+        );
         XMindFileParser xMindFileParser = new XMindFileParser(objectMapper);
         produceBatchService = new ProduceBatchService(
                 hierarchyStore,
                 importBatchStore,
                 new CaseFileParser(10000, xMindFileParser),
                 new KnowledgeFileParser(xMindFileParser),
-                new NaturalLanguageKnowledgeExtractor()
+                new NaturalLanguageKnowledgeExtractor(),
+                new CaseCleaningService(),
+                reviewService
         );
     }
 
@@ -67,30 +81,54 @@ class ProduceBatchServiceTest {
     @Test
     void advancesOnlyAfterCasesKnowledgeAndKeywordConfirmation() {
         ImportBatch batch = produceBatchService.create(standardRequest("家装", "报价"));
+        String csv = "用例编号,用例名称,步骤,预期结果,场景,功能点\n"
+                + "TC-001,数量价汇总,提交报价,金额正确,金额计算与汇总,数量价汇总\n";
+        String knowledge = "场景：金额计算与汇总\n功能点：数量价汇总\n节点：报价计算节点";
 
-        ImportBatch afterCases = produceBatchService.markCasesImported(batch.getId());
+        produceBatchService.importCases(batch.getId(), "cases.csv", csv.getBytes(StandardCharsets.UTF_8));
+        ImportBatch afterCases = produceBatchService.get(batch.getId());
         assertEquals(ImportBatchStatus.WAITING_FOR_KNOWLEDGE, afterCases.getStatus());
         assertThrows(
                 IllegalArgumentException.class,
                 () -> produceBatchService.confirmKeywords(batch.getId())
         );
 
-        ImportBatch afterKnowledge = produceBatchService.markKnowledgeImported(batch.getId());
+        produceBatchService.importKnowledge(
+                batch.getId(),
+                "knowledge.md",
+                knowledge.getBytes(StandardCharsets.UTF_8)
+        );
+        ImportBatch afterKnowledge = produceBatchService.get(batch.getId());
         assertEquals(ImportBatchStatus.READY_FOR_KEYWORD_CALIBRATION, afterKnowledge.getStatus());
         assertTrue(afterKnowledge.isReadyForKeywordCalibration());
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> produceBatchService.confirmKeywords(batch.getId())
+        );
 
+        produceBatchService.extractKnowledge(batch.getId());
         ImportBatch afterConfirmation = produceBatchService.confirmKeywords(batch.getId());
         assertEquals(ImportBatchStatus.READY_FOR_MAP_DRAFT, afterConfirmation.getStatus());
         assertTrue(afterConfirmation.isReadyForMapDraft());
 
-        ImportBatch generated = produceBatchService.markMapDraftGenerated(batch.getId());
-        assertEquals(ImportBatchStatus.MAP_DRAFT_GENERATED, generated.getStatus());
+        MapDraftResult mapDraft = produceBatchService.generateMapDraft(batch.getId());
+        ImportBatch generated = produceBatchService.get(batch.getId());
+        assertEquals(ImportBatchStatus.REVIEW_IN_PROGRESS, generated.getStatus());
+        assertTrue(generated.isReviewQueueGenerated());
+        assertEquals(1, mapDraft.stats().totalCases());
+        assertEquals("数量价汇总", mapDraft.cases().get(0).feature());
+        assertEquals(1, reviewQueueStore.listAll().size());
     }
 
     @Test
     void persistsBatchAndReloadsGateState() throws Exception {
         ImportBatch batch = produceBatchService.create(standardRequest("家装", "报价"));
-        produceBatchService.markCasesImported(batch.getId());
+        String csv = "用例编号,用例名称,步骤,预期结果\nTC-001,数量价汇总,提交报价,金额正确\n";
+        produceBatchService.importCases(
+                batch.getId(),
+                "cases.csv",
+                csv.getBytes(StandardCharsets.UTF_8)
+        );
 
         ImportBatchStore reloadedStore = new ImportBatchStore(objectMapper, batchFile.toString());
         reloadedStore.init();
@@ -161,6 +199,30 @@ class ProduceBatchServiceTest {
         ImportBatchStore reloadedStore = new ImportBatchStore(objectMapper, batchFile.toString());
         reloadedStore.init();
         assertFalse(reloadedStore.get(batch.getId()).orElseThrow().getKeywordExtraction().rules().isEmpty());
+    }
+
+    @Test
+    void pastedKnowledgeExtendsUploadedFileInsteadOfReplacingIt() {
+        ImportBatch batch = produceBatchService.create(standardRequest("家装", "报价"));
+        String uploadedKnowledge = "# 功能点\n- 自动审核判定\n";
+        produceBatchService.importKnowledge(
+                batch.getId(),
+                "uploaded.md",
+                uploadedKnowledge.getBytes(StandardCharsets.UTF_8)
+        );
+
+        produceBatchService.importKnowledgeText(
+                batch.getId(),
+                "人工补充",
+                "规则：金额必须大于零"
+        );
+
+        ImportBatch updatedBatch = produceBatchService.get(batch.getId());
+        assertTrue(updatedBatch.getKnowledgeImport().text().contains("自动审核判定"));
+        assertTrue(updatedBatch.getKnowledgeImport().text().contains("金额必须大于零"));
+        assertEquals("combined-knowledge", updatedBatch.getKnowledgeImport().metadata().format());
+        assertFalse(updatedBatch.getKeywordExtraction().features().isEmpty());
+        assertFalse(updatedBatch.getKeywordExtraction().rules().isEmpty());
     }
 
     @Test

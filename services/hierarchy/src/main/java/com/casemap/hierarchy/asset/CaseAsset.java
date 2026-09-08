@@ -20,6 +20,16 @@ public class CaseAsset {
     private String lifecycle;
     private String api;
     private Integer confidence;
+    private String step;
+    private String expected;
+    private String sourceBatchId;
+    private String sourceReviewId;
+    private String originalCaseId;
+    private String knowledgeSourceVersion;
+    private String sourceType;
+    private String flowNode;
+    private String createdAt;
+    private String updatedAt;
 
     @JsonIgnore
     public boolean isPublishedOfficial() {
@@ -112,5 +122,85 @@ public class CaseAsset {
 
     public void setConfidence(Integer confidence) {
         this.confidence = confidence;
+    }
+
+    public String getStep() {
+        return step;
+    }
+
+    public void setStep(String step) {
+        this.step = step;
+    }
+
+    public String getExpected() {
+        return expected;
+    }
+
+    public void setExpected(String expected) {
+        this.expected = expected;
+    }
+
+    public String getSourceBatchId() {
+        return sourceBatchId;
+    }
+
+    public void setSourceBatchId(String sourceBatchId) {
+        this.sourceBatchId = sourceBatchId;
+    }
+
+    public String getSourceReviewId() {
+        return sourceReviewId;
+    }
+
+    public void setSourceReviewId(String sourceReviewId) {
+        this.sourceReviewId = sourceReviewId;
+    }
+
+    public String getOriginalCaseId() {
+        return originalCaseId;
+    }
+
+    public void setOriginalCaseId(String originalCaseId) {
+        this.originalCaseId = originalCaseId;
+    }
+
+    public String getKnowledgeSourceVersion() {
+        return knowledgeSourceVersion;
+    }
+
+    public void setKnowledgeSourceVersion(String knowledgeSourceVersion) {
+        this.knowledgeSourceVersion = knowledgeSourceVersion;
+    }
+
+    public String getSourceType() {
+        return sourceType;
+    }
+
+    public void setSourceType(String sourceType) {
+        this.sourceType = sourceType;
+    }
+
+    public String getFlowNode() {
+        return flowNode;
+    }
+
+    public void setFlowNode(String flowNode) {
+        this.flowNode = flowNode;
+    }
+
+    public String getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(String createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public String getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(String updatedAt) {
+        this.updatedAt = updatedAt;
     }
 }

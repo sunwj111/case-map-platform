@@ -5,6 +5,8 @@ import com.casemap.hierarchy.produce.ImportFileMetadata;
 import com.casemap.hierarchy.produce.CaseFileParseResult;
 import com.casemap.hierarchy.produce.KeywordCandidate;
 import com.casemap.hierarchy.produce.KnowledgeExtractionResult;
+import com.casemap.hierarchy.produce.MapDraftResult;
+import com.casemap.hierarchy.produce.MapDraftStats;
 import com.casemap.hierarchy.produce.ProduceBatchService;
 import com.casemap.hierarchy.produce.ProductionMode;
 import org.junit.jupiter.api.Test;
@@ -119,6 +121,40 @@ class ProduceControllerTest {
                 .andExpect(jsonPath("$.mode").value("nl"))
                 .andExpect(jsonPath("$.features[0].text").value("数量价汇总"))
                 .andExpect(jsonPath("$.features[0].confidence").value(85));
+    }
+
+    @Test
+    void confirmsKeywordsAndGeneratesDraft() throws Exception {
+        ImportBatch batch = standardBatch("batch-001");
+        batch.setCasesImported(true);
+        batch.setKnowledgeImported(true);
+        batch.setKeywordsConfirmed(true);
+        batch.refreshGate();
+        when(produceBatchService.find("batch-001")).thenReturn(Optional.of(batch));
+        when(produceBatchService.confirmKeywords(any(), any())).thenReturn(batch);
+        when(produceBatchService.generateMapDraft("batch-001")).thenReturn(new MapDraftResult(
+                "batch-001",
+                List.of(),
+                List.of(),
+                new MapDraftStats(14, 10, 4, 0, 2),
+                "2026-09-07T16:00:00Z"
+        ));
+
+        mockMvc.perform(post("/api/v1/produce/batches/batch-001/keywords/confirm")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "scenes": ["造价单审核"],
+                                  "features": ["人工审核"]
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.readyForMapDraft").value(true));
+
+        mockMvc.perform(post("/api/v1/produce/batches/batch-001/draft"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.stats.totalCases").value(14))
+                .andExpect(jsonPath("$.stats.autoMounted").value(10));
     }
 
     private static ImportBatch standardBatch(String batchId) {

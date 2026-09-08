@@ -11,6 +11,7 @@ dist/
 tmp/
 *.local
 services/hierarchy/data/hierarchy_store.json
+services/hierarchy/data/produce/
 services/hierarchy/target/
 services/hierarchy-python/
 __pycache__/

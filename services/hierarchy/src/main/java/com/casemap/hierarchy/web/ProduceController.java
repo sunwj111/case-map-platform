@@ -2,10 +2,12 @@ package com.casemap.hierarchy.web;
 
 import com.casemap.hierarchy.produce.CreateImportBatchRequest;
 import com.casemap.hierarchy.produce.CaseFileParseResult;
+import com.casemap.hierarchy.produce.ConfirmKeywordsRequest;
 import com.casemap.hierarchy.produce.ImportBatch;
 import com.casemap.hierarchy.produce.KnowledgeFileParseResult;
 import com.casemap.hierarchy.produce.KnowledgeExtractionResult;
 import com.casemap.hierarchy.produce.KnowledgeTextRequest;
+import com.casemap.hierarchy.produce.MapDraftResult;
 import com.casemap.hierarchy.produce.ProduceBatchService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -78,6 +80,21 @@ public class ProduceController {
                 request.getSourceName(),
                 request.getText()
         );
+    }
+
+    @PostMapping("/{batchId}/keywords/confirm")
+    public ImportBatch confirmKeywords(
+            @PathVariable String batchId,
+            @RequestBody(required = false) ConfirmKeywordsRequest request
+    ) {
+        ensureBatchExists(batchId);
+        return produceBatchService.confirmKeywords(batchId, request);
+    }
+
+    @PostMapping("/{batchId}/draft")
+    public MapDraftResult generateMapDraft(@PathVariable String batchId) {
+        ensureBatchExists(batchId);
+        return produceBatchService.generateMapDraft(batchId);
     }
 
     private void ensureBatchExists(String batchId) {

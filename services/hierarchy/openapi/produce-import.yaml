@@ -174,6 +174,206 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /api/v1/produce/batches/{batchId}/keywords/confirm:
+    post:
+      summary: 确认或调整关键字候选
+      operationId: confirmKnowledgeCandidates
+      parameters:
+        - name: batchId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfirmKeywordsRequest"
+      responses:
+        "200":
+          description: 更新后的批次门禁状态
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportBatch"
+        "400":
+          description: 双源导入或关键字抽取尚未完成
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /api/v1/produce/batches/{batchId}/draft:
+    post:
+      summary: 清洗历史用例并生成地图草稿
+      operationId: generateMapDraft
+      parameters:
+        - name: batchId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 用例清洗、挂载和知识缺口结果
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MapDraftResult"
+        "400":
+          description: 标准模式门禁尚未满足
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /api/v1/reviews:
+    get:
+      summary: 查询评审队列
+      operationId: queryReviewQueue
+      parameters:
+        - name: batchId
+          in: query
+          schema:
+            type: string
+        - name: system
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [待评审, 已确认, 已废弃, 已发布]
+        - name: kind
+          in: query
+          schema:
+            type: string
+            enum: [历史用例, 知识缺口]
+        - name: pool
+          in: query
+          schema:
+            type: string
+            enum: [A, B, C]
+        - name: keyword
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 评审队列及状态统计
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewQueueResult"
+  /api/v1/reviews/{reviewId}:
+    patch:
+      summary: 调整待评审用例内容与挂载
+      operationId: updateReviewItem
+      parameters:
+        - name: reviewId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateReviewItemRequest"
+      responses:
+        "200":
+          description: 更新后的评审项
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewItem"
+  /api/v1/reviews/{reviewId}/confirm:
+    post:
+      summary: 确认单条评审项
+      operationId: confirmReviewItem
+      parameters:
+        - name: reviewId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewActionRequest"
+      responses:
+        "200":
+          description: 已确认评审项
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewItem"
+  /api/v1/reviews/{reviewId}/discard:
+    post:
+      summary: 废弃单条评审项
+      operationId: discardReviewItem
+      parameters:
+        - name: reviewId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewActionRequest"
+      responses:
+        "200":
+          description: 已废弃评审项
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewItem"
+  /api/v1/reviews/batch/confirm:
+    post:
+      summary: 批量确认评审项并逐条返回失败原因
+      operationId: confirmReviewItems
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BatchReviewRequest"
+      responses:
+        "200":
+          description: 批量操作结果
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BatchReviewResult"
+  /api/v1/reviews/batches/{batchId}/publish:
+    post:
+      summary: 将批次内已确认用例发布到正式资产库
+      operationId: publishReviewedCases
+      parameters:
+        - name: batchId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewActionRequest"
+      responses:
+        "200":
+          description: 正式入库结果
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublishBatchResult"
 components:
   schemas:
     CreateImportBatchRequest:
@@ -234,6 +434,10 @@ components:
           type: boolean
         mapDraftGenerated:
           type: boolean
+        reviewQueueGenerated:
+          type: boolean
+        publishedCount:
+          type: integer
         readyForKeywordCalibration:
           type: boolean
         readyForMapDraft:
@@ -255,6 +459,8 @@ components:
           $ref: "#/components/schemas/KnowledgeFileParseResult"
         keywordExtraction:
           $ref: "#/components/schemas/KnowledgeExtractionResult"
+        mapDraft:
+          $ref: "#/components/schemas/MapDraftResult"
     ImportFileMetadata:
       type: object
       properties:
@@ -371,9 +577,246 @@ components:
             $ref: "#/components/schemas/KeywordCandidate"
         mode:
           type: string
-          enum: [nl, structured+nl]
+          enum: [nl, structured+nl, confirmed]
         sourceVersion:
           type: string
+    ConfirmKeywordsRequest:
+      type: object
+      properties:
+        scenes:
+          type: array
+          items:
+            type: string
+        features:
+          type: array
+          items:
+            type: string
+        rules:
+          type: array
+          items:
+            type: string
+        nodes:
+          type: array
+          items:
+            type: string
+    CleanedCaseItem:
+      type: object
+      properties:
+        originalCaseId:
+          type: string
+        caseName:
+          type: string
+        scene:
+          type: string
+        feature:
+          type: string
+        flowNode:
+          type: string
+        confidence:
+          type: integer
+        mountAdvice:
+          type: string
+          enum: [自动挂载, 待抽检, 人工确认]
+        matchEvidence:
+          type: array
+          items:
+            type: string
+        sourceRowNumber:
+          type: integer
+    GapCaseCandidate:
+      type: object
+      properties:
+        id:
+          type: string
+        scene:
+          type: string
+        feature:
+          type: string
+        reason:
+          type: string
+    MapDraftStats:
+      type: object
+      properties:
+        totalCases:
+          type: integer
+        autoMounted:
+          type: integer
+        reviewRequired:
+          type: integer
+        manualRequired:
+          type: integer
+        gapCount:
+          type: integer
+    MapDraftResult:
+      type: object
+      properties:
+        batchId:
+          type: string
+        cases:
+          type: array
+          items:
+            $ref: "#/components/schemas/CleanedCaseItem"
+        gaps:
+          type: array
+          items:
+            $ref: "#/components/schemas/GapCaseCandidate"
+        stats:
+          $ref: "#/components/schemas/MapDraftStats"
+        generatedAt:
+          type: string
+          format: date-time
+    ReviewOperation:
+      type: object
+      properties:
+        action:
+          type: string
+        operator:
+          type: string
+        detail:
+          type: string
+        operatedAt:
+          type: string
+          format: date-time
+    ReviewItem:
+      type: object
+      properties:
+        id:
+          type: string
+        batchId:
+          type: string
+        kind:
+          type: string
+          enum: [历史用例, 知识缺口]
+        status:
+          type: string
+          enum: [待评审, 已确认, 已废弃, 已发布]
+        originalCaseId:
+          type: string
+        officialCaseId:
+          type: string
+        caseName:
+          type: string
+        scene:
+          type: string
+        feature:
+          type: string
+        flowNode:
+          type: string
+        step:
+          type: string
+        expected:
+          type: string
+        priority:
+          type: string
+          enum: [P0, P1, P2]
+        confidence:
+          type: integer
+        matchEvidence:
+          type: array
+          items:
+            type: string
+        operations:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReviewOperation"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    ReviewQueueResult:
+      type: object
+      properties:
+        total:
+          type: integer
+        pending:
+          type: integer
+        confirmed:
+          type: integer
+        discarded:
+          type: integer
+        published:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReviewItem"
+    UpdateReviewItemRequest:
+      type: object
+      properties:
+        caseName:
+          type: string
+        scene:
+          type: string
+        feature:
+          type: string
+        flowNode:
+          type: string
+        step:
+          type: string
+        expected:
+          type: string
+        priority:
+          type: string
+          enum: [P0, P1, P2]
+        operator:
+          type: string
+    ReviewActionRequest:
+      type: object
+      properties:
+        operator:
+          type: string
+        comment:
+          type: string
+    BatchReviewRequest:
+      type: object
+      required: [reviewIds]
+      properties:
+        reviewIds:
+          type: array
+          items:
+            type: string
+        operator:
+          type: string
+    BatchReviewFailure:
+      type: object
+      properties:
+        reviewId:
+          type: string
+        reason:
+          type: string
+    BatchReviewResult:
+      type: object
+      properties:
+        requested:
+          type: integer
+        succeeded:
+          type: integer
+        failed:
+          type: integer
+        succeededIds:
+          type: array
+          items:
+            type: string
+        failures:
+          type: array
+          items:
+            $ref: "#/components/schemas/BatchReviewFailure"
+    PublishBatchResult:
+      type: object
+      properties:
+        batchId:
+          type: string
+        publishedCount:
+          type: integer
+        officialCaseIds:
+          type: array
+          items:
+            type: string
+        publishedAt:
+          type: string
+          format: date-time
     Problem:
       type: object
       required: [detail]
