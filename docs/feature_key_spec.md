@@ -42,3 +42,19 @@ featureKey = {领域}/{系统}/{场景}/{功能点}
 | 领域 → 应用 → **模块** → 功能点 → 场景 | 领域 → **系统** → **场景** → 功能点 |
 
 正式协议以本文件为准；原型里的「模块」不进入 featureKey。
+
+## 模块（moduleName）
+
+批次与正式用例可带可选字段 `moduleName`（对应平台 `Project.module_name`），用于总览分组和按模块筛选。
+
+- **不是** featureKey 的第四段；第四段仍是功能点
+- 不参与清洗匹配
+- 段内禁止 `/` 与换行；缺省为空字符串
+- 平台字段别名：`ziroom_domain` → 领域，`system_ref` → 系统，`module_name` → 模块
+- 创建批次可只传平台字段；与 `domain` / `system` / `moduleName` 同时传时必须一致
+- 批次不要求领域/系统已在功能点目录中；`system_ref` 必须是系统名，不能是带 `/` 的 URL
+- 报价对拍：`tests/fixtures/quote_replay/`，带标签用例自动挂载数与功能点不得回退
+- `GET /api/v1/cases` 增加可选 `moduleName`（或 `module_name`）；不传时行为与原来一致
+- 总览树 `GET /api/v1/overview/tree`：领域 → 系统 → 模块；模块下再挂场景 / 功能点 / 用例
+- 空模块展示为「未填写模块」，查询过滤值仍是空字符串
+- 功能点目录 `/api/v1/hierarchy/tree` 仍是领域 → 系统 → 场景 → 功能点，不要把模块插入 `featureKey`

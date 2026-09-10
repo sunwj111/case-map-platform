@@ -1,0 +1,23 @@
+{
+  "stats": {
+    "totalCases": 11,
+    "autoMounted": 8,
+    "reviewRequired": 0,
+    "manualRequired": 3,
+    "gapCount": 4
+  },
+  "labeledAutoMounted": ["TC-001", "TC-002", "TC-003", "TC-004", "TC-101", "TC-102", "TC-201", "TC-202"],
+  "cases": [
+    {"originalCaseId": "TC-001", "scene": "金额计算与汇总", "feature": "数量价汇总", "confidence": 95, "mountAdvice": "自动挂载", "flowNode": "金额计算与汇总"},
+    {"originalCaseId": "TC-002", "scene": "金额计算与汇总", "feature": "数量价汇总", "confidence": 95, "mountAdvice": "自动挂载", "flowNode": "金额计算与汇总"},
+    {"originalCaseId": "TC-003", "scene": "金额计算与汇总", "feature": "数量价汇总", "confidence": 95, "mountAdvice": "自动挂载", "flowNode": "金额计算与汇总"},
+    {"originalCaseId": "TC-004", "scene": "金额计算与汇总", "feature": "数量价汇总", "confidence": 95, "mountAdvice": "自动挂载", "flowNode": "金额计算与汇总"},
+    {"originalCaseId": "TC-101", "scene": "金额计算与汇总", "feature": "固定价汇总", "confidence": 95, "mountAdvice": "自动挂载", "flowNode": "金额计算与汇总"},
+    {"originalCaseId": "TC-102", "scene": "金额计算与汇总", "feature": "固定价汇总", "confidence": 95, "mountAdvice": "自动挂载", "flowNode": "金额计算与汇总"},
+    {"originalCaseId": "TC-201", "scene": "造价提交与审核", "feature": "自动审核判定", "confidence": 95, "mountAdvice": "自动挂载", "flowNode": "造价提交与审核"},
+    {"originalCaseId": "TC-202", "scene": "造价提交与审核", "feature": "自动审核判定", "confidence": 95, "mountAdvice": "自动挂载", "flowNode": "造价提交与审核"},
+    {"originalCaseId": "UL-001", "scene": "未识别场景", "feature": "数量价汇总", "confidence": 55, "mountAdvice": "人工确认", "flowNode": ""},
+    {"originalCaseId": "UL-002", "scene": "未识别场景", "feature": "固定价汇总", "confidence": 55, "mountAdvice": "人工确认", "flowNode": ""},
+    {"originalCaseId": "UL-003", "scene": "未识别场景", "feature": "自动审核判定", "confidence": 55, "mountAdvice": "人工确认", "flowNode": ""}
+  ]
+}
