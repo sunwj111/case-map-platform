@@ -8,7 +8,7 @@
 ```text
 FeatureMapDTO
 ├── meta            地图元信息
-├── spine           业务脊柱（域 / 系统 / 场景 / 功能点）
+├── spine           业务脊柱（域 / 系统 / 模块 / 场景 / 功能点）
 ├── businessView    业务资产链（场景 → 用例 → 脚本 / 数据 / 执行）
 ├── techView        技术映射（服务 / 接口 / 表 / 消息 / 模块）
 ├── riskView        规则 / 缺陷 / 风险标签
@@ -16,7 +16,7 @@ FeatureMapDTO
 └── consumers       下游消费方（可选）
 ```
 
-`featureKey` 规则见 [`feature_key_spec.md`](feature_key_spec.md)。
+`featureKey` 规则见 [`feature_key_spec.md`](feature_key_spec.md)。`spine.moduleName` 是展示分组（可空），不是 featureKey 的一段。
 
 ## MapNode（M1-S03）
 
@@ -42,7 +42,7 @@ FeatureMapDTO
 | `meta.updatedAt` | `#updatedAt` |
 | `meta.dataSources` | 技术映射来源补充 |
 | `meta.synthetic` | 无层级节点、按正式资产或主数据合成 |
-| `spine.domain` / `app` / `featureName` / `sceneName` | `#spineBox`、`#pageTitle`、面包屑 |
+| `spine.domain` / `app` / `moduleName` / `featureName` / `sceneName` | `#spineBox`、`#pageTitle`、面包屑 |
 | `spine.valueTags` | `#spineBox` 价值标签 |
 | `spine.neighborFeatures` | `#spineBox` 邻接列表 |
 | `businessView.scenarios` | `#sceneCol`、`#sceneCountTag` |

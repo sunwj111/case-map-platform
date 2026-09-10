@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>功能点地图查询 · E-09</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --card: #fff;
+      --line: #dfe5ef;
+      --text: #172033;
+      --muted: #667085;
+      --primary: #3157d5;
+      --primary-soft: #eef2ff;
+      --success: #087a55;
+      --success-soft: #eaf8f2;
+      --danger: #b42318;
+      --danger-soft: #fef3f2;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+    .topbar {
+      height: 58px;
+      padding: 0 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #18213a;
+      color: #fff;
+    }
+    .topbar a { color: #cbd5e1; text-decoration: none; font-size: 13px; }
+    .wrap { max-width: 1360px; margin: 0 auto; padding: 26px 20px 56px; }
+    h1 { margin: 0; font-size: 24px; }
+    h2 { margin: 0; font-size: 16px; }
+    .subtitle { margin: 7px 0 20px; color: var(--muted); font-size: 13px; }
+    .card {
+      padding: 16px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      box-shadow: 0 6px 18px rgba(17, 24, 39, .04);
+    }
+    .form-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    label { display: block; margin-bottom: 5px; color: var(--muted); font-size: 12px; }
+    input, select, button {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 9px 10px;
+      background: #fff;
+      font: inherit;
+    }
+    button {
+      width: auto;
+      cursor: pointer;
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+      font-weight: 600;
+    }
+    button.secondary { background: #fff; color: var(--text); }
+    .actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 14px; }
+    .stat {
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #f8fafc;
+    }
+    .stat b { display: block; font-size: 20px; margin-top: 4px; }
+    .muted { color: var(--muted); font-size: 12px; }
+    .status {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      background: var(--primary-soft);
+      color: #34459a;
+    }
+    .status.ok { background: var(--success-soft); color: var(--success); }
+    .status.err { background: var(--danger-soft); color: var(--danger); }
+    pre {
+      margin: 12px 0 0;
+      padding: 12px;
+      max-height: 320px;
+      overflow: auto;
+      background: #0f172a;
+      color: #e2e8f0;
+      border-radius: 10px;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .map-block { margin-top: 14px; }
+    .spine-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .spine-chip {
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #f8fafc;
+      min-width: 120px;
+    }
+    .spine-chip.core {
+      border-color: #93c5fd;
+      background: var(--primary-soft);
+    }
+    .spine-chip .k { font-size: 11px; color: var(--muted); }
+    .spine-chip .v { font-size: 13px; font-weight: 650; margin-top: 2px; }
+    .fm-asset-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 10px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .fm-asset-legend i {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+      display: inline-grid;
+      place-items: center;
+      font-size: 8px;
+      color: #fff;
+      font-style: normal;
+      margin-right: 4px;
+    }
+    .fm-biz-row {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .fm-col-box {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 8px;
+      background: #fafbfc;
+      min-height: 180px;
+    }
+    .fm-col-box--scene { border-top: 3px solid #8b5cf6; }
+    .fm-col-box--case { border-top: 3px solid #2563eb; }
+    .fm-col-box--script { border-top: 3px solid #16a34a; }
+    .fm-col-box--data { border-top: 3px solid #0891b2; }
+    .fm-col-box--exec { border-top: 3px solid #d97706; }
+    .fm-col-hd {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 650;
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+    .fm-col-hd span { color: var(--muted); font-weight: 500; }
+    .fm-asset-node {
+      display: flex;
+      gap: 8px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px;
+      margin-bottom: 6px;
+      background: #fff;
+      cursor: pointer;
+    }
+    .fm-asset-node.dim { opacity: .38; }
+    .fm-asset-node--scene.active { border-color: #7c3aed; background: #f5f3ff; }
+    .fm-asset-node--case.active { border-color: #2563eb; background: #eff6ff; }
+    .fm-asset-badge {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      display: grid;
+      place-items: center;
+      font-size: 9px;
+      font-weight: 800;
+      color: #fff;
+      flex-shrink: 0;
+    }
+    .fm-asset-node--scene .fm-asset-badge { background: #8b5cf6; }
+    .fm-asset-node--case .fm-asset-badge { background: #2563eb; }
+    .fm-asset-node--script .fm-asset-badge { background: #16a34a; }
+    .fm-asset-node--data .fm-asset-badge { background: #0891b2; }
+    .fm-asset-node--exec .fm-asset-badge { background: #d97706; }
+    .fm-asset-kind { font-size: 10px; color: var(--muted); }
+    .fm-asset-title { font-weight: 650; font-size: 12px; margin-top: 2px; word-break: break-word; }
+    .fm-asset-meta { font-size: 10px; color: var(--muted); margin-top: 4px; }
+    .fm-empty { padding: 18px 8px; text-align: center; color: var(--muted); font-size: 12px; }
+    .priority-p0 { color: #dc2626; font-weight: 700; }
+    .priority-p1 { color: #d97706; font-weight: 700; }
+    .fm-bottom-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+    .fm-tech-box { border: 1px dashed var(--line); border-radius: 8px; padding: 8px; min-height: 72px; }
+    .fm-tech-box h4 { margin: 0 0 8px; font-size: 12px; color: var(--muted); }
+    .fm-asset-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin: 0 6px 6px 0;
+      padding: 3px 8px;
+      border-radius: 6px;
+      border: 1px solid var(--line);
+      font-size: 11px;
+      background: #fff;
+    }
+    .fm-chip-icon {
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      display: grid;
+      place-items: center;
+      font-size: 8px;
+      color: #fff;
+      font-weight: 700;
+    }
+    .chip-rule { background: #d97706; }
+    .chip-defect { background: #dc2626; }
+    .chip-api { background: #2563eb; }
+    .chip-service { background: #475569; }
+    .chip-table { background: #0f766e; }
+    .fm-summary-strip {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: #f8fafc;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    details { margin-top: 12px; }
+    details summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+    @media (max-width: 1100px) {
+      .form-grid, .stats, .fm-biz-row, .fm-bottom-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <strong>功能点地图查询</strong>
+    <div>
+      <a href="/">层级管理</a>
+      &nbsp;·&nbsp;
+      <a href="/produce.html">资产生产</a>
+    </div>
+  </div>
+  <div class="wrap">
+    <h1>功能点地图</h1>
+    <p class="subtitle">查询后按场景 → 用例展示。面包屑含模块（展示分组，不进入 featureKey）。无层级样例时按正式资产与主数据合成。</p>
+
+    <section class="card">
+      <div class="form-grid">
+        <div>
+          <label for="domainSelect">领域</label>
+          <select id="domainSelect"></select>
+        </div>
+        <div>
+          <label for="systemSelect">系统</label>
+          <select id="systemSelect" disabled></select>
+        </div>
+        <div>
+          <label for="sceneSelect">场景</label>
+          <select id="sceneSelect" disabled></select>
+        </div>
+        <div>
+          <label for="featureSelect">功能点</label>
+          <select id="featureSelect" disabled></select>
+        </div>
+      </div>
+      <div class="actions">
+        <input id="featureKeyInput" placeholder="家装/报价/金额计算与汇总/数量价汇总" />
+        <button type="button" id="btnQuery">查询地图</button>
+        <button type="button" class="secondary" id="btnSynthetic">试合成</button>
+        <button type="button" class="secondary" id="btnMissing">试 404</button>
+      </div>
+      <div class="muted" id="pathHint">请求路径会在查询后显示。</div>
+      <div class="status" id="statusBox">未查询</div>
+      <div class="stats">
+        <div class="stat"><span class="muted">用例数</span><b id="caseCount">—</b></div>
+        <div class="stat"><span class="muted">脚本 / 数据模板</span><b id="assetCount">—</b></div>
+        <div class="stat"><span class="muted">规则数</span><b id="ruleCount">—</b></div>
+        <div class="stat"><span class="muted">覆盖状态</span><b id="coverageStatus">—</b></div>
+      </div>
+    </section>
+
+    <section class="card map-block" id="mapCard">
+      <h2>布局地图</h2>
+      <p class="muted" id="mapHint">查询成功后在此展示。点击场景可过滤用例，点击用例可高亮关联脚本。</p>
+      <div id="spineStrip" class="spine-strip"></div>
+      <div id="mapCanvas"></div>
+      <details>
+        <summary>查看响应 JSON</summary>
+        <pre id="jsonBox">等待查询</pre>
+      </details>
+    </section>
+  </div>
+  <script>
+    const domainSelect = document.getElementById('domainSelect');
+    const systemSelect = document.getElementById('systemSelect');
+    const sceneSelect = document.getElementById('sceneSelect');
+    const featureSelect = document.getElementById('featureSelect');
+    const featureKeyInput = document.getElementById('featureKeyInput');
+    const pathHint = document.getElementById('pathHint');
+    const statusBox = document.getElementById('statusBox');
+    const jsonBox = document.getElementById('jsonBox');
+    const mapCanvas = document.getElementById('mapCanvas');
+    const spineStrip = document.getElementById('spineStrip');
+    const mapHint = document.getElementById('mapHint');
+
+    const mapState = {
+      dto: null,
+      selectedScenarioId: null,
+      selectedCaseId: null
+    };
+
+    function escapeHtml(value) {
+      return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function fillSelect(select, values, emptyLabel, useObjects) {
+      const current = select.value;
+      const options = ['<option value="">' + emptyLabel + '</option>'];
+      (values || []).forEach((item) => {
+        const name = useObjects ? item.name : item;
+        options.push('<option value="' + escapeHtml(name) + '">' + escapeHtml(name) + '</option>');
+      });
+      select.innerHTML = options.join('');
+      if (current && values && values.some((item) => (useObjects ? item.name : item) === current)) {
+        select.value = current;
+      }
+    }
+
+    async function readJson(response) {
+      return response.json().catch(() => ({}));
+    }
+
+    async function refreshCascade() {
+      const domain = domainSelect.value;
+      const system = systemSelect.value;
+      const scene = sceneSelect.value;
+      const query = new URLSearchParams();
+      if (domain) query.set('domain', domain);
+      if (system) query.set('system', system);
+      if (scene) query.set('scene', scene);
+      const response = await fetch('/api/v1/hierarchy/cascade?' + query.toString());
+      const data = await readJson(response);
+      fillSelect(domainSelect, data.domains, '请选择领域');
+      if (domain) domainSelect.value = domain;
+      systemSelect.disabled = !domainSelect.value;
+      fillSelect(systemSelect, data.systems, domainSelect.value ? '请选择系统' : '请先选领域');
+      if (system && (data.systems || []).includes(system)) systemSelect.value = system;
+      sceneSelect.disabled = !systemSelect.value;
+      fillSelect(sceneSelect, data.scenes, systemSelect.value ? '请选择场景' : '请先选系统');
+      if (scene && (data.scenes || []).includes(scene)) sceneSelect.value = scene;
+      featureSelect.disabled = !sceneSelect.value;
+      fillSelect(featureSelect, data.features, sceneSelect.value ? '请选择功能点' : '请先选场景', true);
+      syncFeatureKeyFromCascade();
+    }
+
+    function syncFeatureKeyFromCascade() {
+      if (!(domainSelect.value && systemSelect.value && sceneSelect.value && featureSelect.value)) {
+        return;
+      }
+      featureKeyInput.value = [domainSelect.value, systemSelect.value, sceneSelect.value, featureSelect.value].join('/');
+    }
+
+    function mapPath(featureKey) {
+      return '/api/v1/feature-maps/' + featureKey.split('/').map(encodeURIComponent).join('/');
+    }
+
+    function coverageLabel(status) {
+      if (status === 'gap') return '缺口场景';
+      if (status === 'partial') return '部分覆盖';
+      return '已覆盖';
+    }
+
+    function priorityClass(priority) {
+      if (priority === 'P0') return 'priority-p0';
+      if (priority === 'P1') return 'priority-p1';
+      return '';
+    }
+
+    function chipHtml(iconClass, icon, text) {
+      return '<span class="fm-asset-chip"><span class="fm-chip-icon ' + iconClass + '">' + escapeHtml(icon) +
+        '</span><span>' + escapeHtml(text) + '</span></span>';
+    }
+
+    function nodeHtml(options) {
+      const extraClass = options.extraClass ? ' ' + options.extraClass : '';
+      const dimClass = options.dim ? ' dim' : '';
+      return '<div class="fm-asset-node fm-asset-node--' + options.type + extraClass + dimClass + '"' +
+        (options.dataAttrs || '') + '>' +
+        '<div class="fm-asset-badge">' + escapeHtml(options.badge) + '</div>' +
+        '<div>' +
+        '<div class="fm-asset-kind">' + escapeHtml(options.kind) + '</div>' +
+        '<div class="fm-asset-title">' + escapeHtml(options.title) + '</div>' +
+        (options.meta ? '<div class="fm-asset-meta">' + options.meta + '</div>' : '') +
+        '</div></div>';
+    }
+
+    function emptyColumn(text) {
+      return '<div class="fm-empty">' + escapeHtml(text) + '</div>';
+    }
+
+    function selectedScenario(business) {
+      return (business.scenarios || []).find((item) => item.id === mapState.selectedScenarioId) || null;
+    }
+
+    function visibleCases(business) {
+      const scenario = selectedScenario(business);
+      return (business.cases || []).filter((caseItem) => {
+        if (!scenario) return true;
+        return caseItem.testScenario === scenario.name;
+      });
+    }
+
+    function renderSpine(map) {
+      const spine = map.spine || {};
+      const synthetic = map.meta && map.meta.synthetic;
+      const chips = [
+        { key: '业务域', value: spine.domain },
+        { key: '系统 / 流程', value: (spine.app || '') + (spine.processName ? ' · ' + spine.processName : '') },
+        { key: '模块', value: spine.moduleName || '未填写模块' },
+        { key: '核心功能点', value: spine.featureName, core: true },
+        { key: '业务场景', value: spine.sceneName },
+        { key: '地图类型', value: synthetic ? '合成地图' : '层级地图' }
+      ];
+      spineStrip.innerHTML = chips.map((chip) =>
+        '<div class="spine-chip' + (chip.core ? ' core' : '') + '"><div class="k">' + escapeHtml(chip.key) +
+        '</div><div class="v">' + escapeHtml(chip.value || '—') + '</div></div>'
+      ).join('') +
+        ((spine.valueTags || []).length
+          ? '<div class="spine-chip"><div class="k">价值标签</div><div class="v">' +
+            escapeHtml(spine.valueTags.join('、')) + '</div></div>'
+          : '');
+    }
+
+    function renderLayoutMap(map) {
+      const business = map.businessView || {};
+      const tech = map.techView || {};
+      const risk = map.riskView || {};
+      const summary = map.summary || {};
+      const cases = visibleCases(business);
+      const scenario = selectedScenario(business);
+
+      const sceneHtml = (business.scenarios || []).map((item) => nodeHtml({
+        type: 'scene',
+        badge: 'SC',
+        kind: coverageLabel(item.coverageStatus),
+        title: item.name,
+        meta: escapeHtml(item.id) + ' · ' + (item.caseCount || 0) + ' 条用例',
+        extraClass: item.id === mapState.selectedScenarioId ? 'active' : '',
+        dataAttrs: ' data-role="scenario" data-id="' + escapeHtml(item.id) + '"'
+      })).join('') || emptyColumn('暂无场景');
+
+      const caseHtml = cases.map((item) => nodeHtml({
+        type: 'case',
+        badge: 'TC',
+        kind: '测试用例 · ' + (item.testScenario || '—'),
+        title: item.name,
+        meta: escapeHtml(item.id) + ' · <span class="' + priorityClass(item.priority) + '">' +
+          escapeHtml(item.priority || '') + '</span>',
+        extraClass: item.id === mapState.selectedCaseId ? 'active' : '',
+        dataAttrs: ' data-role="case" data-id="' + escapeHtml(item.id) + '"'
+      })).join('') || emptyColumn(scenario ? '该场景下暂无用例' : '暂无正式用例');
+
+      const scriptHtml = (business.scripts || []).map((item) => nodeHtml({
+        type: 'script',
+        badge: 'JS',
+        kind: (item.type || '脚本') + ' · ' + (item.status || ''),
+        title: item.name,
+        meta: escapeHtml(item.linkedCaseId || '未挂接用例'),
+        dim: mapState.selectedCaseId && item.linkedCaseId !== mapState.selectedCaseId
+      })).join('') || emptyColumn('暂无脚本');
+
+      const templateHtml = (business.dataTemplates || []).map((item) => nodeHtml({
+        type: 'data',
+        badge: 'DT',
+        kind: '数据模板',
+        title: item.name,
+        meta: escapeHtml(item.id),
+        dim: scenario && item.linkedScenarioId && item.linkedScenarioId !== scenario.id
+      })).join('') || emptyColumn('暂无数据模板');
+
+      const executionHtml = (business.executions || []).map((item) => nodeHtml({
+        type: 'exec',
+        badge: 'EX',
+        kind: item.source === 'unavailable' ? '执行平台未接入' : (item.label || '执行'),
+        title: item.label || '执行结果',
+        meta: escapeHtml(item.lastRunAt || item.source || '—')
+      })).join('') || emptyColumn('暂无执行记录');
+
+      const ruleHtml = (risk.rules || []).map((item) => chipHtml('chip-rule', 'R', (item.id || '') + ' ' + (item.name || ''))).join('')
+        || '<span class="muted">暂无规则</span>';
+      const defectHtml = (risk.defects || []).map((item) => chipHtml('chip-defect', 'BG', (item.id || '') + ' ' + (item.title || ''))).join('')
+        || chipHtml('chip-defect', 'BG', '近 30 天无缺陷');
+      const apiHtml = (tech.apis || []).map((item) => chipHtml('chip-api', 'API', item.label || ((item.method || '') + ' ' + (item.path || '')).trim())).join('')
+        || '<span class="muted">暂无接口</span>';
+      const serviceHtml = (tech.services || []).map((item) => chipHtml('chip-service', 'S', item.name)).join('')
+        || '<span class="muted">暂无应用</span>';
+      const tableHtml = (tech.tables || []).map((item) => chipHtml('chip-table', 'T', item)).join('')
+        || '<span class="muted">暂无表</span>';
+
+      mapCanvas.innerHTML =
+        '<div class="fm-asset-legend">' +
+        '<span><i style="background:#8b5cf6">SC</i>场景</span>' +
+        '<span><i style="background:#2563eb">TC</i>用例</span>' +
+        '<span><i style="background:#16a34a">JS</i>脚本</span>' +
+        '<span><i style="background:#0891b2">DT</i>数据</span>' +
+        '<span><i style="background:#d97706">EX</i>执行</span></div>' +
+        '<div class="fm-biz-row">' +
+        '<div class="fm-col-box fm-col-box--scene"><div class="fm-col-hd"><strong>业务场景</strong><span>' +
+        (business.scenarios || []).length + '</span></div>' + sceneHtml + '</div>' +
+        '<div class="fm-col-box fm-col-box--case"><div class="fm-col-hd"><strong>测试用例</strong><span>' +
+        cases.length + '</span></div>' + caseHtml + '</div>' +
+        '<div class="fm-col-box fm-col-box--script"><div class="fm-col-hd"><strong>自动化脚本</strong><span>' +
+        (business.scripts || []).length + '</span></div>' + scriptHtml + '</div>' +
+        '<div class="fm-col-box fm-col-box--data"><div class="fm-col-hd"><strong>测试数据</strong><span>' +
+        (business.dataTemplates || []).length + '</span></div>' + templateHtml + '</div>' +
+        '<div class="fm-col-box fm-col-box--exec"><div class="fm-col-hd"><strong>执行历史</strong><span>' +
+        (business.executions || []).length + '</span></div>' + executionHtml + '</div>' +
+        '</div>' +
+        '<div class="fm-bottom-row">' +
+        '<div class="fm-tech-box"><h4>关联关系与风险</h4>' + ruleHtml + '<div style="height:8px"></div>' + defectHtml + '</div>' +
+        '<div class="fm-tech-box"><h4>技术映射</h4>' + apiHtml + '<div style="height:8px"></div>' + serviceHtml +
+        '<div style="height:8px"></div>' + tableHtml + '</div>' +
+        '</div>' +
+        '<div class="fm-summary-strip">关联用例 <strong>' + (summary.linkedCaseCount || 0) +
+        '</strong> · 自动化 <strong>' + Math.round((summary.automationCoverage || 0) * 100) +
+        '%</strong> · 缺口 <strong>' + (summary.gapCount || 0) +
+        '</strong> · 口径 ' + escapeHtml(summary.metricSource || '—') + '</div>';
+
+      mapCanvas.querySelectorAll('[data-role="scenario"]').forEach((node) => {
+        node.addEventListener('click', () => {
+          const scenarioId = node.getAttribute('data-id');
+          mapState.selectedScenarioId = mapState.selectedScenarioId === scenarioId ? null : scenarioId;
+          mapState.selectedCaseId = null;
+          renderSpine(map);
+          renderLayoutMap(map);
+        });
+      });
+      mapCanvas.querySelectorAll('[data-role="case"]').forEach((node) => {
+        node.addEventListener('click', () => {
+          const caseId = node.getAttribute('data-id');
+          mapState.selectedCaseId = mapState.selectedCaseId === caseId ? null : caseId;
+          renderLayoutMap(map);
+        });
+      });
+    }
+
+    function resetMap() {
+      mapState.dto = null;
+      mapState.selectedScenarioId = null;
+      mapState.selectedCaseId = null;
+      document.getElementById('caseCount').textContent = '—';
+      document.getElementById('assetCount').textContent = '—';
+      document.getElementById('ruleCount').textContent = '—';
+      document.getElementById('coverageStatus').textContent = '—';
+      spineStrip.innerHTML = '';
+      mapCanvas.innerHTML = '<div class="fm-empty">无地图数据</div>';
+      mapHint.textContent = '查询成功后在此展示。点击场景可过滤用例，点击用例可高亮关联脚本。';
+    }
+
+    async function queryMap(featureKey) {
+      const path = mapPath(featureKey);
+      pathHint.textContent = '请求：GET ' + path;
+      const response = await fetch(path);
+      const data = await readJson(response);
+      jsonBox.textContent = JSON.stringify(data, null, 2);
+      if (response.status === 200) {
+        statusBox.className = 'status ok';
+        const synthetic = data.meta && data.meta.synthetic;
+        statusBox.textContent = synthetic
+          ? '200 合成地图（无层级节点，已按正式资产/主数据组装）'
+          : '200 已返回完整 FeatureMapDTO';
+        const business = data.businessView || {};
+        const risk = data.riskView || {};
+        const summary = data.summary || {};
+        document.getElementById('caseCount').textContent = (business.cases || []).length;
+        document.getElementById('assetCount').textContent =
+          (business.scripts || []).length + ' / ' + (business.dataTemplates || []).length;
+        document.getElementById('ruleCount').textContent = (risk.rules || []).length;
+        document.getElementById('coverageStatus').textContent = summary.coverageStatus || '—';
+        mapState.dto = data;
+        mapState.selectedScenarioId = null;
+        mapState.selectedCaseId = null;
+        mapHint.textContent = synthetic
+          ? '这是合成地图：左侧场景到右侧执行是同一条资产链。点击节点可筛选高亮。'
+          : '这是层级地图。点击场景过滤用例，点击用例高亮关联脚本。';
+        renderSpine(data);
+        renderLayoutMap(data);
+        mapCanvas.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+      resetMap();
+      statusBox.className = 'status err';
+      statusBox.textContent = response.status + ' ' + (data.detail || '查询失败');
+    }
+
+    domainSelect.addEventListener('change', async () => {
+      systemSelect.value = '';
+      sceneSelect.value = '';
+      featureSelect.value = '';
+      await refreshCascade();
+    });
+    systemSelect.addEventListener('change', async () => {
+      sceneSelect.value = '';
+      featureSelect.value = '';
+      await refreshCascade();
+    });
+    sceneSelect.addEventListener('change', async () => {
+      featureSelect.value = '';
+      await refreshCascade();
+    });
+    featureSelect.addEventListener('change', syncFeatureKeyFromCascade);
+    document.getElementById('btnQuery').addEventListener('click', async () => {
+      const featureKey = featureKeyInput.value.trim();
+      if (!featureKey) {
+        statusBox.className = 'status err';
+        statusBox.textContent = '请输入 featureKey';
+        return;
+      }
+      await queryMap(featureKey);
+    });
+    document.getElementById('btnSynthetic').addEventListener('click', async () => {
+      featureKeyInput.value = '家装/报价/造价审核/人工审核';
+      await queryMap(featureKeyInput.value);
+    });
+    document.getElementById('btnMissing').addEventListener('click', async () => {
+      featureKeyInput.value = '家装/报价/金额计算与汇总/不存在功能点XYZ';
+      await queryMap(featureKeyInput.value);
+    });
+
+    refreshCascade().then(async () => {
+      const fromQuery = new URLSearchParams(window.location.search).get('featureKey');
+      featureKeyInput.value = fromQuery || '家装/报价/金额计算与汇总/数量价汇总';
+      if (fromQuery) await queryMap(fromQuery);
+    }).catch((error) => {
+      statusBox.className = 'status err';
+      statusBox.textContent = error.message;
+    });
+  </script>
+</body>
+</html>

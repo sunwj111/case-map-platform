@@ -14,6 +14,8 @@ services/hierarchy/data/hierarchy_store.json
 services/hierarchy/data/produce/
 services/hierarchy/target/
 services/hierarchy-python/
+services/casemap/runtime/
+services/casemap/.venv/
 __pycache__/
 *.pyc
 .pytest_cache/

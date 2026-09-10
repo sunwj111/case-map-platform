@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>层级管理 · 领域/系统/场景/功能点</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --card: #fff;
+      --line: #e2e8f0;
+      --text: #0f172a;
+      --muted: #64748b;
+      --primary: #2563eb;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: linear-gradient(180deg, #eef4ff, var(--bg));
+      color: var(--text);
+    }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 28px 20px 48px; }
+    h1 { margin: 0 0 6px; font-size: 22px; }
+    .sub { color: var(--muted); margin-bottom: 18px; }
+    .grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 14px; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, .04);
+    }
+    .card h2 { margin: 0 0 12px; font-size: 15px; }
+    .cascade { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+    select, input, textarea, button {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 9px 10px;
+      font: inherit;
+      background: #fff;
+    }
+    button {
+      cursor: pointer;
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+      font-weight: 600;
+    }
+    button.secondary { background: #fff; color: var(--text); }
+    .actions { display: flex; gap: 8px; margin-top: 12px; }
+    .tree { font-size: 13px; line-height: 1.55; max-height: 520px; overflow: auto; }
+    .tree details { margin-left: 12px; }
+    .tree summary { cursor: pointer; }
+    .tag {
+      display: inline-block;
+      margin-left: 6px;
+      padding: 1px 7px;
+      border-radius: 999px;
+      background: #eff6ff;
+      color: #1d4ed8;
+      font-size: 11px;
+    }
+    .key {
+      margin-top: 12px;
+      padding: 10px 12px;
+      background: #0f172a;
+      color: #e2e8f0;
+      border-radius: 10px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12px;
+      word-break: break-all;
+    }
+    .muted { color: var(--muted); font-size: 12px; }
+    .form-grid { display: grid; gap: 10px; }
+    @media (max-width: 900px) {
+      .grid, .cascade { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>层级管理</h1>
+    <p class="sub">总览：领域 → 系统 → 模块 · featureKey 仍是 领域/系统/场景/功能点</p>
+    <p>
+      <a href="/produce.html">打开资产导入与知识抽取验证页</a>
+      ·
+      <a href="/feature-map.html">打开功能点地图查询</a>
+    </p>
+
+    <div class="grid">
+      <section class="card">
+        <h2>级联选择</h2>
+        <div class="cascade">
+          <div>
+            <label for="domainSelect">领域</label>
+            <select id="domainSelect"></select>
+          </div>
+          <div>
+            <label for="systemSelect">系统</label>
+            <select id="systemSelect" disabled></select>
+          </div>
+          <div>
+            <label for="sceneSelect">场景</label>
+            <select id="sceneSelect" disabled></select>
+          </div>
+          <div>
+            <label for="featureSelect">功能点</label>
+            <select id="featureSelect" disabled></select>
+          </div>
+        </div>
+        <div class="key" id="featureKeyBox">featureKey：—</div>
+        <p class="muted" id="encodeHint">选择完整四级后生成 featureKey，并展示 URL 编码。</p>
+        <div class="actions">
+          <button type="button" class="secondary" id="btnReload">刷新树</button>
+          <button type="button" class="secondary" id="btnResetSeed">重置种子数据</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>新增节点</h2>
+        <div class="form-grid">
+          <div>
+            <label for="createLevel">层级</label>
+            <select id="createLevel">
+              <option value="domain">领域</option>
+              <option value="system">系统</option>
+              <option value="scene">场景</option>
+              <option value="feature">功能点</option>
+            </select>
+          </div>
+          <div>
+            <label for="createParent">父节点 ID（领域可空）</label>
+            <input id="createParent" placeholder="从树节点点击填入" />
+          </div>
+          <div>
+            <label for="createName">名称</label>
+            <input id="createName" placeholder="不可包含 /" />
+          </div>
+          <div>
+            <label for="createDesc">说明</label>
+            <input id="createDesc" placeholder="可选" />
+          </div>
+          <button type="button" id="btnCreate">创建</button>
+          <p class="muted" id="createMsg"></p>
+        </div>
+      </section>
+    </div>
+
+    <section class="card" style="margin-top:14px">
+      <h2>用例总览（领域 → 系统 → 模块）</h2>
+      <p class="muted">模块来自正式资产的 moduleName；未填写的归入「未填写模块」。功能点可点进地图。</p>
+      <div class="tree" id="overviewBox"><div class="muted">加载中…</div></div>
+    </section>
+
+    <section class="card" style="margin-top:14px">
+      <h2>功能点目录（领域 → 系统 → 场景 → 功能点）</h2>
+      <div class="tree" id="treeBox"><div class="muted">加载中…</div></div>
+    </section>
+  </div>
+
+  <script>
+    const domainSelect = document.getElementById('domainSelect');
+    const systemSelect = document.getElementById('systemSelect');
+    const sceneSelect = document.getElementById('sceneSelect');
+    const featureSelect = document.getElementById('featureSelect');
+    const featureKeyBox = document.getElementById('featureKeyBox');
+    const encodeHint = document.getElementById('encodeHint');
+    const treeBox = document.getElementById('treeBox');
+    const overviewBox = document.getElementById('overviewBox');
+    const createMsg = document.getElementById('createMsg');
+
+    async function api(path, options) {
+      const response = await fetch(path, Object.assign({
+        headers: { 'Content-Type': 'application/json' }
+      }, options || {}));
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.detail || response.statusText || '请求失败');
+      }
+      return data;
+    }
+
+    function fillSelect(select, values, emptyLabel, useObjects) {
+      const current = select.value;
+      const options = ['<option value="">' + emptyLabel + '</option>'];
+      (values || []).forEach((item) => {
+        if (useObjects) {
+          options.push(
+            '<option value="' + item.name + '" data-key="' + (item.featureKey || '') + '">' +
+            item.name + '</option>'
+          );
+        } else {
+          options.push('<option value="' + item + '">' + item + '</option>');
+        }
+      });
+      select.innerHTML = options.join('');
+      if (current && values && values.some((item) => (useObjects ? item.name : item) === current)) {
+        select.value = current;
+      }
+    }
+
+    async function refreshCascade() {
+      const domain = domainSelect.value;
+      const system = systemSelect.value;
+      const scene = sceneSelect.value;
+      const query = new URLSearchParams();
+      if (domain) query.set('domain', domain);
+      if (system) query.set('system', system);
+      if (scene) query.set('scene', scene);
+      const data = await api('/api/v1/hierarchy/cascade?' + query.toString());
+      fillSelect(domainSelect, data.domains, '请选择领域');
+      if (domain) domainSelect.value = domain;
+      systemSelect.disabled = !domainSelect.value;
+      fillSelect(systemSelect, data.systems, domainSelect.value ? '请选择系统' : '请先选领域');
+      if (system && data.systems.includes(system)) systemSelect.value = system;
+      sceneSelect.disabled = !systemSelect.value;
+      fillSelect(sceneSelect, data.scenes, systemSelect.value ? '请选择场景' : '请先选系统');
+      if (scene && data.scenes.includes(scene)) sceneSelect.value = scene;
+      featureSelect.disabled = !sceneSelect.value;
+      fillSelect(
+        featureSelect,
+        data.features,
+        sceneSelect.value ? '请选择功能点' : '请先选场景',
+        true
+      );
+      await refreshFeatureKey();
+    }
+
+    async function refreshFeatureKey() {
+      const domain = domainSelect.value;
+      const system = systemSelect.value;
+      const scene = sceneSelect.value;
+      const feature = featureSelect.value;
+      if (!(domain && system && scene && feature)) {
+        featureKeyBox.textContent = 'featureKey：—';
+        encodeHint.textContent = '选择完整四级后生成 featureKey，并展示 URL 编码。';
+        return;
+      }
+      const result = await api('/api/v1/feature-keys/encode', {
+        method: 'POST',
+        body: JSON.stringify({ domain, system, scene, feature })
+      });
+      featureKeyBox.textContent = 'featureKey：' + result.featureKey;
+      encodeHint.textContent = 'URL 编码：' + result.urlEncoded;
+    }
+
+    function renderTree(nodes, depth) {
+      if (!nodes || !nodes.length) return '<div class="muted">暂无节点</div>';
+      return nodes.map((node) => {
+        const tag = '<span class="tag">' + node.level + '</span>';
+        const key = node.featureKey
+          ? '<div class="muted" style="margin-left:18px">' + node.featureKey + '</div>'
+          : '';
+        const title =
+          '<span onclick="event.preventDefault();document.getElementById(\'createParent\').value=\'' +
+          node.id + '\';createMsg.textContent=\'已填入父节点 ' + node.name + '\'">' +
+          node.name + '</span>' + tag +
+          '<span class="muted"> · ' + node.id + '</span>';
+        if (node.children && node.children.length) {
+          return '<details open><summary>' + title + '</summary>' + key +
+            renderTree(node.children, (depth || 0) + 1) + '</details>';
+        }
+        return '<div style="margin-left:12px">' + title + key + '</div>';
+      }).join('');
+    }
+
+    function renderOverviewTree(nodes) {
+      if (!nodes || !nodes.length) return '<div class="muted">暂无节点</div>';
+      return nodes.map((node) => {
+        const tag = '<span class="tag">' + node.level + '</span>';
+        const count = '<span class="muted"> · ' + (node.caseCount || 0) + ' 条</span>';
+        let title = node.name + tag + count;
+        if (node.level === 'feature' && node.featureKey) {
+          title = '<a href="/feature-map.html?featureKey=' + encodeURIComponent(node.featureKey) + '">' +
+            node.name + '</a>' + tag + count;
+        }
+        if (node.children && node.children.length) {
+          return '<details open><summary>' + title + '</summary>' +
+            renderOverviewTree(node.children) + '</details>';
+        }
+        return '<div style="margin-left:12px">' + title + '</div>';
+      }).join('');
+    }
+
+    async function refreshOverview() {
+      const result = await api('/api/v1/overview/tree');
+      overviewBox.innerHTML = renderOverviewTree(result.nodes);
+    }
+
+    async function refreshTree() {
+      const tree = await api('/api/v1/hierarchy/tree');
+      treeBox.innerHTML = renderTree(tree, 0);
+    }
+
+    domainSelect.addEventListener('change', async () => {
+      systemSelect.value = '';
+      sceneSelect.value = '';
+      featureSelect.value = '';
+      await refreshCascade();
+    });
+    systemSelect.addEventListener('change', async () => {
+      sceneSelect.value = '';
+      featureSelect.value = '';
+      await refreshCascade();
+    });
+    sceneSelect.addEventListener('change', async () => {
+      featureSelect.value = '';
+      await refreshCascade();
+    });
+    featureSelect.addEventListener('change', refreshFeatureKey);
+
+    document.getElementById('btnReload').addEventListener('click', async () => {
+      await refreshCascade();
+      await refreshTree();
+      await refreshOverview();
+    });
+    document.getElementById('btnResetSeed').addEventListener('click', async () => {
+      await api('/api/v1/hierarchy/seed/reset', { method: 'POST', body: '{}' });
+      domainSelect.value = '';
+      await refreshCascade();
+      await refreshTree();
+      await refreshOverview();
+      createMsg.textContent = '已重置为家装报价种子树';
+    });
+    document.getElementById('btnCreate').addEventListener('click', async () => {
+      try {
+        const level = document.getElementById('createLevel').value;
+        const parentId = document.getElementById('createParent').value.trim();
+        const name = document.getElementById('createName').value.trim();
+        const description = document.getElementById('createDesc').value.trim();
+        const body = { level, name, description };
+        if (level !== 'domain') body.parentId = parentId || null;
+        await api('/api/v1/hierarchy/nodes', { method: 'POST', body: JSON.stringify(body) });
+        createMsg.textContent = '创建成功';
+        document.getElementById('createName').value = '';
+        await refreshCascade();
+        await refreshTree();
+        await refreshOverview();
+      } catch (error) {
+        createMsg.textContent = error.message;
+      }
+    });
+
+    refreshCascade().then(refreshTree).then(refreshOverview).catch((error) => {
+      treeBox.textContent = error.message;
+      overviewBox.textContent = error.message;
+    });
+  </script>
+</body>
+</html>

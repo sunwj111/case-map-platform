@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>资产导入与知识抽取 · 已开发功能</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --card: #fff;
+      --line: #dfe5ef;
+      --text: #172033;
+      --muted: #667085;
+      --primary: #3157d5;
+      --primary-soft: #eef2ff;
+      --success: #087a55;
+      --success-soft: #eaf8f2;
+      --warning: #a15c00;
+      --warning-soft: #fff7e6;
+      --danger: #b42318;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+    .topbar {
+      height: 58px;
+      padding: 0 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #18213a;
+      color: #fff;
+    }
+    .topbar a { color: #cbd5e1; text-decoration: none; font-size: 13px; }
+    .wrap { max-width: 1180px; margin: 0 auto; padding: 26px 20px 56px; }
+    h1 { margin: 0; font-size: 24px; }
+    h2 { margin: 0; font-size: 16px; }
+    .subtitle { margin: 7px 0 20px; color: var(--muted); font-size: 13px; }
+    .notice {
+      padding: 12px 14px;
+      margin-bottom: 16px;
+      border: 1px solid #c7d2fe;
+      border-radius: 10px;
+      background: var(--primary-soft);
+      color: #34459a;
+      font-size: 13px;
+    }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .card {
+      padding: 16px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      box-shadow: 0 6px 18px rgba(17, 24, 39, .04);
+    }
+    .card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .form-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    label { display: block; margin-bottom: 5px; color: var(--muted); font-size: 12px; }
+    input, select, textarea, button {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 9px 10px;
+      background: #fff;
+      font: inherit;
+    }
+    textarea { min-height: 122px; resize: vertical; }
+    button {
+      width: auto;
+      cursor: pointer;
+      border-color: var(--primary);
+      background: var(--primary);
+      color: #fff;
+      font-weight: 600;
+    }
+    button:disabled { cursor: not-allowed; opacity: .45; }
+    button.secondary { border-color: var(--line); background: #fff; color: var(--text); }
+    .actions { display: flex; gap: 8px; align-items: center; margin-top: 12px; }
+    .status-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 14px 0; }
+    .status-item { padding: 12px; border-radius: 9px; background: #f8fafc; }
+    .status-label { color: var(--muted); font-size: 11px; }
+    .status-value { margin-top: 5px; font-size: 14px; font-weight: 650; }
+    .tag {
+      display: inline-flex;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: var(--warning-soft);
+      color: var(--warning);
+      font-size: 12px;
+    }
+    .tag.success { background: var(--success-soft); color: var(--success); }
+    .hint, .message { color: var(--muted); font-size: 12px; }
+    .message { margin-top: 10px; min-height: 18px; }
+    .message.error { color: var(--danger); }
+    .full { grid-column: 1 / -1; }
+    .result { max-height: 350px; overflow: auto; border-top: 1px solid var(--line); margin-top: 12px; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th, td { padding: 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { position: sticky; top: 0; background: #f8fafc; color: var(--muted); }
+    .candidate-group { margin-top: 12px; }
+    .candidate-list { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 7px; }
+    .candidate {
+      padding: 6px 9px;
+      border: 1px solid #c7d2fe;
+      border-radius: 8px;
+      background: var(--primary-soft);
+      font-size: 12px;
+    }
+    .candidate small { display: block; margin-top: 2px; color: var(--muted); }
+    code { color: #475467; }
+    @media (max-width: 820px) {
+      .grid, .form-grid, .status-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <strong>用例地图平台 · 正式服务</strong>
+    <a href="/">层级管理</a>
+    &nbsp;·&nbsp;
+    <a href="/feature-map.html">功能点地图</a>
+  </header>
+  <main class="wrap">
+    <h1>资产导入与知识抽取</h1>
+    <p class="subtitle">当前已开发功能验证页 · 所有操作直接调用 Java API，不使用原型内存数据。</p>
+    <div class="notice">标准模式门禁：历史用例和知识库都导入成功后，才进入关键字校准准备状态。</div>
+
+    <section class="card">
+      <div class="card-head">
+        <h2>1. 创建标准模式批次</h2>
+        <span class="tag" id="batchTag">尚未创建</span>
+      </div>
+      <div class="form-grid">
+        <div>
+          <label for="domainSelect">领域</label>
+          <select id="domainSelect"></select>
+        </div>
+        <div>
+          <label for="systemSelect">系统</label>
+          <select id="systemSelect" disabled></select>
+        </div>
+        <div>
+          <label for="modeInput">生产模式</label>
+          <input id="modeInput" value="标准模式（用例 + 知识库）" disabled />
+        </div>
+      </div>
+      <div class="form-grid" style="margin-top: 10px;">
+        <div>
+          <label for="moduleNameInput">模块（可选）</label>
+          <input id="moduleNameInput" placeholder="对应平台 module_name，不进入 featureKey" />
+        </div>
+      </div>
+      <div class="actions">
+        <button type="button" id="createBatchButton">创建批次</button>
+        <button type="button" class="secondary" id="refreshBatchButton" disabled>刷新状态</button>
+      </div>
+      <div class="message" id="batchMessage"></div>
+      <div class="status-grid">
+        <div class="status-item"><div class="status-label">批次 ID</div><div class="status-value" id="batchIdValue">—</div></div>
+        <div class="status-item"><div class="status-label">模块</div><div class="status-value" id="moduleNameValue">—</div></div>
+        <div class="status-item"><div class="status-label">历史用例</div><div class="status-value" id="casesStatus">未导入</div></div>
+        <div class="status-item"><div class="status-label">知识库</div><div class="status-value" id="knowledgeStatus">未导入</div></div>
+        <div class="status-item"><div class="status-label">门禁状态</div><div class="status-value" id="gateStatus">等待创建批次</div></div>
+      </div>
+    </section>
+
+    <div class="grid" style="margin-top:14px">
+      <section class="card">
+        <div class="card-head"><h2>2. 导入历史用例</h2><span class="tag">真实解析</span></div>
+        <label for="caseFileInput">CSV / XLSX / XLS / XMind</label>
+        <input id="caseFileInput" type="file" accept=".csv,.xlsx,.xls,.xmind" />
+        <div class="actions"><button type="button" id="uploadCasesButton" disabled>上传并解析</button></div>
+        <div class="message" id="casesMessage"></div>
+        <div class="result" id="casesResult"></div>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><h2>3. 导入知识库</h2><span class="tag">真实解析</span></div>
+        <label for="knowledgeFileInput">TXT / MD / XLSX / XLS / XMind</label>
+        <input id="knowledgeFileInput" type="file" accept=".txt,.md,.markdown,.xlsx,.xls,.xmind" />
+        <div class="actions">
+          <button type="button" id="uploadKnowledgeButton" disabled>上传并自动抽取</button>
+          <button type="button" class="secondary" id="extractKnowledgeButton" disabled>重新抽取</button>
+        </div>
+        <div class="message" id="knowledgeMessage"></div>
+      </section>
+
+      <section class="card full">
+        <div class="card-head"><h2>4. 确认知识抽取结果</h2><span class="tag">自然语言补充可选</span></div>
+        <p class="hint">上传用例和知识库后会自动抽取，可直接检查并确认下方候选。</p>
+        <div id="candidateResult"><p class="hint">请先上传知识库。</p></div>
+        <label for="knowledgeText">可选：补充自然语言知识</label>
+        <textarea id="knowledgeText" placeholder="仅在需要补充知识文件时填写，例如：&#10;场景：金额计算与汇总&#10;功能点：数量价汇总、固定价汇总&#10;规则：数量必须大于零&#10;节点：报价计算节点"></textarea>
+        <p class="hint">此项不必填写；已有知识文件时会合并补充，不会覆盖上传内容。</p>
+        <div class="actions">
+          <button type="button" class="secondary" id="extractTextButton" disabled>可选：补充并重新抽取</button>
+          <button type="button" class="secondary" id="confirmKeywordsButton" disabled>确认关键字</button>
+          <button type="button" id="generateDraftButton" disabled>清洗用例并生成草稿</button>
+        </div>
+        <div class="message" id="extractMessage"></div>
+      </section>
+
+      <section class="card full">
+        <div class="card-head"><h2>5. 用例清洗与挂载结果</h2><span class="tag" id="draftTag">尚未生成</span></div>
+        <div id="draftResult"><p class="hint">完成双源导入、关键字抽取和确认后生成。</p></div>
+      </section>
+
+      <section class="card full">
+        <div class="card-head"><h2>6. 评审与正式入库</h2><span class="tag" id="reviewTag">等待草稿</span></div>
+        <div class="form-grid">
+          <div>
+            <label for="reviewStatusFilter">状态</label>
+            <select id="reviewStatusFilter">
+              <option value="">全部状态</option>
+              <option value="待评审">待评审</option>
+              <option value="已确认">已确认</option>
+              <option value="已废弃">已废弃</option>
+              <option value="已发布">已发布</option>
+            </select>
+          </div>
+          <div>
+            <label for="reviewKindFilter">类型</label>
+            <select id="reviewKindFilter">
+              <option value="">全部类型</option>
+              <option value="历史用例">历史用例</option>
+              <option value="知识缺口">知识缺口</option>
+            </select>
+          </div>
+          <div>
+            <label for="reviewPoolFilter">匹配池</label>
+            <select id="reviewPoolFilter">
+              <option value="">全部匹配池</option>
+              <option value="A">A 池（≥80）</option>
+              <option value="B">B 池（60-79）</option>
+              <option value="C">C 池（&lt;60）</option>
+            </select>
+          </div>
+          <div>
+            <label for="reviewKeywordFilter">关键词</label>
+            <input id="reviewKeywordFilter" placeholder="用例、场景、功能点" />
+          </div>
+        </div>
+        <div class="actions">
+          <button type="button" class="secondary" id="loadReviewsButton" disabled>查询评审队列</button>
+          <button type="button" class="secondary" id="confirmSelectedButton" disabled>批量确认所选</button>
+          <button type="button" id="publishBatchButton" disabled>正式入库已确认用例</button>
+        </div>
+        <div class="message" id="reviewMessage"></div>
+        <div id="reviewSummary"></div>
+        <div class="result" id="reviewResult"><p class="hint">生成清洗草稿后自动进入评审队列。</p></div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const state = { batchId: null, extraction: null, reviewItems: [] };
+    const elements = Object.fromEntries(Array.from(document.querySelectorAll('[id]')).map((element) => [element.id, element]));
+
+    async function request(path, options) {
+      const response = await fetch(path, options || {});
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.detail || response.statusText || '请求失败');
+      return result;
+    }
+
+    function escapeHtml(value) {
+      return String(value == null ? '' : value)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
+    function setMessage(element, message, isError) {
+      element.textContent = message || '';
+      element.className = isError ? 'message error' : 'message';
+    }
+
+    function fillOptions(select, values, placeholder) {
+      select.innerHTML = '<option value="">' + escapeHtml(placeholder) + '</option>' +
+        (values || []).map((value) => '<option value="' + escapeHtml(value) + '">' + escapeHtml(value) + '</option>').join('');
+    }
+
+    async function loadDomains() {
+      const result = await request('/api/v1/hierarchy/cascade');
+      fillOptions(elements.domainSelect, result.domains, '请选择领域');
+      fillOptions(elements.systemSelect, [], '请先选择领域');
+    }
+
+    async function loadSystems() {
+      const domain = elements.domainSelect.value;
+      elements.systemSelect.disabled = !domain;
+      if (!domain) {
+        fillOptions(elements.systemSelect, [], '请先选择领域');
+        return;
+      }
+      const result = await request('/api/v1/hierarchy/cascade?domain=' + encodeURIComponent(domain));
+      fillOptions(elements.systemSelect, result.systems, '请选择系统');
+    }
+
+    function enableBatchActions(enabled) {
+      elements.refreshBatchButton.disabled = !enabled;
+      elements.uploadCasesButton.disabled = !enabled;
+      elements.uploadKnowledgeButton.disabled = !enabled;
+      elements.extractTextButton.disabled = !enabled;
+    }
+
+    async function createBatch() {
+      try {
+        const result = await request('/api/v1/produce/batches', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            domain: elements.domainSelect.value,
+            system: elements.systemSelect.value,
+            moduleName: elements.moduleNameInput.value,
+            mode: 'standard'
+          })
+        });
+        state.batchId = result.id;
+        state.extraction = null;
+        state.reviewItems = [];
+        elements.candidateResult.innerHTML = '<p class="hint">请先上传知识库。</p>';
+        resetDraft();
+        resetReviews();
+        enableBatchActions(true);
+        setMessage(elements.batchMessage, '标准模式批次创建成功');
+        renderBatch(result);
+      } catch (error) {
+        setMessage(elements.batchMessage, error.message, true);
+      }
+    }
+
+    async function refreshBatch() {
+      if (!state.batchId) return;
+      try {
+        const result = await request('/api/v1/produce/batches/' + encodeURIComponent(state.batchId));
+        renderBatch(result);
+        if (result.reviewQueueGenerated) {
+          await loadReviews();
+        }
+      } catch (error) {
+        setMessage(elements.batchMessage, error.message, true);
+      }
+    }
+
+    function renderBatch(batch) {
+      elements.batchTag.textContent = batch.mapDraftGenerated
+        ? '草稿已生成'
+        : (batch.readyForKeywordCalibration ? '可校准关键字' : '等待双源导入');
+      elements.batchTag.className = batch.readyForKeywordCalibration ? 'tag success' : 'tag';
+      elements.batchIdValue.textContent = batch.id;
+      elements.moduleNameValue.textContent = batch.moduleName || '（未填）';
+      elements.casesStatus.textContent = batch.casesImported ? '已导入' : '未导入';
+      elements.knowledgeStatus.textContent = batch.knowledgeImported ? '已导入' : '未导入';
+      elements.gateStatus.textContent = batch.status;
+      elements.extractKnowledgeButton.disabled = !batch.knowledgeImported;
+      if (batch.keywordExtraction) {
+        state.extraction = batch.keywordExtraction;
+        renderCandidates(batch.keywordExtraction);
+      } else {
+        state.extraction = null;
+        elements.candidateResult.innerHTML = '<p class="hint">请先上传知识库。</p>';
+      }
+      elements.confirmKeywordsButton.disabled = !batch.readyForKeywordCalibration || !batch.keywordExtraction;
+      elements.generateDraftButton.disabled = !batch.readyForMapDraft;
+      elements.loadReviewsButton.disabled = !batch.reviewQueueGenerated;
+      elements.confirmSelectedButton.disabled = !batch.reviewQueueGenerated;
+      elements.publishBatchButton.disabled = !batch.reviewQueueGenerated;
+      if (batch.reviewQueueGenerated) {
+        elements.reviewTag.textContent = batch.publishedCount > 0 ? '已入库 ' + batch.publishedCount + ' 条' : '评审中';
+        elements.reviewTag.className = 'tag success';
+      }
+      if (batch.mapDraft) {
+        renderDraft(batch.mapDraft);
+      } else {
+        resetDraft();
+      }
+    }
+
+    async function uploadFile(kind) {
+      const input = kind === 'cases' ? elements.caseFileInput : elements.knowledgeFileInput;
+      const message = kind === 'cases' ? elements.casesMessage : elements.knowledgeMessage;
+      if (!input.files.length) {
+        setMessage(message, '请选择文件', true);
+        return;
+      }
+      const formData = new FormData();
+      formData.append('file', input.files[0]);
+      try {
+        const result = await request(
+          '/api/v1/produce/batches/' + encodeURIComponent(state.batchId) + '/' + kind,
+          { method: 'POST', body: formData }
+        );
+        setMessage(message, '解析成功：' + result.metadata.fileName);
+        if (kind === 'cases') {
+          renderCases(result);
+        } else {
+          await extractUploadedKnowledge();
+        }
+        await refreshBatch();
+      } catch (error) {
+        setMessage(message, error.message, true);
+      }
+    }
+
+    function renderCases(result) {
+      const rows = (result.rows || []).slice(0, 50);
+      elements.casesResult.innerHTML =
+        '<p class="hint">共解析 ' + result.metadata.rowCount + ' 条；风险 ' + (result.risks || []).length +
+        ' 条；SHA-256：<code>' + escapeHtml(result.metadata.sha256) + '</code></p>' +
+        '<table><thead><tr><th>原始 ID</th><th>用例名称</th><th>场景</th><th>功能点</th><th>步骤</th><th>预期</th></tr></thead><tbody>' +
+        rows.map((row) => '<tr><td>' + escapeHtml(row.originalCaseId) + '</td><td>' + escapeHtml(row.caseName) +
+          '</td><td>' + escapeHtml(row.scene) + '</td><td>' + escapeHtml(row.feature) +
+          '</td><td>' + escapeHtml(row.step) + '</td><td>' + escapeHtml(row.expected) + '</td></tr>').join('') +
+        '</tbody></table>';
+    }
+
+    async function extractUploadedKnowledge() {
+      try {
+        const result = await request(
+          '/api/v1/produce/batches/' + encodeURIComponent(state.batchId) + '/knowledge/extract',
+          { method: 'POST' }
+        );
+        setMessage(elements.extractMessage, '已从上传文件抽取关键字');
+        state.extraction = result;
+        renderCandidates(result);
+        await refreshBatch();
+      } catch (error) {
+        setMessage(elements.extractMessage, error.message, true);
+      }
+    }
+
+    async function extractPastedText() {
+      const knowledgeText = elements.knowledgeText.value.trim();
+      if (knowledgeText.length < 2) {
+        setMessage(elements.extractMessage, '请输入有效的业务知识描述，或先上传知识文件', true);
+        return;
+      }
+      try {
+        const result = await request(
+          '/api/v1/produce/batches/' + encodeURIComponent(state.batchId) + '/knowledge/text',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sourceName: '页面粘贴知识', text: knowledgeText })
+          }
+        );
+        setMessage(elements.extractMessage, '自然语言抽取成功');
+        state.extraction = result;
+        renderCandidates(result);
+        await refreshBatch();
+      } catch (error) {
+        setMessage(elements.extractMessage, error.message, true);
+      }
+    }
+
+    function renderCandidates(result) {
+      const groups = [
+        ['scenes', '业务场景', result.scenes],
+        ['features', '功能点', result.features],
+        ['rules', '规则', result.rules],
+        ['nodes', '流程节点', result.nodes]
+      ];
+      elements.candidateResult.innerHTML = '<p class="hint">每行一项，可直接修改、删除或补充后再确认。</p>' +
+        groups.map(([groupKey, label, candidates]) =>
+        '<div class="candidate-group"><strong>' + label + '（' + (candidates || []).length + '）</strong>' +
+        '<textarea data-candidate-group="' + groupKey + '" rows="' +
+        Math.min(10, Math.max(3, (candidates || []).length)) + '">' +
+        escapeHtml((candidates || []).map((candidate) => candidate.text).join('\n')) +
+        '</textarea></div>'
+      ).join('');
+    }
+
+    async function confirmKeywords() {
+      if (!state.extraction) return;
+      const confirmed = {
+        scenes: candidateLines('scenes'),
+        features: candidateLines('features'),
+        rules: candidateLines('rules'),
+        nodes: candidateLines('nodes')
+      };
+      try {
+        await request(
+          '/api/v1/produce/batches/' + encodeURIComponent(state.batchId) + '/keywords/confirm',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(confirmed)
+          }
+        );
+        setMessage(elements.extractMessage, '关键字已确认，可以清洗用例');
+        await refreshBatch();
+      } catch (error) {
+        setMessage(elements.extractMessage, error.message, true);
+      }
+    }
+
+    function candidateLines(groupKey) {
+      const textarea = document.querySelector('[data-candidate-group="' + groupKey + '"]');
+      return textarea ? textarea.value.split(/\r?\n/).map((value) => value.trim()).filter(Boolean) : [];
+    }
+
+    async function generateDraft() {
+      try {
+        const result = await request(
+          '/api/v1/produce/batches/' + encodeURIComponent(state.batchId) + '/draft',
+          { method: 'POST' }
+        );
+        renderDraft(result);
+        await refreshBatch();
+      } catch (error) {
+        setMessage(elements.extractMessage, error.message, true);
+      }
+    }
+
+    function renderDraft(result) {
+      elements.draftTag.textContent = '已生成';
+      elements.draftTag.className = 'tag success';
+      const stats = result.stats;
+      elements.draftResult.innerHTML =
+        '<div class="status-grid">' +
+        '<div class="status-item"><div class="status-label">清洗用例</div><div class="status-value">' + stats.totalCases + '</div></div>' +
+        '<div class="status-item"><div class="status-label">自动挂载</div><div class="status-value">' + stats.autoMounted + '</div></div>' +
+        '<div class="status-item"><div class="status-label">待抽检/人工</div><div class="status-value">' + (stats.reviewRequired + stats.manualRequired) + '</div></div>' +
+        '<div class="status-item"><div class="status-label">知识缺口</div><div class="status-value">' + stats.gapCount + '</div></div>' +
+        '</div><div class="result"><table><thead><tr><th>用例</th><th>业务场景</th><th>功能点</th><th>流程节点</th><th>置信度</th><th>建议</th><th>匹配依据</th></tr></thead><tbody>' +
+        (result.cases || []).map((item) => '<tr><td>' + escapeHtml(item.caseName) +
+          '</td><td>' + escapeHtml(item.scene) + '</td><td>' + escapeHtml(item.feature) +
+          '</td><td>' + escapeHtml(item.flowNode || '—') + '</td><td>' + item.confidence +
+          '%</td><td>' + escapeHtml(item.mountAdvice) + '</td><td>' +
+          escapeHtml((item.matchEvidence || []).join('；')) + '</td></tr>').join('') +
+        '</tbody></table></div>' +
+        '<h3>知识缺口候选</h3><div class="candidate-list">' +
+        (result.gaps || []).map((gap) => '<div class="candidate"><strong>' +
+          escapeHtml(gap.feature) + '</strong><small>' + escapeHtml(gap.scene) +
+          ' · ' + escapeHtml(gap.reason) + '</small></div>').join('') +
+        '</div>';
+    }
+
+    function resetDraft() {
+      elements.draftTag.textContent = '尚未生成';
+      elements.draftTag.className = 'tag';
+      elements.draftResult.innerHTML = '<p class="hint">完成双源导入、关键字抽取和确认后生成。</p>';
+    }
+
+    async function loadReviews() {
+      if (!state.batchId) return;
+      const query = new URLSearchParams({ batchId: state.batchId });
+      if (elements.reviewStatusFilter.value) query.set('status', elements.reviewStatusFilter.value);
+      if (elements.reviewKindFilter.value) query.set('kind', elements.reviewKindFilter.value);
+      if (elements.reviewPoolFilter.value) query.set('pool', elements.reviewPoolFilter.value);
+      if (elements.reviewKeywordFilter.value.trim()) query.set('keyword', elements.reviewKeywordFilter.value.trim());
+      try {
+        const result = await request('/api/v1/reviews?' + query.toString());
+        state.reviewItems = result.items || [];
+        renderReviews(result);
+      } catch (error) {
+        setMessage(elements.reviewMessage, error.message, true);
+      }
+    }
+
+    function renderReviews(result) {
+      elements.reviewSummary.innerHTML =
+        '<div class="status-grid">' +
+        '<div class="status-item"><div class="status-label">当前结果</div><div class="status-value">' + result.total + '</div></div>' +
+        '<div class="status-item"><div class="status-label">待评审</div><div class="status-value">' + result.pending + '</div></div>' +
+        '<div class="status-item"><div class="status-label">已确认</div><div class="status-value">' + result.confirmed + '</div></div>' +
+        '<div class="status-item"><div class="status-label">已发布</div><div class="status-value">' + result.published + '</div></div>' +
+        '</div>';
+      elements.reviewResult.innerHTML =
+        '<table><thead><tr><th>选择</th><th>类型/状态</th><th>用例名称</th><th>场景</th><th>功能点</th><th>步骤</th><th>预期</th><th>优先级</th><th>操作</th></tr></thead><tbody>' +
+        state.reviewItems.map((item) => {
+          const editable = item.status === '待评审';
+          const disabled = editable ? '' : ' disabled';
+          return '<tr data-review-id="' + escapeHtml(item.id) + '">' +
+            '<td><input type="checkbox" data-review-select value="' + escapeHtml(item.id) + '"' + disabled + ' /></td>' +
+            '<td>' + escapeHtml(item.kind) + '<br><span class="tag">' + escapeHtml(item.status) + '</span></td>' +
+            '<td><input data-review-field="caseName" value="' + escapeHtml(item.caseName) + '"' + disabled + ' /></td>' +
+            '<td><input data-review-field="scene" value="' + escapeHtml(item.scene) + '"' + disabled + ' /></td>' +
+            '<td><input data-review-field="feature" value="' + escapeHtml(item.feature) + '"' + disabled + ' /></td>' +
+            '<td><input data-review-field="step" value="' + escapeHtml(item.step || '') + '"' + disabled + ' /></td>' +
+            '<td><input data-review-field="expected" value="' + escapeHtml(item.expected || '') + '"' + disabled + ' /></td>' +
+            '<td><select data-review-field="priority"' + disabled + '>' +
+            ['P0', 'P1', 'P2'].map((priority) => '<option value="' + priority + '"' +
+              (priority === item.priority ? ' selected' : '') + '>' + priority + '</option>').join('') +
+            '</select></td><td>' +
+            (editable
+              ? '<button type="button" class="secondary" data-review-action="save">保存</button> ' +
+                '<button type="button" data-review-action="confirm">确认</button> ' +
+                '<button type="button" class="secondary" data-review-action="discard">废弃</button>'
+              : escapeHtml(item.officialCaseId || '—')) +
+            '</td></tr>';
+        }).join('') +
+        '</tbody></table>';
+    }
+
+    async function saveReview(reviewId, row) {
+      const reviewPayload = {};
+      row.querySelectorAll('[data-review-field]').forEach((field) => {
+        reviewPayload[field.dataset.reviewField] = field.value;
+      });
+      reviewPayload.operator = '页面评审人';
+      await request('/api/v1/reviews/' + encodeURIComponent(reviewId), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(reviewPayload)
+      });
+      setMessage(elements.reviewMessage, '评审项已保存');
+      await loadReviews();
+    }
+
+    async function performReviewAction(reviewId, action) {
+      await request('/api/v1/reviews/' + encodeURIComponent(reviewId) + '/' + action, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ operator: '页面评审人' })
+      });
+      setMessage(elements.reviewMessage, action === 'confirm' ? '评审项已确认' : '评审项已废弃');
+      await loadReviews();
+    }
+
+    async function confirmSelectedReviews() {
+      const selectedIds = Array.from(document.querySelectorAll('[data-review-select]:checked'))
+        .map((checkbox) => checkbox.value);
+      if (!selectedIds.length) {
+        setMessage(elements.reviewMessage, '请选择待确认的评审项', true);
+        return;
+      }
+      try {
+        const result = await request('/api/v1/reviews/batch/confirm', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reviewIds: selectedIds, operator: '页面评审人' })
+        });
+        const message = '批量确认成功 ' + result.succeeded + ' 条，失败 ' + result.failed + ' 条';
+        setMessage(elements.reviewMessage, message, result.failed > 0);
+        await loadReviews();
+      } catch (error) {
+        setMessage(elements.reviewMessage, error.message, true);
+      }
+    }
+
+    async function publishReviewedCases() {
+      try {
+        const result = await request(
+          '/api/v1/reviews/batches/' + encodeURIComponent(state.batchId) + '/publish',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ operator: '页面评审人' })
+          }
+        );
+        setMessage(elements.reviewMessage, '正式入库成功：' + result.publishedCount + ' 条');
+        await refreshBatch();
+      } catch (error) {
+        setMessage(elements.reviewMessage, error.message, true);
+      }
+    }
+
+    function resetReviews() {
+      elements.reviewTag.textContent = '等待草稿';
+      elements.reviewTag.className = 'tag';
+      elements.reviewSummary.innerHTML = '';
+      elements.reviewResult.innerHTML = '<p class="hint">生成清洗草稿后自动进入评审队列。</p>';
+      elements.loadReviewsButton.disabled = true;
+      elements.confirmSelectedButton.disabled = true;
+      elements.publishBatchButton.disabled = true;
+    }
+
+    elements.domainSelect.addEventListener('change', loadSystems);
+    elements.createBatchButton.addEventListener('click', createBatch);
+    elements.refreshBatchButton.addEventListener('click', refreshBatch);
+    elements.uploadCasesButton.addEventListener('click', () => uploadFile('cases'));
+    elements.uploadKnowledgeButton.addEventListener('click', () => uploadFile('knowledge'));
+    elements.extractKnowledgeButton.addEventListener('click', extractUploadedKnowledge);
+    elements.extractTextButton.addEventListener('click', extractPastedText);
+    elements.confirmKeywordsButton.addEventListener('click', confirmKeywords);
+    elements.generateDraftButton.addEventListener('click', generateDraft);
+    elements.loadReviewsButton.addEventListener('click', loadReviews);
+    elements.confirmSelectedButton.addEventListener('click', confirmSelectedReviews);
+    elements.publishBatchButton.addEventListener('click', publishReviewedCases);
+    elements.reviewResult.addEventListener('click', async (event) => {
+      const actionButton = event.target.closest('[data-review-action]');
+      if (!actionButton) return;
+      const reviewRow = actionButton.closest('[data-review-id]');
+      const reviewId = reviewRow.dataset.reviewId;
+      try {
+        if (actionButton.dataset.reviewAction === 'save') {
+          await saveReview(reviewId, reviewRow);
+        } else {
+          await performReviewAction(reviewId, actionButton.dataset.reviewAction);
+        }
+      } catch (error) {
+        setMessage(elements.reviewMessage, error.message, true);
+      }
+    });
+    elements.caseFileInput.addEventListener('change', () => {
+      setMessage(elements.casesMessage, elements.caseFileInput.files.length ? '文件已选择，请点击“上传并解析”' : '');
+    });
+    elements.knowledgeFileInput.addEventListener('change', () => {
+      setMessage(elements.knowledgeMessage, elements.knowledgeFileInput.files.length ? '文件已选择，请点击“上传”' : '');
+    });
+    loadDomains().catch((error) => setMessage(elements.batchMessage, error.message, true));
+  </script>
+</body>
+</html>

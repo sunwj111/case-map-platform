@@ -6,9 +6,19 @@
 
 | 服务 | 说明 |
 |---|---|
-| [`services/hierarchy`](services/hierarchy/README.md) | **Java / Spring Boot**：层级 + FeatureMapDTO |
+| [`services/casemap`](services/casemap/README.md) | **Python / FastAPI**：层级 + FeatureMapDTO + 资产生产 |
+| [`services/hierarchy`](services/hierarchy/README.md) | Java / Spring Boot 对照实现（接口一致） |
 | [`docs/feature_key_spec.md`](docs/feature_key_spec.md) | featureKey 规范（M1-S01） |
 | [`docs/feature_map_dto_spec.md`](docs/feature_map_dto_spec.md) | FeatureMapDTO / MapNode（M1-S02 / M1-S03） |
+
+```bash
+cd services/casemap
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --host 127.0.0.1 --port 8787
+```
+
+Java 对照启动：
 
 ```bash
 export JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk-17.0.2.jdk/Contents/Home
@@ -16,7 +26,7 @@ cd services/hierarchy
 ./mvnw spring-boot:run
 ```
 
-> 早期 Python 试验版在 `services/hierarchy-python/`，非正式交付。
+> 早期试验目录 `services/hierarchy-python/` 已废弃，正式 Python 服务在 `services/casemap/`。
 
 ## 交付物
 
