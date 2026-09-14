@@ -130,7 +130,7 @@ class FeatureMapAssembler:
         data_sources = ["hierarchy"]
         feature_node = self._safe_feature_node(feature_key, data_sources)
         cases = self._safe_cases(feature_key, data_sources)
-        tech = self._safe_tech(feature_key, parts, data_sources)
+        tech = self._safe_tech(feature_key, parts, cases, data_sources)
         spine = self._build_spine(parts, feature_node, cases, data_sources)
         business_view = self._build_business_view(parts, cases, tech, data_sources)
         tech_view = self._build_tech_view(parts, tech, data_sources)
@@ -174,19 +174,29 @@ class FeatureMapAssembler:
             data_sources.append("case-assets:degraded")
             return []
 
-    def _safe_tech(self, feature_key: str, parts: FeatureKey, data_sources: list[str]) -> dict[str, Any]:
+    def _safe_tech(
+        self,
+        feature_key: str,
+        parts: FeatureKey,
+        cases: list[dict[str, Any]],
+        data_sources: list[str],
+    ) -> dict[str, Any]:
         try:
             result = self.api_resolve.resolve(feature_key, parts.feature, parts.scene)
             data_sources.append(result.get("source") or "tech-mapping")
             if result.get("fallback"):
                 data_sources.append("tech-mapping:fallback")
-            return result
+            overlaid = _overlay_case_apis(result, cases)
+            if overlaid.get("caseApiSource"):
+                data_sources.append("tech-apis:" + str(overlaid["caseApiSource"]))
+            return overlaid
         except Exception:
             data_sources.append("tech-mapping:degraded")
-            return {
+            degraded = {
                 "feature": parts.feature, "scene": parts.scene, "fallback": True,
                 "source": "degraded", "apis": [], "flowNodes": [],
             }
+            return _overlay_case_apis(degraded, cases)
 
     def _build_meta(self, feature_key: str, feature_node: dict[str, Any] | None, data_sources: list[str]) -> dict[str, Any]:
         synthetic = feature_node is None
@@ -292,9 +302,8 @@ class FeatureMapAssembler:
                 "sourceType": asset.get("sourceType"),
                 "source": SOURCE_OFFICIAL_CASES,
             })
-            script = _derive_script_from_case(asset, tech)
-            if script:
-                scripts.append(script)
+            script_items = _derive_scripts_from_case(asset)
+            scripts.extend(script_items)
         if not scenarios:
             gap = _new_scenario(parts.scene, "gap")
             scenarios[gap["name"]] = gap
@@ -437,15 +446,62 @@ def _script_from_api_label(script_id: str, api_label: str, linked_case_id: str |
     }
 
 
-def _derive_script_from_case(asset: dict[str, Any], tech: dict[str, Any] | None) -> dict[str, Any] | None:
-    api_label = asset.get("api")
-    source = SOURCE_DERIVED_CASE
-    if (not api_label) and tech and tech.get("apis"):
-        api_label = tech["apis"][0].get("label")
-        source = SOURCE_DERIVED_TECH
-    if not api_label:
-        return None
-    return _script_from_api_label("SCRIPT-" + str(asset.get("id")), api_label, asset.get("id"), source)
+def _split_api_labels(value: str | None) -> list[str]:
+    if not value:
+        return []
+    return [part.strip() for part in re.split(r"[;\n]+", str(value)) if part.strip()]
+
+
+def _parse_api_label(label: str) -> tuple[str, str]:
+    matched = re.match(r"^(GET|POST|PUT|PATCH|DELETE)\s+(\S+)", (label or "").strip(), re.I)
+    if matched:
+        return matched.group(1).upper(), matched.group(2)
+    compact = (label or "").strip()
+    if compact.startswith("/"):
+        return "POST", compact
+    return "POST", compact
+
+
+def _overlay_case_apis(tech: dict[str, Any], cases: list[dict[str, Any]]) -> dict[str, Any]:
+    from_cases: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for asset in cases:
+        for label in _split_api_labels(asset.get("api")):
+            method, path = _parse_api_label(label)
+            key = (method + " " + path).strip()
+            if not path or key in seen:
+                continue
+            seen.add(key)
+            from_cases.append({
+                "method": method,
+                "path": path,
+                "label": key,
+                "relation": "用例关联",
+                "controller": None,
+                "primaryNode": None,
+                "fallback": False,
+            })
+    if not from_cases:
+        return tech
+    overlaid = dict(tech)
+    overlaid["apis"] = from_cases
+    overlaid["fallback"] = False
+    overlaid["caseApiSource"] = SOURCE_OFFICIAL_CASES
+    return overlaid
+
+
+def _derive_scripts_from_case(asset: dict[str, Any]) -> list[dict[str, Any]]:
+    labels = _split_api_labels(asset.get("api"))
+    scripts = []
+    for index, label in enumerate(labels, start=1):
+        suffix = "" if len(labels) == 1 else "-" + str(index)
+        scripts.append(_script_from_api_label(
+            "SCRIPT-" + str(asset.get("id")) + suffix,
+            label,
+            asset.get("id"),
+            SOURCE_DERIVED_CASE,
+        ))
+    return scripts
 
 
 def _derive_scripts_from_tech(tech: dict[str, Any] | None) -> list[dict[str, Any]]:

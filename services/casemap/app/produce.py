@@ -61,6 +61,68 @@ def _compact(value: Any) -> str:
     return re.sub(r"\s+", " ", "" if value is None else str(value)).strip()
 
 
+_OUTLINE_PREFIX = re.compile(r"^[（(]*[一二三四五六七八九十百零〇0-9]+[、.．)）]\s*")
+_GENERIC_SECTION_LABELS = {
+    "功能点", "功能", "能力", "场景", "业务场景", "业务背景", "背景", "概述", "简介",
+    "规则", "校验", "约束", "接口", "API", "api", "节点", "流程节点", "目录", "说明",
+}
+
+
+def _strip_outline_prefix(text: str) -> str:
+    return _OUTLINE_PREFIX.sub("", (text or "").strip()).strip()
+
+
+def _parenthetical_name(text: str) -> str:
+    matched = re.search(r"[（(]([^）)]+)[）)]\s*$", text or "")
+    if not matched:
+        return ""
+    return matched.group(1).strip()
+
+
+def _is_generic_section_label(text: str) -> bool:
+    compact = _compact(text)
+    if not compact:
+        return True
+    inner = _parenthetical_name(compact)
+    if inner and inner not in _GENERIC_SECTION_LABELS:
+        return False
+    stripped = _strip_outline_prefix(compact)
+    stripped = re.sub(r"[（(][^）)]*[）)]", "", stripped).strip("、.．:： ")
+    stripped = stripped.replace("业务场景", "").replace("功能点", "").strip()
+    if stripped.endswith("场景") and stripped != "场景":
+        stripped = stripped[:-2].strip()
+    return (not stripped) or stripped in _GENERIC_SECTION_LABELS
+
+
+def _is_outline_label(text: str) -> bool:
+    return _is_generic_section_label(text)
+
+
+def _is_section_heading_line(title: str) -> bool:
+    stripped = _strip_outline_prefix(title)
+    return bool(re.match(
+        r"^(?:（[^）]*）)?(?:业务)?(?:场景|功能点|功能|能力|规则|校验|接口|API|节点)",
+        stripped,
+    ))
+
+
+def _business_label(text: str) -> str:
+    compact = _compact(text)
+    if not compact:
+        return ""
+    inner = _parenthetical_name(compact)
+    if inner and not _is_generic_section_label(inner):
+        return _compact(inner)
+    stripped = _strip_outline_prefix(compact)
+    stripped = re.sub(r"[（(][^）)]*[）)]", "", stripped).strip("、.．:： ")
+    stripped = stripped.replace("业务场景", "").replace("功能点", "").strip()
+    if "场景" in stripped and stripped != "场景":
+        stripped = stripped.replace("场景", "").strip()
+    if _is_generic_section_label(stripped):
+        return ""
+    return stripped
+
+
 def _normalize_header(value: str) -> str:
     return re.sub(r"[\s_\-]+", "", value).lower()
 
@@ -324,7 +386,7 @@ def _parse_knowledge_workbook(file_name: str, content: bytes, suffix: str) -> di
     }
 
 
-def extract_knowledge(text: str, source_version: str) -> dict[str, Any]:
+def extract_knowledge(text: str, source_version: str, process_node: str = "") -> dict[str, Any]:
     source_text = (text or "").strip()
     if not source_text:
         raise ValueError("知识文本不能为空")
@@ -332,52 +394,118 @@ def extract_knowledge(text: str, source_version: str) -> dict[str, Any]:
     features: dict[str, dict[str, Any]] = {}
     rules: dict[str, dict[str, Any]] = {}
     nodes: dict[str, dict[str, Any]] = {}
+    apis: dict[str, dict[str, Any]] = {}
     has_sections = False
+    current_scene = ""
+    current_section = ""
     for line in source_text.splitlines():
         stripped = line.strip()
         heading = re.match(r"^(#{1,3})\s*(.+?)\s*$", stripped)
+        outline_line = None if heading else re.match(
+            r"^([一二三四五六七八九十百零〇0-9]+[、.．].+)$",
+            stripped,
+        )
+        title = ""
         if heading:
-            has_sections = True
             title = heading.group(2).strip()
+        elif outline_line and _is_section_heading_line(outline_line.group(1)):
+            title = outline_line.group(1).strip()
+        if title:
+            has_sections = True
             if "场景" in title:
-                _add_candidate(scenes, title.replace("场景", "").strip() or title, "章节标题·场景", 80)
+                current_section = "scenes"
+                scene_name = _business_label(title)
+                if scene_name:
+                    current_scene = scene_name
+                    _add_candidate(scenes, scene_name, "章节标题·场景", 80)
             elif "功能" in title or "能力" in title:
-                _add_candidate(features, title, "章节标题·功能点", 80)
+                current_section = "features"
+                feature_name = _business_label(title)
+                if feature_name:
+                    _add_candidate(features, feature_name, "章节标题·功能点", 80, related_scene=current_scene)
             elif "规则" in title or "校验" in title:
-                _add_candidate(rules, title, "章节标题·规则", 75)
+                current_section = "rules"
+                rule_name = _business_label(title)
+                if rule_name:
+                    _add_candidate(rules, rule_name, "章节标题·规则", 75, related_scene=current_scene)
             elif "节点" in title:
-                _add_candidate(nodes, title, "章节标题·节点", 75)
+                current_section = "nodes"
+                node_name = _business_label(title)
+                if node_name:
+                    _add_candidate(nodes, node_name, "章节标题·节点", 75, related_scene=current_scene)
+            elif "接口" in title or title.upper() == "API":
+                current_section = "apis"
+                api_name = _business_label(title)
+                if api_name and not _is_outline_label(api_name):
+                    _add_candidate(apis, api_name, "章节标题·接口", 75, related_scene=current_scene)
             continue
         lead_scene = re.match(r"^(?:业务)?场景[:：]\s*(.+)$", stripped)
         if lead_scene:
-            _add_candidate(scenes, lead_scene.group(1), "行首·场景", 85)
+            scene_name = _business_label(lead_scene.group(1))
+            if scene_name:
+                current_scene = scene_name
+                current_section = "scenes"
+                _add_candidate(scenes, scene_name, "行首·场景", 85)
             continue
         lead_feature = re.match(r"^(?:功能点|功能|能力|模块)[:：]\s*(.+)$", stripped)
         if lead_feature:
-            _add_candidate(features, lead_feature.group(1), "行首·功能点", 85)
+            feature_name = _business_label(lead_feature.group(1)) or _compact(lead_feature.group(1))
+            if feature_name and not _is_outline_label(feature_name):
+                current_section = "features"
+                _add_candidate(features, feature_name, "行首·功能点", 85, related_scene=current_scene)
             continue
         lead_rule = re.match(r"^(?:规则|约束|校验)[:：]\s*(.+)$", stripped)
         if lead_rule:
-            _add_candidate(rules, lead_rule.group(1), "行首·规则", 80)
+            current_section = "rules"
+            _add_candidate(rules, lead_rule.group(1), "行首·规则", 80, related_scene=current_scene)
             continue
         lead_node = re.match(r"^(?:流程节点|节点)[:：]\s*(.+)$", stripped)
         if lead_node:
-            _add_candidate(nodes, lead_node.group(1), "行首·节点", 80)
+            current_section = "nodes"
+            _add_candidate(nodes, lead_node.group(1), "行首·节点", 80, related_scene=current_scene)
+            continue
+        lead_api = re.match(r"^(?:接口|API)[:：]\s*(.+)$", stripped, re.I)
+        if lead_api:
+            current_section = "apis"
+            _add_candidate(apis, lead_api.group(1), "行首·接口", 85, related_scene=current_scene)
+            continue
+        list_item = re.match(r"^[-*•、]\s*(.+)$", stripped)
+        if list_item and current_section:
+            item_text = _business_label(list_item.group(1)) or _compact(list_item.group(1))
+            if item_text and not _is_outline_label(item_text):
+                bags = {
+                    "scenes": scenes,
+                    "features": features,
+                    "rules": rules,
+                    "nodes": nodes,
+                    "apis": apis,
+                }
+                _add_candidate(bags[current_section], item_text, "列表·" + current_section, 80, related_scene=current_scene)
+            continue
     for match in re.finditer(r"(?:支持|提供|完成|实现|负责|用于)\s*([\u4e00-\u9fa5A-Za-z0-9]{2,16})", source_text):
         _add_candidate(features, match.group(1), "短文本·功能点", 65)
     for match in re.finditer(r"([\u4e00-\u9fa5A-Za-z0-9]{2,20}(?:必须|不可|不能|应当|禁止)[^\n。；;]{0,20})", source_text):
         _add_candidate(rules, match.group(1), "短文本·规则", 70)
-    if not scenes and not features and not rules and not nodes:
+    for match in re.finditer(r"\b(GET|POST|PUT|PATCH|DELETE)\s+(\/[A-Za-z0-9_\-./{}]+)", source_text, re.I):
+        _add_candidate(apis, match.group(1).upper() + " " + match.group(2), "短文本·接口", 80)
+    node = (process_node or "").strip()
+    if node:
+        if not scenes:
+            _add_candidate(scenes, node, "流程节点·场景", 70)
+        if not features:
+            _add_candidate(features, node, "流程节点·功能点", 70)
+    if not scenes and not features and not rules and not nodes and not apis:
         cleaned = _clean_item(source_text)
         if cleaned:
             _add_candidate(features, cleaned, "短文本·功能点", 65)
-    if not scenes and not features and not rules and not nodes:
+    if not scenes and not features and not rules and not nodes and not apis:
         raise ValueError("未从知识文本中抽取到有效候选，请上传知识文件或补充业务描述")
     return {
         "scenes": list(scenes.values())[:24],
         "features": list(features.values())[:30],
         "rules": list(rules.values())[:24],
         "nodes": list(nodes.values())[:24],
+        "apis": list(apis.values())[:30],
         "mode": "structured+nl" if has_sections else "nl",
         "sourceVersion": source_version,
     }
@@ -390,13 +518,29 @@ def _clean_item(text: str) -> str:
     return cleaned[:40]
 
 
-def _add_candidate(bag: dict[str, dict[str, Any]], text: str, source: str, confidence: int) -> None:
+def _add_candidate(
+    bag: dict[str, dict[str, Any]],
+    text: str,
+    source: str,
+    confidence: int,
+    related_scene: str = "",
+) -> None:
     cleaned = _compact(text)
-    if len(cleaned) < 2:
+    if len(cleaned) < 2 or _is_outline_label(cleaned):
         return
     current = bag.get(cleaned)
+    payload = {"text": cleaned, "source": source, "confidence": confidence}
+    scene = _business_label(related_scene) if related_scene else ""
+    if scene and _is_outline_label(scene):
+        scene = ""
+    if scene:
+        payload["relatedScene"] = scene
+    elif current and current.get("relatedScene"):
+        payload["relatedScene"] = current["relatedScene"]
     if current is None or confidence > current["confidence"]:
-        bag[cleaned] = {"text": cleaned, "source": source, "confidence": confidence}
+        bag[cleaned] = payload
+    elif scene and not current.get("relatedScene"):
+        current["relatedScene"] = scene
 
 
 def generate_map_draft(batch: dict[str, Any]) -> dict[str, Any]:
@@ -410,7 +554,8 @@ def generate_map_draft(batch: dict[str, Any]) -> dict[str, Any]:
     if not batch.get("keywordsConfirmed"):
         raise ValueError("请先确认关键字")
     cleaned_cases = [_clean_case(row, keywords) for row in rows]
-    gaps = _build_gaps(cleaned_cases, keywords)
+    process_node = str(batch.get("processNode") or batch.get("process_node") or "").strip()
+    gaps = _build_gaps(cleaned_cases, keywords, process_node)
     stats = _draft_stats(cleaned_cases, gaps)
     return {
         "batchId": batch["id"],
@@ -426,9 +571,10 @@ def _clean_case(row: dict[str, Any], keywords: dict[str, Any]) -> dict[str, Any]
         row.get("caseName") or "", row.get("step") or "", row.get("expected") or "",
         row.get("scene") or "", row.get("feature") or "", row.get("module") or "",
     ]))
-    matched_scene = _best_match(searchable, keywords.get("scenes") or [])
-    matched_feature = _best_match(searchable, keywords.get("features") or [])
-    matched_node = _best_match(searchable, keywords.get("nodes") or [])
+    matched_scene = _best_match(searchable, _usable_keywords(keywords.get("scenes") or []))
+    matched_feature = _best_match(searchable, _usable_keywords(keywords.get("features") or []))
+    matched_node = _best_match(searchable, _usable_keywords(keywords.get("nodes") or []))
+    matched_apis = _match_apis(searchable, keywords.get("apis") or [])
     scene = row.get("scene") or (matched_scene["text"] if matched_scene else "未识别场景")
     feature = row.get("feature") or (matched_feature["text"] if matched_feature else "未识别功能点")
     evidence = []
@@ -452,6 +598,8 @@ def _clean_case(row: dict[str, Any], keywords: dict[str, Any]) -> dict[str, Any]
     if matched_node:
         confidence += 5
         evidence.append("命中流程节点：" + matched_node["text"])
+    if matched_apis:
+        evidence.append("建议关联接口：" + _join_api_labels(matched_apis))
     confidence = min(confidence, 95)
     return {
         "originalCaseId": original_id,
@@ -459,6 +607,7 @@ def _clean_case(row: dict[str, Any], keywords: dict[str, Any]) -> dict[str, Any]
         "scene": scene,
         "feature": feature,
         "flowNode": matched_node["text"] if matched_node else "",
+        "api": _join_api_labels(matched_apis),
         "confidence": confidence,
         "mountAdvice": "自动挂载" if confidence >= 85 else ("待抽检" if confidence >= 70 else "人工确认"),
         "matchEvidence": evidence,
@@ -477,32 +626,517 @@ def _best_match(searchable: str, candidates: list[dict[str, Any]]) -> dict[str, 
     return best
 
 
-def _build_gaps(cleaned_cases: list[dict[str, Any]], keywords: dict[str, Any]) -> list[dict[str, Any]]:
-    covered = {_normalize(item.get("feature") or "") for item in cleaned_cases}
-    default_scene = (keywords.get("scenes") or [{"text": "待确认场景"}])[0]["text"]
-    gaps = []
-    for feature in keywords.get("features") or []:
-        source = feature.get("source") or ""
-        text = feature.get("text") or ""
-        if text.startswith("/"):
-            continue
-        if not any(token in source for token in ("章节标题·功能点", "章节·功能点", "行首·功能点")) and source != "人工确认":
-            continue
-        normalized = _normalize(text)
-        covered_hit = any(
-            existing == normalized or existing in normalized or normalized in existing
-            for existing in covered
-        )
-        if not covered_hit:
+GAP_CASE_LIMIT = 180
+
+
+def _usable_keywords(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [item for item in items if not _is_outline_label(item.get("text") or "")]
+
+
+def _build_gaps(
+    cleaned_cases: list[dict[str, Any]],
+    keywords: dict[str, Any],
+    process_node: str = "",
+) -> list[dict[str, Any]]:
+    corpus = [
+        _normalize(" ".join([
+            item.get("caseName") or "",
+            item.get("step") or "",
+            item.get("expected") or "",
+            item.get("scene") or "",
+            item.get("feature") or "",
+            item.get("flowNode") or "",
+        ]))
+        for item in cleaned_cases
+    ]
+    gaps: list[dict[str, Any]] = []
+
+    def append_cases(kind: str, source_item: dict[str, Any], reason: str) -> None:
+        text = (source_item.get("text") or "").strip()
+        if _skip_gap_text(text):
+            return
+        scene = _resolve_gap_scene(text, source_item, keywords, process_node)
+        if kind == "接口缺口":
+            feature_name = _api_feature_name(text)
+        else:
+            feature_name = _resolve_gap_feature(text, keywords, process_node)
+        api_label = _format_api(text) if kind == "接口缺口" else ""
+        variants = _gap_case_variants(kind, text if kind != "功能点缺口" else feature_name, scene, feature_name)
+        if len(gaps) + len(variants) > GAP_CASE_LIMIT:
+            return
+        for variant in variants:
             gaps.append({
                 "id": "GAP-" + str(len(gaps) + 1).zfill(3),
-                "scene": default_scene,
-                "feature": text,
-                "reason": "知识库功能点未匹配历史用例",
+                "kind": kind,
+                "scene": scene,
+                "feature": feature_name,
+                "api": api_label,
+                "reason": reason,
+                "caseName": variant["caseName"],
+                "step": variant["step"],
+                "expected": variant["expected"],
+                "priority": variant["priority"],
             })
-        if len(gaps) >= 50:
-            break
+
+    real_features = _usable_keywords(keywords.get("features") or [])
+    for feature in real_features:
+        text = (feature.get("text") or "").strip()
+        if _looks_like_api(text):
+            continue
+        if not _is_covered(text, corpus):
+            append_cases("功能点缺口", feature, "知识库功能点未匹配历史用例")
+    if not real_features and process_node and not _is_covered(process_node, corpus):
+        append_cases(
+            "功能点缺口",
+            {"text": process_node, "relatedScene": process_node},
+            "知识库未给出有效功能点，按流程节点补齐",
+        )
+    for rule in _usable_keywords(keywords.get("rules") or []):
+        text = (rule.get("text") or "").strip()
+        if not _is_covered(text, corpus):
+            append_cases("规则缺口", rule, "知识库规则未匹配历史用例")
+    for api in _usable_keywords(keywords.get("apis") or []):
+        text = (api.get("text") or "").strip()
+        if not _is_covered(text, corpus):
+            append_cases("接口缺口", api, "知识库接口未匹配历史用例")
     return gaps
+
+
+def _resolve_gap_scene(
+    text: str,
+    source_item: dict[str, Any],
+    keywords: dict[str, Any],
+    process_node: str = "",
+) -> str:
+    related = _business_label(source_item.get("relatedScene") or "")
+    if related:
+        return related
+    matched_scene = _best_match(text, _usable_keywords(keywords.get("scenes") or []))
+    if matched_scene:
+        return str(matched_scene["text"]).strip()
+    matched_node = _best_match(text, _usable_keywords(keywords.get("nodes") or []))
+    if matched_node:
+        return str(matched_node["text"]).strip()
+    real_scenes = _usable_keywords(keywords.get("scenes") or [])
+    if real_scenes:
+        return str(real_scenes[0].get("text") or "").strip() or "待确认场景"
+    node = (process_node or "").strip()
+    if node:
+        return node
+    return "待确认场景"
+
+
+def _resolve_gap_feature(text: str, keywords: dict[str, Any], process_node: str = "") -> str:
+    label = _business_label(text) or (text or "").strip()
+    if label and not _is_outline_label(label):
+        return label
+    for feature in _usable_keywords(keywords.get("features") or []):
+        name = (feature.get("text") or "").strip()
+        if name:
+            return name
+    node = (process_node or "").strip()
+    if node:
+        return node
+    return label or "待确认功能点"
+
+
+def _numbered(*lines: str) -> str:
+    return "\n".join(str(index) + ". " + line for index, line in enumerate(lines, 1))
+
+
+def _gap_variant(case_name: str, priority: str, steps: tuple[str, ...], expected: tuple[str, ...]) -> dict[str, str]:
+    return {
+        "caseName": case_name,
+        "priority": priority,
+        "step": _numbered(*steps),
+        "expected": _numbered(*expected),
+    }
+
+
+def _gap_case_variants(kind: str, text: str, scene: str, feature_name: str) -> list[dict[str, str]]:
+    if kind == "规则缺口":
+        return _functional_gap_variants("规则「" + text + "」", scene, text)
+    if kind == "接口缺口":
+        method, path = _split_api(text)
+        return _api_gap_variants(method + " " + path, scene)
+    return _functional_gap_variants("「" + feature_name + "」", scene, feature_name)
+
+
+def _functional_gap_variants(subject: str, scene: str, detail: str) -> list[dict[str, str]]:
+    return [
+        _gap_variant(
+            "验证" + subject + "正常业务主流程可完成且结果正确",
+            "P1",
+            (
+                "进入场景「" + scene + "」，使用有权限账号打开" + subject + "入口",
+                "按业务主路径准备合法、完整的前置数据",
+                "执行该功能的核心操作并提交/保存",
+                "核对页面展示、状态流转与关键计算结果",
+            ),
+            (
+                "入口可见、可操作，页面加载完成",
+                "主流程可走完，无阻塞级报错",
+                "提交成功，核心数据与计算结果正确",
+                "状态与下游展示与「" + detail + "」业务含义一致",
+            ),
+        ),
+        _gap_variant(
+            "验证" + subject + "必填项为空时拦截并提示",
+            "P2",
+            (
+                "进入场景「" + scene + "」并打开" + subject,
+                "将必填项留空或删除已填内容",
+                "点击提交/保存",
+                "查看校验提示与按钮、表单状态",
+            ),
+            (
+                "必填项有明确标识",
+                "空值无法作为有效数据提交",
+                "提示指出具体必填字段，文案正确",
+                "原数据不落库、不更新",
+            ),
+        ),
+        _gap_variant(
+            "验证" + subject + "在边界值与长度限制下处理正确",
+            "P3",
+            (
+                "进入场景「" + scene + "」打开" + subject,
+                "分别录入最小值、最大值、超长文本及临界长度",
+                "提交并查看截断、拒绝或成功结果",
+                "核对列表/详情中的展示与存储",
+            ),
+            (
+                "合法边界值可提交且展示完整",
+                "超限被拦截或按约定截断",
+                "提示说明限制规则",
+                "不出现计算溢出或页面错乱",
+            ),
+        ),
+        _gap_variant(
+            "验证" + subject + "对异常输入和特殊字符拦截或容错",
+            "P2",
+            (
+                "进入场景「" + scene + "」打开" + subject,
+                "录入空格、脚本字符、表情、全角符号或类型不符的值",
+                "提交并观察前端校验与后端返回",
+                "刷新页面确认未写入脏数据",
+            ),
+            (
+                "非法值被拦截或按约定转义展示",
+                "无脚本执行、无后端 5xx",
+                "错误提示指向输入问题",
+                "有效业务数据保持不变",
+            ),
+        ),
+        _gap_variant(
+            "验证" + subject + "重复提交不产生重复有效数据",
+            "P2",
+            (
+                "进入场景「" + scene + "」完成一次合法提交",
+                "在结果返回前或成功后立即再次点击提交",
+                "查看是否生成第二条有效记录",
+                "核对提示、按钮置灰与数据条数",
+            ),
+            (
+                "首次提交成功或进入处理中",
+                "重复点击不新增重复有效数据",
+                "按钮处于加载/禁用或给出重复提示",
+                "列表与详情仅保留一条有效结果",
+            ),
+        ),
+        _gap_variant(
+            "验证无权限角色无法访问或操作" + subject,
+            "P2",
+            (
+                "使用无权限或只读角色登录",
+                "尝试进入场景「" + scene + "」并打开" + subject,
+                "尝试提交、编辑或删除",
+                "改用有权限角色对照同一入口",
+            ),
+            (
+                "无权限时入口隐藏、禁用或进入后提示无权限",
+                "无法提交成功，接口返回权限错误",
+                "不产生越权数据变更",
+                "有权限角色可正常进入并操作",
+            ),
+        ),
+        _gap_variant(
+            "验证" + subject + "数据联动与状态流转正确",
+            "P1",
+            (
+                "进入场景「" + scene + "」打开" + subject,
+                "变更会驱动联动的字段、选项或上游状态",
+                "观察关联字段、金额、按钮与下游状态是否同步",
+                "提交后在列表、详情或下一节点核对状态",
+            ),
+            (
+                "联动字段随源数据即时更新",
+                "空值/零值/无数据时展示约定占位或禁用",
+                "提交后状态与「" + detail + "」规则一致",
+                "无滞后脏数据或错误状态残留",
+            ),
+        ),
+        _gap_variant(
+            "验证" + subject + "失败时错误提示文案正确且可理解",
+            "P2",
+            (
+                "进入场景「" + scene + "」构造会失败的操作（缺参、规则不满足或依赖失败）",
+                "执行提交/保存",
+                "记录页面提示、字段红字与接口错误信息",
+                "关闭提示后再次查看表单是否可继续修改",
+            ),
+            (
+                "失败时给出明确中文提示，指向真实原因",
+                "文案无堆栈、无英文代码裸奔（除非约定错误码）",
+                "用户可据此修正后重试",
+                "失败不改变原有效数据",
+            ),
+        ),
+        _gap_variant(
+            "验证" + subject + "按钮状态、页面交互与跳转符合规则",
+            "P3",
+            (
+                "进入场景「" + scene + "」打开" + subject,
+                "在未填完、校验失败、提交中、成功后分别观察按钮与加载态",
+                "点击取消、返回、成功后的跳转链接或下一步",
+                "使用浏览器后退确认页面与数据一致",
+            ),
+            (
+                "不可用操作对应按钮禁用或不可点",
+                "提交中防止重复点击，完成后恢复或跳转",
+                "成功跳转到约定页面，失败停留并可改",
+                "返回后数据与列表状态不错乱",
+            ),
+        ),
+    ]
+
+
+def _api_gap_variants(signature: str, scene: str) -> list[dict[str, str]]:
+    return [
+        _gap_variant(
+            "验证" + signature + "合法请求走通主流程并返回成功",
+            "P1",
+            (
+                "在场景「" + scene + "」准备有权限账号与完整合法入参",
+                "调用" + signature + "一次",
+                "核对响应码、关键字段与落库/下游结果",
+                "在页面或查询接口确认主流程完成",
+            ),
+            (
+                "鉴权通过，请求可发出",
+                "返回约定成功码",
+                "关键字段完整且与请求一致",
+                "业务主流程完成，数据状态正确",
+            ),
+        ),
+        _gap_variant(
+            "验证" + signature + "必填参数为空时返回明确错误",
+            "P2",
+            (
+                "构造缺少必填字段或字段为 null/空字符串的请求",
+                "调用" + signature,
+                "记录 HTTP 状态、业务码与错误信息",
+                "查询确认未写入有效数据",
+            ),
+            (
+                "请求被拒绝，返回 4xx 或业务失败码",
+                "错误信息指出缺失字段",
+                "不创建、不更新有效业务数据",
+                "无 5xx",
+            ),
+        ),
+        _gap_variant(
+            "验证" + signature + "在边界值与长度限制下处理正确",
+            "P3",
+            (
+                "分别构造最小合法值、最大合法值、超长字段请求",
+                "调用" + signature,
+                "核对成功与拒绝两类响应",
+                "抽查存储长度与计算是否溢出",
+            ),
+            (
+                "合法边界返回成功",
+                "超限返回参数错误",
+                "存储与展示不超过约定长度",
+                "无计算溢出",
+            ),
+        ),
+        _gap_variant(
+            "验证" + signature + "异常类型与特殊字符被拒绝或安全转义",
+            "P2",
+            (
+                "构造类型错误、脚本字符串、特殊符号入参",
+                "调用" + signature,
+                "查看错误码与返回体是否回显未转义脚本",
+                "确认数据库无脏数据",
+            ),
+            (
+                "非法入参失败，不落有效库",
+                "返回体不执行、不回显可执行脚本",
+                "错误指向参数问题",
+                "无 5xx",
+            ),
+        ),
+        _gap_variant(
+            "验证" + signature + "重复调用不产生重复有效数据",
+            "P2",
+            (
+                "用同一业务单据连续调用" + signature + "两次",
+                "对比两次响应与数据条数",
+                "检查是否幂等或第二次被拒绝",
+                "核对列表仅一条有效结果（除非业务允许追加）",
+            ),
+            (
+                "首次成功",
+                "第二次幂等返回同一结果或明确拒绝重复",
+                "不产生重复有效单据",
+                "状态机不被重复推进两次",
+            ),
+        ),
+        _gap_variant(
+            "验证无权限调用" + signature + "被拒绝",
+            "P2",
+            (
+                "使用过期 token、空 token 或无权限角色调用" + signature,
+                "使用有权限账号对照调用一次",
+                "核对未授权请求是否落库",
+            ),
+            (
+                "无权限返回 401/403 或业务无权限码",
+                "不产生越权写入",
+                "有权限调用可成功",
+            ),
+        ),
+        _gap_variant(
+            "验证" + signature + "对 null/0/无数据的联动与状态处理正确",
+            "P1",
+            (
+                "构造关联对象不存在、字段为 null、数值为 0 或列表为空的请求",
+                "调用" + signature,
+                "核对返回结构、默认值与页面/下游状态",
+                "确认不会把空数据当成成功业务结果（除非约定）",
+            ),
+            (
+                "空数据按约定返回空列表、默认值或业务失败",
+                "不出现空指针式 5xx",
+                "状态与金额因子为 null/0 时容错符合规则",
+                "有数据时联动字段正确",
+            ),
+        ),
+        _gap_variant(
+            "验证" + signature + "失败时错误码与提示文案正确",
+            "P2",
+            (
+                "分别构造缺参、无权限、规则不满足三类失败请求",
+                "调用" + signature,
+                "对比错误码、message 是否可区分原因",
+            ),
+            (
+                "不同失败原因对应不同或可区分的错误信息",
+                "文案可读，能指导修正",
+                "失败不改变原有效数据",
+            ),
+        ),
+        _gap_variant(
+            "验证调用" + signature + "后前端按钮、加载与跳转状态正确",
+            "P3",
+            (
+                "从场景「" + scene + "」页面触发会调用" + signature + "的按钮",
+                "观察请求中、成功、失败时按钮与加载态",
+                "成功后确认跳转或列表刷新；失败后停留可改",
+            ),
+            (
+                "请求中按钮禁用或展示加载",
+                "成功跳转或刷新到正确状态",
+                "失败提示后可再次提交",
+                "无重复提交导致的重复单据",
+            ),
+        ),
+    ]
+
+
+def _split_api(text: str) -> tuple[str, str]:
+    matched = re.match(r"^(GET|POST|PUT|PATCH|DELETE)\s+(\S+)", (text or "").strip(), re.I)
+    if matched:
+        return matched.group(1).upper(), matched.group(2)
+    return "POST", (text or "").strip() or "/unknown"
+
+
+def _format_api(text: str) -> str:
+    method, path = _split_api(text)
+    if not path or path == "/unknown":
+        return ""
+    if path.startswith("/"):
+        return method + " " + path
+    return (text or "").strip()
+
+
+def _join_api_labels(labels: list[str]) -> str:
+    unique: list[str] = []
+    seen: set[str] = set()
+    for label in labels:
+        compact = (label or "").strip()
+        if not compact or compact in seen:
+            continue
+        seen.add(compact)
+        unique.append(compact)
+    return "; ".join(unique)
+
+
+def _split_api_labels(value: str | None) -> list[str]:
+    if not value:
+        return []
+    return [part.strip() for part in re.split(r"[;\n]+", str(value)) if part.strip()]
+
+
+def _match_apis(searchable: str, candidates: list[dict[str, Any]]) -> list[str]:
+    matched: list[str] = []
+    for candidate in candidates:
+        text = (candidate.get("text") or "").strip()
+        label = _format_api(text)
+        if not label:
+            continue
+        tokens = {_normalize(text), _normalize(label)}
+        method, path = _split_api(text)
+        if path.startswith("/"):
+            tokens.add(_normalize(path))
+            tokens.add(_normalize(path.replace("/", "")))
+        tokens = {token for token in tokens if len(token) >= 4}
+        if not any(token in searchable for token in tokens):
+            continue
+        matched.append(label)
+    return matched
+
+
+def _skip_gap_text(text: str) -> bool:
+    compact = (text or "").strip()
+    if len(compact) < 2:
+        return True
+    if _is_outline_label(compact):
+        return True
+    return compact in {"规则", "校验", "约束", "功能", "功能点", "能力", "接口", "API", "api", "场景", "节点"}
+
+
+def _looks_like_api(text: str) -> bool:
+    return bool(re.match(r"^(GET|POST|PUT|PATCH|DELETE)\b", (text or "").strip(), re.I) or (text or "").startswith("/"))
+
+
+def _api_feature_name(text: str) -> str:
+    return re.sub(r"/+", " ", text).strip() or "未命名接口"
+
+
+def _is_covered(text: str, corpus: list[str]) -> bool:
+    normalized = _normalize(text)
+    folded = normalized.replace("/", "")
+    if len(folded) < 2:
+        return True
+    for blob in corpus:
+        if not blob:
+            continue
+        blob_folded = blob.replace("/", "")
+        if folded in blob_folded or blob_folded in folded:
+            return True
+    return False
 
 
 def _draft_stats(cleaned_cases: list[dict[str, Any]], gaps: list[dict[str, Any]]) -> dict[str, int]:
@@ -613,7 +1247,8 @@ class ProduceService:
         if not text.strip():
             raise ValueError("请先上传或粘贴知识库内容")
         source_version = (knowledge.get("metadata") or {}).get("sha256") or sha256_bytes(text.encode("utf-8"))
-        extraction = extract_knowledge(text, source_version)
+        process_node = str(batch.get("processNode") or batch.get("process_node") or "").strip()
+        extraction = extract_knowledge(text, source_version, process_node)
         batch["keywordExtraction"] = extraction
         batch["keywordsConfirmed"] = False
         batch["mapDraftGenerated"] = False
@@ -642,7 +1277,8 @@ class ProduceService:
             "sha256": sha256_bytes(content),
             "rowCount": None, "sheetName": None, "sheetCount": None,
         }
-        extraction = extract_knowledge(combined, metadata["sha256"])
+        process_node = str(batch.get("processNode") or batch.get("process_node") or "").strip()
+        extraction = extract_knowledge(combined, metadata["sha256"], process_node)
         batch["knowledgeImport"] = {"metadata": metadata, "text": combined, "lineCount": combined.count("\n") + 1, "risks": []}
         batch["knowledgeImported"] = True
         batch["keywordExtraction"] = extraction
@@ -661,7 +1297,7 @@ class ProduceService:
             raise ValueError("标准模式需先完成历史用例和知识库导入")
         if batch.get("keywordExtraction") is None:
             raise ValueError("请先抽取知识库关键字")
-        if body and any(body.get(key) for key in ("scenes", "features", "rules", "nodes")):
+        if body and any(body.get(key) for key in ("scenes", "features", "rules", "nodes", "apis")):
             current = batch["keywordExtraction"]
             batch["keywordExtraction"] = {
                 **current,
@@ -669,6 +1305,7 @@ class ProduceService:
                 "features": _confirmed(body.get("features") or [], current.get("features") or []),
                 "rules": _confirmed(body.get("rules") or [], current.get("rules") or []),
                 "nodes": _confirmed(body.get("nodes") or [], current.get("nodes") or []),
+                "apis": _confirmed(body.get("apis") or [], current.get("apis") or []),
                 "mode": "confirmed",
             }
         batch["keywordsConfirmed"] = True
@@ -706,6 +1343,7 @@ class ProduceService:
             items = [item for item in items if needle in _normalize(" ".join([
                 str(item.get("caseName") or ""), str(item.get("scene") or ""),
                 str(item.get("feature") or ""), str(item.get("originalCaseId") or ""),
+                str(item.get("api") or ""),
             ]))]
         if pool == "A":
             items = [item for item in items if int(item.get("confidence") or 0) >= 85]
@@ -726,7 +1364,8 @@ class ProduceService:
         item = self._review(review_id)
         for field_name, key in (
             ("caseName", "caseName"), ("scene", "scene"), ("feature", "feature"),
-            ("step", "step"), ("expected", "expected"), ("priority", "priority"), ("flowNode", "flowNode"),
+            ("step", "step"), ("expected", "expected"), ("priority", "priority"),
+            ("flowNode", "flowNode"), ("api", "api"),
         ):
             if body.get(field_name) is not None:
                 item[key] = str(body[field_name]).strip()
@@ -824,9 +1463,9 @@ class ProduceService:
             value = item.get(field_name) or ""
             if "/" in value or "\n" in value or "\r" in value:
                 raise ValueError(label + "不能包含斜杠或换行")
-        if item.get("priority") not in {"P0", "P1", "P2"}:
-            raise ValueError("优先级仅支持 P0、P1、P2")
-        if item.get("kind") == "知识缺口":
+        if item.get("priority") not in {"P0", "P1", "P2", "P3", "P4"}:
+            raise ValueError("优先级仅支持 P0、P1、P2、P3、P4")
+        if item.get("kind") in {"知识缺口", "功能点缺口", "规则缺口", "接口缺口"}:
             if not (item.get("step") or "").strip():
                 raise ValueError("缺口用例步骤不能为空")
             if not (item.get("expected") or "").strip():
@@ -848,6 +1487,7 @@ class ProduceService:
                 "scene": cleaned.get("scene"),
                 "feature": cleaned.get("feature"),
                 "flowNode": cleaned.get("flowNode"),
+                "api": cleaned.get("api") or "",
                 "step": source_row.get("step") or "",
                 "expected": source_row.get("expected") or "",
                 "priority": "P0" if int(cleaned.get("confidence") or 0) >= 85 else "P1",
@@ -860,16 +1500,18 @@ class ProduceService:
         for gap in draft.get("gaps") or []:
             review_id = _review_id(batch["id"], "G", gap_index)
             gap_index += 1
-            item = _base_review(review_id, batch["id"], "知识缺口", current_time)
+            gap_kind = str(gap.get("kind") or "知识缺口")
+            item = _base_review(review_id, batch["id"], gap_kind, current_time)
             item.update({
                 "originalCaseId": gap.get("id"),
-                "caseName": "缺口用例：" + str(gap.get("feature") or ""),
+                "caseName": gap.get("caseName") or (gap_kind + "：" + str(gap.get("feature") or "")),
                 "scene": gap.get("scene"),
                 "feature": gap.get("feature"),
                 "flowNode": "",
-                "step": "",
-                "expected": "",
-                "priority": "P1",
+                "api": gap.get("api") or "",
+                "step": gap.get("step") or "",
+                "expected": gap.get("expected") or "",
+                "priority": gap.get("priority") or "P1",
                 "confidence": 60,
                 "matchEvidence": [gap.get("reason")],
             })
@@ -942,7 +1584,7 @@ def _to_official_asset(batch: dict[str, Any], item: dict[str, Any], published_at
         "featureKey": join(batch["domain"], batch["system"], item.get("scene") or "", item.get("feature") or ""),
         "status": "已确认",
         "lifecycle": "已发布",
-        "api": "",
+        "api": item.get("api") or "",
         "confidence": item.get("confidence"),
         "step": item.get("step"),
         "expected": item.get("expected"),
