@@ -85,6 +85,7 @@ def test_uncovered_rules_and_apis_become_gap_candidates(produce_service):
     assert all("1." in (item.get("step") or "") and "1." in (item.get("expected") or "") for item in draft["gaps"])
     profit_gaps = [item for item in feature_gaps if item["feature"] == "去利润价计算"]
     assert len(profit_gaps) == 9
+    assert all("POST /quote/submit" in (item.get("api") or "") for item in profit_gaps)
     assert {item["priority"] for item in profit_gaps} == {"P1", "P2", "P3"}
     assert any("主流程" in item["caseName"] for item in profit_gaps)
     assert any("必填" in item["caseName"] for item in profit_gaps)
@@ -142,6 +143,7 @@ def test_history_case_binds_api_only_when_text_hits_knowledge(produce_service):
         "用例编号,用例名称,步骤,预期结果,场景,功能点\n"
         "TC-001,提交报价,调用 POST /quote/submit,返回成功,金额计算与汇总,数量价汇总\n"
         "TC-002,数量价汇总,打开汇总页,金额正确,金额计算与汇总,数量价汇总\n"
+        "TC-003,其它功能,打开其它页,展示正确,金额计算与汇总,优惠计算\n"
     ).encode("utf-8")
     knowledge = (
         "场景：金额计算与汇总\n"
@@ -155,8 +157,9 @@ def test_history_case_binds_api_only_when_text_hits_knowledge(produce_service):
     produce_service.confirm_keywords(batch["id"], None)
     draft = produce_service.generate_draft(batch["id"])
     by_id = {item["originalCaseId"]: item for item in draft["cases"]}
-    assert by_id["TC-001"]["api"] == "POST /quote/submit"
-    assert by_id["TC-002"]["api"] == ""
+    assert "POST /quote/submit" in by_id["TC-001"]["api"]
+    assert "POST /quote/submit" in by_id["TC-002"]["api"]
+    assert by_id["TC-003"]["api"] == ""
     reviews = produce_service.query_reviews(batch["id"], None, None, None, None, None)
     first_review = next(item for item in reviews["items"] if item["originalCaseId"] == "TC-001")
     produce_service.update_review(first_review["id"], {"api": "POST /quote/submit; POST /quote/audit"})
@@ -194,10 +197,140 @@ def test_outline_headings_not_used_as_scene_or_feature(produce_service):
     draft = produce_service.generate_draft(batch["id"])
     feature_gaps = [item for item in draft["gaps"] if item["kind"] == "功能点缺口"]
     assert feature_gaps
-    assert all(item["scene"] == "造价审核" for item in feature_gaps)
+    assert all(item["scene"] == "金额计算与汇总" for item in feature_gaps)
     assert all(item["feature"] == "造价审核" for item in feature_gaps)
     assert all("二、功能点" not in item["caseName"] for item in feature_gaps)
     assert all("业务背景" not in (item["scene"] or "") for item in feature_gaps)
+
+
+def test_gap_scene_falls_back_to_history_not_process_node(produce_service):
+    batch = produce_service.create({
+        "domain": "家装",
+        "system": "报价",
+        "processNode": "金额计算",
+        "moduleName": "报价计算",
+    })
+    csv_content = (
+        "用例编号,用例名称,步骤,预期结果,场景,功能点\n"
+        "TC-001,无权限访问,打开规则,提示无权限,权限校验,状态枚举\n"
+    ).encode("utf-8")
+    knowledge = (
+        "功能点：审核拒绝回退\n"
+        "规则：无权限不可操作\n"
+        "接口：POST /check-status\n"
+    )
+    produce_service.import_cases(batch["id"], "cases.csv", csv_content)
+    produce_service.import_knowledge(batch["id"], "knowledge.md", knowledge.encode("utf-8"))
+    produce_service.extract_knowledge(batch["id"])
+    produce_service.confirm_keywords(batch["id"], None)
+    draft = produce_service.generate_draft(batch["id"])
+    assert draft["gaps"]
+    assert all(item["scene"] == "权限校验" for item in draft["gaps"])
+    assert all(item["scene"] != "金额计算" for item in draft["gaps"])
+    keywords = produce_service.get(batch["id"])["keywordExtraction"]
+    assert all(item["text"] != "金额计算" for item in keywords.get("scenes") or [])
+
+
+def test_feature_cases_bind_section_api(produce_service):
+    batch = produce_service.create({"domain": "家装", "system": "报价"})
+    csv_content = (
+        "用例编号,用例名称,步骤,预期结果,场景,功能点\n"
+        "TC-001,无权限访问,打开规则页,提示无权限,权限校验,状态枚举\n"
+    ).encode("utf-8")
+    knowledge = (
+        "场景：权限校验\n"
+        "功能点：状态枚举\n"
+        "接口：POST /check-status\n"
+        "功能点：审核拒绝回退\n"
+        "接口：POST /audit/reject\n"
+    )
+    produce_service.import_cases(batch["id"], "cases.csv", csv_content)
+    produce_service.import_knowledge(batch["id"], "knowledge.md", knowledge.encode("utf-8"))
+    produce_service.extract_knowledge(batch["id"])
+    produce_service.confirm_keywords(batch["id"], None)
+    draft = produce_service.generate_draft(batch["id"])
+    historical = draft["cases"][0]
+    assert historical["api"] == "POST /check-status"
+    reject_gaps = [item for item in draft["gaps"] if item["feature"] == "审核拒绝回退"]
+    assert reject_gaps
+    assert all(item["api"] == "POST /audit/reject" for item in reject_gaps)
+
+
+def test_markdown_table_knowledge_binds_feature_apis(produce_service):
+    batch = produce_service.create({"domain": "家装", "system": "报价"})
+    csv_content = (
+        "用例编号,用例名称,步骤,预期结果,场景,功能点\n"
+        "TC-001,接单成功,点击接单,状态变为已接单,造价单审核,接单\n"
+    ).encode("utf-8")
+    knowledge = """## 二、功能点
+| # | 功能点 | 实现位置 | 说明 |
+|---|---|---|---|
+| 4 | **接单**（认领） | `DesignCostServiceImpl#accept` | 把审核人置为当前用户 |
+| 5 | **转派** | `DesignCostServiceImpl#transform` | 批量改审核人 |
+| 6 | **催审** | `CostAuditRpcServiceImpl#urgentReview` | 写催审时间 |
+
+## 五、接口
+| 方法 | 路径 | 入参 |
+|---|---|---|
+| POST | `/costAudit/findList` | `CostAuditListReq` |
+| POST | `/costAudit/accept` | `CostAuditAcceptReq` |
+| POST | `/costAudit/transform` | `CostAuditTransformReq` |
+| POST | `/costAudit/urgentReview` | `UrgentReviewReq` |
+"""
+    produce_service.import_cases(batch["id"], "cases.csv", csv_content)
+    produce_service.import_knowledge(batch["id"], "knowledge.md", knowledge.encode("utf-8"))
+    produce_service.extract_knowledge(batch["id"])
+    keywords = produce_service.get(batch["id"])["keywordExtraction"]
+    api_texts = [item["text"] for item in keywords["apis"]]
+    assert "POST /costAudit/accept" in api_texts
+    accept = next(item for item in keywords["apis"] if "accept" in item["text"])
+    assert accept.get("relatedFeature") == "接单"
+    produce_service.confirm_keywords(batch["id"], {
+        "apis": [item["text"] for item in keywords["apis"]],
+        "features": [item["text"] for item in keywords["features"]],
+    })
+    draft = produce_service.generate_draft(batch["id"])
+    assert draft["cases"][0]["api"] == "POST /costAudit/accept"
+    transfer_gaps = [item for item in draft["gaps"] if item["feature"] == "转派" and item["kind"] == "功能点缺口"]
+    assert transfer_gaps
+    assert all("POST /costAudit/transform" in (item.get("api") or "") for item in transfer_gaps)
+    urgent_gaps = [item for item in draft["gaps"] if item["feature"] == "催审" and item["kind"] == "功能点缺口"]
+    assert urgent_gaps
+    assert all("POST /costAudit/urgentReview" in (item.get("api") or "") for item in urgent_gaps)
+
+
+def test_audit_history_cases_bind_check_design_cost(produce_service):
+    batch = produce_service.create({"domain": "家装", "system": "报价"})
+    csv_content = (
+        "用例编号,用例名称,步骤,预期结果,场景,功能点\n"
+        "TC-001,造价审核专员成功审核造价单,点击审核通过,审核通过,造价单审核,人工审核\n"
+        "TC-002,设计师成功提交造价审核,超级ZD设计师提交造价审核,提交成功,造价单审核,人工审核\n"
+        "TC-003,造价单自动审核通过,提交造价单,自动通过,造价单审核,自动审核通过\n"
+    ).encode("utf-8")
+    knowledge = (
+        "场景：造价单审核\n"
+        "功能点：审核通过/驳回\n"
+        "功能点：自动审核通过\n"
+        "CostAuditApi /checkDesignCost\n"
+        "提交(submitDesignCost)\n"
+        "whetherAutoSubmit\n"
+        "接口：POST /costAudit/findList\n"
+    )
+    produce_service.import_cases(batch["id"], "cases.csv", csv_content)
+    produce_service.import_knowledge(batch["id"], "knowledge.md", knowledge.encode("utf-8"))
+    produce_service.extract_knowledge(batch["id"])
+    produce_service.confirm_keywords(batch["id"], None)
+    keywords = produce_service.get(batch["id"])["keywordExtraction"]
+    api_texts = [item["text"] for item in keywords["apis"]]
+    assert any("checkDesignCost" in text for text in api_texts)
+    draft = produce_service.generate_draft(batch["id"])
+    by_id = {item["originalCaseId"]: item for item in draft["cases"]}
+    assert "checkDesignCost" in (by_id["TC-001"]["api"] or "")
+    assert "submitDesignCost" in (by_id["TC-002"]["api"] or "")
+    assert "whetherAutoSubmit" in (by_id["TC-003"]["api"] or "") or "autoSubmit" in (by_id["TC-003"]["api"] or "")
+    pass_gaps = [item for item in draft["gaps"] if item["feature"] == "审核通过/驳回"]
+    assert pass_gaps
+    assert all("checkDesignCost" in (item.get("api") or "") for item in pass_gaps)
 
 
 def test_pasted_knowledge_extends_uploaded_file(produce_service):
@@ -398,3 +531,45 @@ def test_publish_copies_module_name_without_changing_feature_key(produce_service
     official = case_store.items[published["caseIds"][0]]
     assert official["moduleName"] == "报价计算"
     assert official["featureKey"] == "家装/报价/金额计算与汇总/数量价汇总"
+
+
+def _draft_cleaned_case(produce_service, csv_line: str, knowledge: str) -> dict:
+    batch = produce_service.create({"domain": "家装", "system": "报价"})
+    csv_content = (
+        "用例编号,用例名称,步骤,预期结果,场景,功能点\n" + csv_line
+    ).encode("utf-8")
+    produce_service.import_cases(batch["id"], "cases.csv", csv_content)
+    produce_service.import_knowledge_text(batch["id"], "粘贴", knowledge)
+    produce_service.extract_knowledge(batch["id"])
+    produce_service.confirm_keywords(batch["id"], None)
+    return produce_service.generate_draft(batch["id"])["cases"][0]
+
+
+def test_unrecognized_scene_falls_back_to_history_scene(produce_service):
+    cleaned = _draft_cleaned_case(
+        produce_service,
+        "TC-001,无权限访问,尝试打开规则,提示无权限,--,DesignCheckStatusEnum\n",
+        "规则：无权限不可操作\n接口：POST /check-status\n",
+    )
+    assert cleaned["scene"] == "未识别场景"
+    assert cleaned["feature"] == "DesignCheckStatusEnum"
+    assert all("历史用例场景兜底" not in item for item in cleaned["matchEvidence"])
+
+    cleaned = _draft_cleaned_case(
+        produce_service,
+        "TC-002,无权限访问,尝试打开规则,提示无权限,权限校验,DesignCheckStatusEnum\n",
+        "规则：无权限不可操作\n接口：POST /check-status\n",
+    )
+    assert cleaned["scene"] == "权限校验"
+    assert "知识未命中场景，已用历史用例场景兜底" in cleaned["matchEvidence"]
+
+
+def test_knowledge_scene_wins_over_history_placeholder(produce_service):
+    cleaned = _draft_cleaned_case(
+        produce_service,
+        "TC-001,打开金额计算与汇总,提交报价,金额正确,--,数量价汇总\n",
+        "场景：金额计算与汇总\n功能点：数量价汇总\n",
+    )
+    assert cleaned["scene"] == "金额计算与汇总"
+    assert "命中知识场景：金额计算与汇总" in cleaned["matchEvidence"]
+    assert "历史用例场景兜底" not in " ".join(cleaned["matchEvidence"])
