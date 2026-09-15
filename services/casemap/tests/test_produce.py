@@ -333,6 +333,33 @@ def test_audit_history_cases_bind_check_design_cost(produce_service):
     assert all("checkDesignCost" in (item.get("api") or "") for item in pass_gaps)
 
 
+def test_knowledge_api_table_with_feature_column(produce_service):
+    batch = produce_service.create({"domain": "美家", "system": "z-homes"})
+    csv_content = (
+        "用例编号,用例名称,步骤,预期结果,场景,功能点\n"
+        "TC-001,提交合同,点击提交,提交成功,签约提交,签约提交\n"
+        "TC-002,撤回合同,点击撤回,撤回成功,签约提交,签约撤回\n"
+    ).encode("utf-8")
+    knowledge = """## 接口
+| 功能点 | 方法 | 路径 |
+|---|---|---|
+| 签约提交 | POST | `/contract/submit` |
+| 签约撤回 | POST | `/contract/revoke` |
+"""
+    produce_service.import_cases(batch["id"], "cases.csv", csv_content)
+    produce_service.import_knowledge(batch["id"], "knowledge.md", knowledge.encode("utf-8"))
+    produce_service.extract_knowledge(batch["id"])
+    produce_service.confirm_keywords(batch["id"], None)
+    keywords = produce_service.get(batch["id"])["keywordExtraction"]
+    by_text = {item["text"]: item.get("relatedFeature") for item in keywords["apis"]}
+    assert by_text.get("POST /contract/submit") == "签约提交"
+    assert by_text.get("POST /contract/revoke") == "签约撤回"
+    draft = produce_service.generate_draft(batch["id"])
+    by_id = {item["originalCaseId"]: item for item in draft["cases"]}
+    assert by_id["TC-001"]["api"] == "POST /contract/submit"
+    assert by_id["TC-002"]["api"] == "POST /contract/revoke"
+
+
 def test_pasted_knowledge_extends_uploaded_file(produce_service):
     batch = produce_service.create({"domain": "家装", "system": "报价"})
     produce_service.import_knowledge(batch["id"], "uploaded.md", "# 功能点\n- 自动审核判定\n".encode("utf-8"))

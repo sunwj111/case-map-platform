@@ -72,6 +72,8 @@ python3 -m pytest
 
 报价样例对拍夹具在 `tests/fixtures/quote_replay/`：带场景/功能点的 8 条应自动挂载，无标签的 3 条靠知识命中功能点但仍需人工确认场景。平台三个字段入参不得改变这组挂载结果。
 
+清洗知识库如何写接口才能挂到功能用例，见仓库根目录 [`docs/knowledge_api_spec.md`](../../docs/knowledge_api_spec.md)。
+
 不存在于层级、且没有正式用例、也没有直接 API 映射命中的功能点返回 **404**。层级缺失但有正式用例或 API 映射时返回 `meta.synthetic=true` 的合成地图。
 
 ## 运行时数据

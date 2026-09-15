@@ -507,9 +507,18 @@ def _is_knowledge_table_header(cells: list[str]) -> bool:
     labels = {re.sub(r"\s+", "", cell) for cell in cells}
     header_marks = {
         "#", "方法", "路径", "入参", "出参", "场景", "说明", "代码证据",
-        "功能点", "实现位置", "规则", "值", "字段", "含义",
+        "功能点", "实现位置", "规则", "值", "字段", "含义", "接口",
     }
     return len(labels & header_marks) >= 2
+
+
+def _table_column_index(headers: list[str], *names: str) -> int:
+    normalized = [_normalize_header(item) for item in headers]
+    wanted = {_normalize_header(name) for name in names}
+    for index, label in enumerate(normalized):
+        if label in wanted:
+            return index
+    return -1
 
 
 def _api_label_from_cells(cells: list[str]) -> str:
@@ -546,13 +555,35 @@ def _ingest_knowledge_table_row(
     features: dict[str, dict[str, Any]],
     rules: dict[str, dict[str, Any]],
     apis: dict[str, dict[str, Any]],
+    table_headers: list[str] | None = None,
 ) -> str:
     if _is_knowledge_table_header(cells):
         return current_feature
     api_label = _api_label_from_cells(cells)
     if api_label:
-        _add_candidate(apis, api_label, "表格·接口", 88, related_scene=current_scene)
-        return current_feature
+        feature_from_row = ""
+        feature_index = _table_column_index(table_headers or [], "功能点", "功能", "feature")
+        if feature_index >= 0 and feature_index < len(cells):
+            feature_from_row = _table_feature_name(cells[feature_index])
+            if _is_outline_label(feature_from_row) or _looks_like_api(feature_from_row):
+                feature_from_row = ""
+        if feature_from_row:
+            _add_candidate(
+                features,
+                feature_from_row,
+                "表格·功能点",
+                80,
+                related_scene=current_scene,
+            )
+        _add_candidate(
+            apis,
+            api_label,
+            "表格·接口",
+            88,
+            related_scene=current_scene,
+            related_feature=feature_from_row,
+        )
+        return feature_from_row or current_feature
     if current_section == "features":
         if cells and re.fullmatch(r"\d+", cells[0]) and len(cells) >= 2:
             feature_name = _table_feature_name(cells[1])
@@ -669,6 +700,7 @@ def extract_knowledge(text: str, source_version: str, process_node: str = "") ->
     current_scene = ""
     current_feature = ""
     current_section = ""
+    table_headers: list[str] = []
     for line in source_text.splitlines():
         stripped = line.strip()
         heading = re.match(r"^(#{1,3})\s*(.+?)\s*$", stripped)
@@ -683,6 +715,7 @@ def extract_knowledge(text: str, source_version: str, process_node: str = "") ->
             title = outline_line.group(1).strip()
         if title:
             has_sections = True
+            table_headers = []
             if "场景" in title:
                 current_section = "scenes"
                 scene_name = _business_label(title)
@@ -714,6 +747,7 @@ def extract_knowledge(text: str, source_version: str, process_node: str = "") ->
             continue
         lead_scene = re.match(r"^(?:业务)?场景[:：]\s*(.+)$", stripped)
         if lead_scene:
+            table_headers = []
             scene_name = _business_label(lead_scene.group(1))
             if scene_name:
                 current_scene = scene_name
@@ -723,6 +757,7 @@ def extract_knowledge(text: str, source_version: str, process_node: str = "") ->
             continue
         lead_feature = re.match(r"^(?:功能点|功能|能力|模块)[:：]\s*(.+)$", stripped)
         if lead_feature:
+            table_headers = []
             feature_name = _business_label(lead_feature.group(1)) or _compact(lead_feature.group(1))
             if feature_name and not _is_outline_label(feature_name):
                 current_section = "features"
@@ -731,33 +766,44 @@ def extract_knowledge(text: str, source_version: str, process_node: str = "") ->
             continue
         lead_rule = re.match(r"^(?:规则|约束|校验)[:：]\s*(.+)$", stripped)
         if lead_rule:
+            table_headers = []
             current_section = "rules"
             _add_candidate(rules, lead_rule.group(1), "行首·规则", 80, related_scene=current_scene)
             continue
         lead_node = re.match(r"^(?:流程节点|节点)[:：]\s*(.+)$", stripped)
         if lead_node:
+            table_headers = []
             current_section = "nodes"
             _add_candidate(nodes, lead_node.group(1), "行首·节点", 80, related_scene=current_scene)
             continue
         lead_api = re.match(r"^(?:接口|API)[:：]\s*(.+)$", stripped, re.I)
         if lead_api:
+            table_headers = []
             current_section = "apis"
             api_label = _api_label_from_text(lead_api.group(1)) or lead_api.group(1)
             _add_candidate(apis, api_label, "行首·接口", 85, related_scene=current_scene, related_feature=current_feature)
             continue
         cells = _markdown_table_cells(stripped)
-        if cells and current_section:
-            current_feature = _ingest_knowledge_table_row(
-                cells,
-                current_section=current_section,
-                current_scene=current_scene,
-                current_feature=current_feature,
-                scenes=scenes,
-                features=features,
-                rules=rules,
-                apis=apis,
-            )
-            continue
+        if cells:
+            if _is_knowledge_table_header(cells):
+                table_headers = cells
+                if _table_column_index(table_headers, "路径", "接口", "方法") >= 0:
+                    current_section = current_section or "apis"
+                continue
+            if current_section or _api_label_from_cells(cells):
+                current_section = current_section or "apis"
+                current_feature = _ingest_knowledge_table_row(
+                    cells,
+                    current_section=current_section,
+                    current_scene=current_scene,
+                    current_feature=current_feature,
+                    scenes=scenes,
+                    features=features,
+                    rules=rules,
+                    apis=apis,
+                    table_headers=table_headers,
+                )
+                continue
         list_item = re.match(r"^[-*•、]\s*(.+)$", stripped)
         if list_item and current_section:
             item_text = _business_label(list_item.group(1)) or _compact(list_item.group(1))
@@ -899,8 +945,16 @@ def _clean_case(row: dict[str, Any], keywords: dict[str, Any]) -> dict[str, Any]
     historical_feature = _usable_label(row.get("feature"))
     identified_scene = _usable_label(matched_scene["text"] if matched_scene else "")
     identified_feature = _usable_label(matched_feature["text"] if matched_feature else "")
+    knowledge_feature_names = {
+        _usable_label(item.get("text"))
+        for item in (keywords.get("features") or [])
+        if _usable_label(item.get("text"))
+    }
+    if historical_feature in knowledge_feature_names:
+        feature = historical_feature
+    else:
+        feature = identified_feature or historical_feature or "未识别功能点"
     scene = identified_scene or historical_scene or "未识别场景"
-    feature = identified_feature or historical_feature or "未识别功能点"
     matched_apis = _bind_knowledge_apis(
         scene=scene,
         feature=feature,
