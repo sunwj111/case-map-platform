@@ -61,6 +61,39 @@ def _compact(value: Any) -> str:
     return re.sub(r"\s+", " ", "" if value is None else str(value)).strip()
 
 
+_PLACEHOLDER_LABELS = {
+    "",
+    "-",
+    "--",
+    "---",
+    "—",
+    "–",
+    "/",
+    "无",
+    "空",
+    "无场景",
+    "暂无",
+    "未识别场景",
+    "待确认场景",
+    "未识别功能点",
+    "null",
+    "none",
+    "n/a",
+    "na",
+}
+
+
+def _usable_label(value: Any) -> str:
+    text = _compact(value)
+    if not text:
+        return ""
+    if text in _PLACEHOLDER_LABELS or text.lower() in _PLACEHOLDER_LABELS:
+        return ""
+    if set(text) <= {"-", "—", "–", "_", ".", "/", "\\"}:
+        return ""
+    return text
+
+
 _OUTLINE_PREFIX = re.compile(r"^[（(]*[一二三四五六七八九十百零〇0-9]+[、.．)）]\s*")
 _GENERIC_SECTION_LABELS = {
     "功能点", "功能", "能力", "场景", "业务场景", "业务背景", "背景", "概述", "简介",
@@ -386,6 +419,274 @@ def _parse_knowledge_workbook(file_name: str, content: bytes, suffix: str) -> di
     }
 
 
+_HTTP_METHODS = {"GET", "POST", "PUT", "PATCH", "DELETE"}
+_API_FEATURE_HINTS = (
+    ("findlist", ("列表查询", "列表", "页面测试")),
+    ("count", ("统计", "角标")),
+    ("enums", ("枚举",)),
+    ("accept", ("接单", "认领")),
+    ("transform", ("转派",)),
+    ("urgentreview", ("催审",)),
+    ("checkdesigncost", ("审核通过", "审核驳回", "驳回", "人工审核", "复审")),
+    ("passdetail", ("明细",)),
+    ("autodispatch", ("分派", "派单")),
+    ("autosubmit", ("自动审核", "自动通过")),
+    ("auditinfo", ("审核信息",)),
+    ("wechat", ("企微",)),
+    ("evaluate", ("评价",)),
+    ("submitdesigncost", ("提交造价", "提交审核", "设计师提交")),
+)
+_API_CLASS_PREFIX = {
+    "CostAuditApi": "/costAudit",
+    "DesignCostApi": "/designCost",
+    "TaskApi": "",
+    "QuotationApi": "/quotation",
+}
+_IMPL_METHOD_PATHS = {
+    "submitDesignCost": "/submitDesignCost",
+    "autoSubmitDesignCost": "/autoSubmitDesignCost",
+    "checkDesignCost": "/checkDesignCost",
+    "passDetail": "/passDetail",
+    "whetherAutoSubmit": "/whetherAutoSubmit",
+}
+
+
+def _strip_md_emphasis(text: str) -> str:
+    return re.sub(r"[*_`]+", "", text or "").strip()
+
+
+_JAVA_TYPE_SEGMENTS = {
+    "date", "decimal", "string", "integer", "boolean", "long", "int", "map", "list", "object",
+}
+
+
+def _usable_api_path(path: str) -> bool:
+    compact = (path or "").strip()
+    if not compact.startswith("/") or len(compact) < 2:
+        return False
+    if compact in {"/", "/api", "/v1", "/v2"}:
+        return False
+    parts = [part for part in compact.strip("/").split("/") if part]
+    if len(parts) >= 2 and all(len(part) <= 3 for part in parts):
+        return False
+    if parts and all(part.lower() in _JAVA_TYPE_SEGMENTS for part in parts):
+        return False
+    return True
+
+
+def _api_label_from_text(text: str) -> str:
+    compact = _compact(text).strip("`")
+    if not compact:
+        return ""
+    matched = re.search(
+        r"(GET|POST|PUT|PATCH|DELETE)\s*(?:[|｜,，]\s*)?`?(/[A-Za-z0-9_\-./{}]+)`?",
+        compact,
+        re.I,
+    )
+    if not matched:
+        return ""
+    path = matched.group(2).split("?")[0].rstrip(".,;")
+    if not _usable_api_path(path):
+        return ""
+    return matched.group(1).upper() + " " + path
+
+
+def _markdown_table_cells(line: str) -> list[str]:
+    stripped = (line or "").strip()
+    if not stripped.startswith("|"):
+        return []
+    cells = [_compact(cell).strip("`") for cell in stripped.strip("|").split("|")]
+    if not any(cells):
+        return []
+    if all(re.fullmatch(r":?-{2,}:?", cell or "") for cell in cells):
+        return []
+    return cells
+
+
+def _is_knowledge_table_header(cells: list[str]) -> bool:
+    labels = {re.sub(r"\s+", "", cell) for cell in cells}
+    header_marks = {
+        "#", "方法", "路径", "入参", "出参", "场景", "说明", "代码证据",
+        "功能点", "实现位置", "规则", "值", "字段", "含义", "接口",
+    }
+    return len(labels & header_marks) >= 2
+
+
+def _table_column_index(headers: list[str], *names: str) -> int:
+    normalized = [_normalize_header(item) for item in headers]
+    wanted = {_normalize_header(name) for name in names}
+    for index, label in enumerate(normalized):
+        if label in wanted:
+            return index
+    return -1
+
+
+def _api_label_from_cells(cells: list[str]) -> str:
+    method = ""
+    path = ""
+    for cell in cells:
+        if cell.upper() in _HTTP_METHODS:
+            method = cell.upper()
+            continue
+        found = re.search(r"/[A-Za-z][A-Za-z0-9_\-./{}]*", cell)
+        if not found:
+            continue
+        candidate = found.group(0).split("?")[0].rstrip(".,;")
+        if _usable_api_path(candidate) and (candidate.count("/") >= 2 or method):
+            path = candidate
+    if path:
+        return (method or "POST") + " " + path
+    return _api_label_from_text(" ".join(cells))
+
+
+def _table_feature_name(raw: str) -> str:
+    cleaned = _strip_md_emphasis(raw)
+    primary = re.sub(r"[（(][^）)]+[）)]", "", cleaned).strip() or cleaned
+    return _compact(primary)
+
+
+def _ingest_knowledge_table_row(
+    cells: list[str],
+    *,
+    current_section: str,
+    current_scene: str,
+    current_feature: str,
+    scenes: dict[str, dict[str, Any]],
+    features: dict[str, dict[str, Any]],
+    rules: dict[str, dict[str, Any]],
+    apis: dict[str, dict[str, Any]],
+    table_headers: list[str] | None = None,
+) -> str:
+    if _is_knowledge_table_header(cells):
+        return current_feature
+    api_label = _api_label_from_cells(cells)
+    if api_label:
+        feature_from_row = ""
+        feature_index = _table_column_index(table_headers or [], "功能点", "功能", "feature")
+        if feature_index >= 0 and feature_index < len(cells):
+            feature_from_row = _table_feature_name(cells[feature_index])
+            if _is_outline_label(feature_from_row) or _looks_like_api(feature_from_row):
+                feature_from_row = ""
+        if feature_from_row:
+            _add_candidate(
+                features,
+                feature_from_row,
+                "表格·功能点",
+                80,
+                related_scene=current_scene,
+            )
+        _add_candidate(
+            apis,
+            api_label,
+            "表格·接口",
+            88,
+            related_scene=current_scene,
+            related_feature=feature_from_row,
+        )
+        return feature_from_row or current_feature
+    if current_section == "features":
+        if cells and re.fullmatch(r"\d+", cells[0]) and len(cells) >= 2:
+            feature_name = _table_feature_name(cells[1])
+            impl_hint = " ".join(cells[2:])
+        else:
+            feature_name = _table_feature_name(cells[0] if cells else "")
+            impl_hint = " ".join(cells[1:])
+        if feature_name and not _is_outline_label(feature_name):
+            _add_candidate(
+                features,
+                feature_name,
+                "表格·功能点",
+                88,
+                related_scene=current_scene,
+                impl_hint=impl_hint,
+            )
+            return feature_name
+        return current_feature
+    if current_section == "scenes" and cells:
+        scene_name = _table_feature_name(cells[0])
+        if scene_name and not _is_outline_label(scene_name):
+            _add_candidate(scenes, scene_name, "表格·场景", 85)
+        return current_feature
+    if current_section == "rules" and cells:
+        rule_name = _compact(cells[0])
+        if rule_name and not _is_outline_label(rule_name) and len(rule_name) >= 4:
+            _add_candidate(rules, rule_name, "表格·规则", 75, related_scene=current_scene)
+    return current_feature
+
+
+def _collect_impl_apis(source_text: str, apis: dict[str, dict[str, Any]]) -> None:
+    for match in re.finditer(
+        r"(CostAuditApi|DesignCostApi|TaskApi|QuotationApi)\s*[/#]([A-Za-z][A-Za-z0-9]+)",
+        source_text or "",
+    ):
+        prefix = _API_CLASS_PREFIX.get(match.group(1), "")
+        method_name = match.group(2)
+        path = f"{prefix}/{method_name}" if prefix else f"/{method_name}"
+        if _usable_api_path(path):
+            _add_candidate(apis, "POST " + path, "实现·接口", 82)
+    for method_name, path in _IMPL_METHOD_PATHS.items():
+        if re.search(r"\b" + method_name + r"\b", source_text or ""):
+            _add_candidate(apis, "POST " + path, "方法·接口", 78)
+
+
+def _keep_real_apis(apis: dict[str, dict[str, Any]]) -> None:
+    real: dict[str, dict[str, Any]] = {}
+    for item in apis.values():
+        label = _format_api(item.get("text") or "")
+        if not label:
+            continue
+        payload = {**item, "text": label}
+        current = real.get(label)
+        if current is None:
+            real[label] = payload
+            continue
+        if payload.get("relatedFeature") and not current.get("relatedFeature"):
+            current["relatedFeature"] = payload["relatedFeature"]
+        if payload.get("relatedScene") and not current.get("relatedScene"):
+            current["relatedScene"] = payload["relatedScene"]
+    apis.clear()
+    apis.update(real)
+
+
+def _link_apis_to_features(
+    features: dict[str, dict[str, Any]],
+    apis: dict[str, dict[str, Any]],
+) -> None:
+    feature_items = [item for item in features.values() if _usable_label(item.get("text") or "")]
+    if not feature_items:
+        return
+    for api in apis.values():
+        if _usable_label(api.get("relatedFeature") or ""):
+            continue
+        _method, path = _split_api(api.get("text") or "")
+        last_key = re.sub(r"[^a-z0-9]", "", (path.split("?")[0].rstrip("/").split("/")[-1] if path else "").lower())
+        path_key = re.sub(r"[^a-z0-9]", "", path.lower())
+        best_text = ""
+        best_score = 0
+        best_scene = ""
+        for feature in feature_items:
+            text = feature.get("text") or ""
+            impl = (feature.get("implHint") or "").replace("#", " ").replace("/", " ")
+            blob = (text + " " + impl).lower()
+            blob_compact = re.sub(r"[^a-z0-9\u4e00-\u9fff]", "", blob)
+            score = 0
+            if last_key and len(last_key) >= 5 and last_key in blob_compact:
+                score += 24
+            for english, chinese_hints in _API_FEATURE_HINTS:
+                if english not in path_key:
+                    continue
+                if any(hint in text for hint in chinese_hints):
+                    score += 12
+            if score > best_score:
+                best_score = score
+                best_text = text
+                best_scene = _usable_label(feature.get("relatedScene") or "")
+        if best_text and best_score >= 12:
+            api["relatedFeature"] = best_text
+            if best_scene:
+                api["relatedScene"] = best_scene
+
+
 def extract_knowledge(text: str, source_version: str, process_node: str = "") -> dict[str, Any]:
     source_text = (text or "").strip()
     if not source_text:
@@ -397,7 +698,9 @@ def extract_knowledge(text: str, source_version: str, process_node: str = "") ->
     apis: dict[str, dict[str, Any]] = {}
     has_sections = False
     current_scene = ""
+    current_feature = ""
     current_section = ""
+    table_headers: list[str] = []
     for line in source_text.splitlines():
         stripped = line.strip()
         heading = re.match(r"^(#{1,3})\s*(.+?)\s*$", stripped)
@@ -412,16 +715,19 @@ def extract_knowledge(text: str, source_version: str, process_node: str = "") ->
             title = outline_line.group(1).strip()
         if title:
             has_sections = True
+            table_headers = []
             if "场景" in title:
                 current_section = "scenes"
                 scene_name = _business_label(title)
                 if scene_name:
                     current_scene = scene_name
+                    current_feature = ""
                     _add_candidate(scenes, scene_name, "章节标题·场景", 80)
             elif "功能" in title or "能力" in title:
                 current_section = "features"
                 feature_name = _business_label(title)
                 if feature_name:
+                    current_feature = feature_name
                     _add_candidate(features, feature_name, "章节标题·功能点", 80, related_scene=current_scene)
             elif "规则" in title or "校验" in title:
                 current_section = "rules"
@@ -436,39 +742,68 @@ def extract_knowledge(text: str, source_version: str, process_node: str = "") ->
             elif "接口" in title or title.upper() == "API":
                 current_section = "apis"
                 api_name = _business_label(title)
-                if api_name and not _is_outline_label(api_name):
-                    _add_candidate(apis, api_name, "章节标题·接口", 75, related_scene=current_scene)
+                if api_name and not _is_outline_label(api_name) and _looks_like_api(api_name):
+                    _add_candidate(apis, api_name, "章节标题·接口", 75, related_scene=current_scene, related_feature=current_feature)
             continue
         lead_scene = re.match(r"^(?:业务)?场景[:：]\s*(.+)$", stripped)
         if lead_scene:
+            table_headers = []
             scene_name = _business_label(lead_scene.group(1))
             if scene_name:
                 current_scene = scene_name
+                current_feature = ""
                 current_section = "scenes"
                 _add_candidate(scenes, scene_name, "行首·场景", 85)
             continue
         lead_feature = re.match(r"^(?:功能点|功能|能力|模块)[:：]\s*(.+)$", stripped)
         if lead_feature:
+            table_headers = []
             feature_name = _business_label(lead_feature.group(1)) or _compact(lead_feature.group(1))
             if feature_name and not _is_outline_label(feature_name):
                 current_section = "features"
+                current_feature = feature_name
                 _add_candidate(features, feature_name, "行首·功能点", 85, related_scene=current_scene)
             continue
         lead_rule = re.match(r"^(?:规则|约束|校验)[:：]\s*(.+)$", stripped)
         if lead_rule:
+            table_headers = []
             current_section = "rules"
             _add_candidate(rules, lead_rule.group(1), "行首·规则", 80, related_scene=current_scene)
             continue
         lead_node = re.match(r"^(?:流程节点|节点)[:：]\s*(.+)$", stripped)
         if lead_node:
+            table_headers = []
             current_section = "nodes"
             _add_candidate(nodes, lead_node.group(1), "行首·节点", 80, related_scene=current_scene)
             continue
         lead_api = re.match(r"^(?:接口|API)[:：]\s*(.+)$", stripped, re.I)
         if lead_api:
+            table_headers = []
             current_section = "apis"
-            _add_candidate(apis, lead_api.group(1), "行首·接口", 85, related_scene=current_scene)
+            api_label = _api_label_from_text(lead_api.group(1)) or lead_api.group(1)
+            _add_candidate(apis, api_label, "行首·接口", 85, related_scene=current_scene, related_feature=current_feature)
             continue
+        cells = _markdown_table_cells(stripped)
+        if cells:
+            if _is_knowledge_table_header(cells):
+                table_headers = cells
+                if _table_column_index(table_headers, "路径", "接口", "方法") >= 0:
+                    current_section = current_section or "apis"
+                continue
+            if current_section or _api_label_from_cells(cells):
+                current_section = current_section or "apis"
+                current_feature = _ingest_knowledge_table_row(
+                    cells,
+                    current_section=current_section,
+                    current_scene=current_scene,
+                    current_feature=current_feature,
+                    scenes=scenes,
+                    features=features,
+                    rules=rules,
+                    apis=apis,
+                    table_headers=table_headers,
+                )
+                continue
         list_item = re.match(r"^[-*•、]\s*(.+)$", stripped)
         if list_item and current_section:
             item_text = _business_label(list_item.group(1)) or _compact(list_item.group(1))
@@ -480,20 +815,35 @@ def extract_knowledge(text: str, source_version: str, process_node: str = "") ->
                     "nodes": nodes,
                     "apis": apis,
                 }
-                _add_candidate(bags[current_section], item_text, "列表·" + current_section, 80, related_scene=current_scene)
+                _add_candidate(
+                    bags[current_section],
+                    item_text,
+                    "列表·" + current_section,
+                    80,
+                    related_scene=current_scene,
+                    related_feature=current_feature if current_section == "apis" else "",
+                )
+                if current_section == "features":
+                    current_feature = item_text
             continue
     for match in re.finditer(r"(?:支持|提供|完成|实现|负责|用于)\s*([\u4e00-\u9fa5A-Za-z0-9]{2,16})", source_text):
         _add_candidate(features, match.group(1), "短文本·功能点", 65)
     for match in re.finditer(r"([\u4e00-\u9fa5A-Za-z0-9]{2,20}(?:必须|不可|不能|应当|禁止)[^\n。；;]{0,20})", source_text):
         _add_candidate(rules, match.group(1), "短文本·规则", 70)
-    for match in re.finditer(r"\b(GET|POST|PUT|PATCH|DELETE)\s+(\/[A-Za-z0-9_\-./{}]+)", source_text, re.I):
-        _add_candidate(apis, match.group(1).upper() + " " + match.group(2), "短文本·接口", 80)
+    for match in re.finditer(
+        r"(GET|POST|PUT|PATCH|DELETE)\s*(?:[|｜]\s*)?`?(\/[A-Za-z0-9_\-./{}]+)`?",
+        source_text,
+        re.I,
+    ):
+        path = match.group(2).split("?")[0].rstrip(".,;")
+        if _usable_api_path(path):
+            _add_candidate(apis, match.group(1).upper() + " " + path, "短文本·接口", 80)
+    _collect_impl_apis(source_text, apis)
+    _keep_real_apis(apis)
+    _link_apis_to_features(features, apis)
     node = (process_node or "").strip()
     if node:
-        if not scenes:
-            _add_candidate(scenes, node, "流程节点·场景", 70)
-        if not features:
-            _add_candidate(features, node, "流程节点·功能点", 70)
+        _add_candidate(nodes, node, "任务·流程节点", 70)
     if not scenes and not features and not rules and not nodes and not apis:
         cleaned = _clean_item(source_text)
         if cleaned:
@@ -505,7 +855,7 @@ def extract_knowledge(text: str, source_version: str, process_node: str = "") ->
         "features": list(features.values())[:30],
         "rules": list(rules.values())[:24],
         "nodes": list(nodes.values())[:24],
-        "apis": list(apis.values())[:30],
+        "apis": list(apis.values())[:40],
         "mode": "structured+nl" if has_sections else "nl",
         "sourceVersion": source_version,
     }
@@ -524,6 +874,8 @@ def _add_candidate(
     source: str,
     confidence: int,
     related_scene: str = "",
+    related_feature: str = "",
+    impl_hint: str = "",
 ) -> None:
     cleaned = _compact(text)
     if len(cleaned) < 2 or _is_outline_label(cleaned):
@@ -533,14 +885,29 @@ def _add_candidate(
     scene = _business_label(related_scene) if related_scene else ""
     if scene and _is_outline_label(scene):
         scene = ""
+    feature = _usable_label(related_feature)
+    hint = _compact(impl_hint)
     if scene:
         payload["relatedScene"] = scene
     elif current and current.get("relatedScene"):
         payload["relatedScene"] = current["relatedScene"]
+    if feature:
+        payload["relatedFeature"] = feature
+    elif current and current.get("relatedFeature"):
+        payload["relatedFeature"] = current["relatedFeature"]
+    if hint:
+        payload["implHint"] = hint
+    elif current and current.get("implHint"):
+        payload["implHint"] = current["implHint"]
     if current is None or confidence > current["confidence"]:
         bag[cleaned] = payload
-    elif scene and not current.get("relatedScene"):
-        current["relatedScene"] = scene
+    else:
+        if scene and not current.get("relatedScene"):
+            current["relatedScene"] = scene
+        if feature and not current.get("relatedFeature"):
+            current["relatedFeature"] = feature
+        if hint and not current.get("implHint"):
+            current["implHint"] = hint
 
 
 def generate_map_draft(batch: dict[str, Any]) -> dict[str, Any]:
@@ -574,27 +941,49 @@ def _clean_case(row: dict[str, Any], keywords: dict[str, Any]) -> dict[str, Any]
     matched_scene = _best_match(searchable, _usable_keywords(keywords.get("scenes") or []))
     matched_feature = _best_match(searchable, _usable_keywords(keywords.get("features") or []))
     matched_node = _best_match(searchable, _usable_keywords(keywords.get("nodes") or []))
-    matched_apis = _match_apis(searchable, keywords.get("apis") or [])
-    scene = row.get("scene") or (matched_scene["text"] if matched_scene else "未识别场景")
-    feature = row.get("feature") or (matched_feature["text"] if matched_feature else "未识别功能点")
+    historical_scene = _usable_label(row.get("scene"))
+    historical_feature = _usable_label(row.get("feature"))
+    identified_scene = _usable_label(matched_scene["text"] if matched_scene else "")
+    identified_feature = _usable_label(matched_feature["text"] if matched_feature else "")
+    knowledge_feature_names = {
+        _usable_label(item.get("text"))
+        for item in (keywords.get("features") or [])
+        if _usable_label(item.get("text"))
+    }
+    if historical_feature in knowledge_feature_names:
+        feature = historical_feature
+    else:
+        feature = identified_feature or historical_feature or "未识别功能点"
+    scene = identified_scene or historical_scene or "未识别场景"
+    matched_apis = _bind_knowledge_apis(
+        scene=scene,
+        feature=feature,
+        searchable=searchable,
+        keywords=keywords,
+        allow_scene_fallback=False,
+    )
     evidence = []
     confidence = 40
-    if row.get("scene"):
+    if historical_scene:
         confidence += 15
         evidence.append("历史用例已有场景")
-    if row.get("feature"):
+    if historical_feature:
         confidence += 20
         evidence.append("历史用例已有功能点")
     original_id = row.get("originalCaseId") or ""
     if not original_id.startswith("IMPORT-ROW-") and not original_id.startswith("XMIND-ROW-"):
         confidence += 5
         evidence.append("保留原始用例ID")
-    if matched_scene:
+    if identified_scene:
         confidence += 5
-        evidence.append("命中知识场景：" + matched_scene["text"])
-    if matched_feature:
+        evidence.append("命中知识场景：" + identified_scene)
+    elif historical_scene:
+        evidence.append("知识未命中场景，已用历史用例场景兜底")
+    if identified_feature:
         confidence += 10
-        evidence.append("命中知识功能点：" + matched_feature["text"])
+        evidence.append("命中知识功能点：" + identified_feature)
+    elif historical_feature:
+        evidence.append("知识未命中功能点，已用历史用例功能点兜底")
     if matched_node:
         confidence += 5
         evidence.append("命中流程节点：" + matched_node["text"])
@@ -630,7 +1019,13 @@ GAP_CASE_LIMIT = 180
 
 
 def _usable_keywords(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    return [item for item in items if not _is_outline_label(item.get("text") or "")]
+    usable: list[dict[str, Any]] = []
+    for item in items:
+        text = item.get("text") or ""
+        if _is_outline_label(text) or not _usable_label(text):
+            continue
+        usable.append(item)
+    return usable
 
 
 def _build_gaps(
@@ -655,12 +1050,21 @@ def _build_gaps(
         text = (source_item.get("text") or "").strip()
         if _skip_gap_text(text):
             return
-        scene = _resolve_gap_scene(text, source_item, keywords, process_node)
+        scene = _resolve_gap_scene(text, source_item, keywords, cleaned_cases, process_node)
         if kind == "接口缺口":
             feature_name = _api_feature_name(text)
+            api_label = _format_api(text)
         else:
-            feature_name = _resolve_gap_feature(text, keywords, process_node)
-        api_label = _format_api(text) if kind == "接口缺口" else ""
+            feature_name = _resolve_gap_feature(text, keywords)
+            api_label = _join_api_labels(
+                _bind_knowledge_apis(
+                    scene=scene,
+                    feature=feature_name,
+                    searchable=_normalize(" ".join([text, scene, feature_name])),
+                    keywords=keywords,
+                    allow_scene_fallback=True,
+                )
+            )
         variants = _gap_case_variants(kind, text if kind != "功能点缺口" else feature_name, scene, feature_name)
         if len(gaps) + len(variants) > GAP_CASE_LIMIT:
             return
@@ -685,12 +1089,6 @@ def _build_gaps(
             continue
         if not _is_covered(text, corpus):
             append_cases("功能点缺口", feature, "知识库功能点未匹配历史用例")
-    if not real_features and process_node and not _is_covered(process_node, corpus):
-        append_cases(
-            "功能点缺口",
-            {"text": process_node, "relatedScene": process_node},
-            "知识库未给出有效功能点，按流程节点补齐",
-        )
     for rule in _usable_keywords(keywords.get("rules") or []):
         text = (rule.get("text") or "").strip()
         if not _is_covered(text, corpus):
@@ -702,42 +1100,53 @@ def _build_gaps(
     return gaps
 
 
+def _history_scene_fallback(cleaned_cases: list[dict[str, Any]]) -> str:
+    counts: dict[str, int] = {}
+    for item in cleaned_cases:
+        scene = _usable_label(item.get("scene"))
+        if not scene:
+            continue
+        counts[scene] = counts.get(scene, 0) + 1
+    if not counts:
+        return ""
+    return max(counts.items(), key=lambda pair: (pair[1], len(pair[0])))[0]
+
+
 def _resolve_gap_scene(
     text: str,
     source_item: dict[str, Any],
     keywords: dict[str, Any],
+    cleaned_cases: list[dict[str, Any]],
     process_node: str = "",
 ) -> str:
-    related = _business_label(source_item.get("relatedScene") or "")
-    if related:
+    knowledge_scenes = _usable_keywords(keywords.get("scenes") or [])
+    scene_names = {_usable_label(item.get("text")) for item in knowledge_scenes}
+    scene_names.discard("")
+    related = _usable_label(_business_label(source_item.get("relatedScene") or ""))
+    node = _usable_label(process_node)
+    if related and related != node and (not scene_names or related in scene_names):
         return related
-    matched_scene = _best_match(text, _usable_keywords(keywords.get("scenes") or []))
-    if matched_scene:
-        return str(matched_scene["text"]).strip()
-    matched_node = _best_match(text, _usable_keywords(keywords.get("nodes") or []))
-    if matched_node:
-        return str(matched_node["text"]).strip()
-    real_scenes = _usable_keywords(keywords.get("scenes") or [])
-    if real_scenes:
-        return str(real_scenes[0].get("text") or "").strip() or "待确认场景"
-    node = (process_node or "").strip()
-    if node:
-        return node
-    return "待确认场景"
+    matched_scene = _best_match(text, knowledge_scenes)
+    identified = _usable_label(matched_scene["text"] if matched_scene else "")
+    if identified:
+        return identified
+    if len(scene_names) == 1:
+        return next(iter(scene_names))
+    historical = _history_scene_fallback(cleaned_cases)
+    if historical:
+        return historical
+    return "未识别场景"
 
 
-def _resolve_gap_feature(text: str, keywords: dict[str, Any], process_node: str = "") -> str:
+def _resolve_gap_feature(text: str, keywords: dict[str, Any]) -> str:
     label = _business_label(text) or (text or "").strip()
-    if label and not _is_outline_label(label):
+    if label and not _is_outline_label(label) and _usable_label(label):
         return label
     for feature in _usable_keywords(keywords.get("features") or []):
         name = (feature.get("text") or "").strip()
         if name:
             return name
-    node = (process_node or "").strip()
-    if node:
-        return node
-    return label or "待确认功能点"
+    return _usable_label(label) or "未识别功能点"
 
 
 def _numbered(*lines: str) -> str:
@@ -1056,19 +1465,21 @@ def _api_gap_variants(signature: str, scene: str) -> list[dict[str, str]]:
 
 
 def _split_api(text: str) -> tuple[str, str]:
-    matched = re.match(r"^(GET|POST|PUT|PATCH|DELETE)\s+(\S+)", (text or "").strip(), re.I)
+    cleaned = (text or "").strip().strip("`")
+    matched = re.match(r"^(GET|POST|PUT|PATCH|DELETE)\s+(\S+)", cleaned, re.I)
     if matched:
-        return matched.group(1).upper(), matched.group(2)
-    return "POST", (text or "").strip() or "/unknown"
+        path = matched.group(2).strip("`,;，。")
+        return matched.group(1).upper(), path
+    return "POST", cleaned or "/unknown"
 
 
 def _format_api(text: str) -> str:
     method, path = _split_api(text)
-    if not path or path == "/unknown":
+    if not path or path == "/unknown" or not path.startswith("/"):
         return ""
-    if path.startswith("/"):
-        return method + " " + path
-    return (text or "").strip()
+    if not _usable_api_path(path):
+        return ""
+    return method + " " + path.split("?")[0]
 
 
 def _join_api_labels(labels: list[str]) -> str:
@@ -1087,6 +1498,59 @@ def _split_api_labels(value: str | None) -> list[str]:
     if not value:
         return []
     return [part.strip() for part in re.split(r"[;\n]+", str(value)) if part.strip()]
+
+
+def _bind_knowledge_apis(
+    *,
+    scene: str,
+    feature: str,
+    searchable: str,
+    keywords: dict[str, Any],
+    allow_scene_fallback: bool,
+) -> list[str]:
+    candidates = keywords.get("apis") or []
+    text_hits = _match_apis(searchable, candidates)
+    scene_name = _usable_label(scene)
+    feature_name = _usable_label(feature)
+    feature_norm = _normalize(feature_name)
+    feature_hits: list[str] = []
+    scene_hits: list[str] = []
+    action_hits: list[str] = []
+    haystack = _normalize(" ".join([searchable, feature_name, scene_name]))
+    for candidate in candidates:
+        label = _format_api(candidate.get("text") or "")
+        if not label:
+            continue
+        related_scene = _usable_label(candidate.get("relatedScene") or "")
+        related_feature = _usable_label(candidate.get("relatedFeature") or "")
+        blob = _normalize(" ".join([candidate.get("text") or "", label, related_feature]))
+        if feature_name and related_feature == feature_name:
+            feature_hits.append(label)
+            continue
+        if feature_norm and len(feature_norm) >= 4 and feature_norm in blob:
+            feature_hits.append(label)
+            continue
+        method, path = _split_api(candidate.get("text") or "")
+        path_key = re.sub(r"[^a-z0-9]", "", path.lower())
+        path_norm = _normalize(path.replace("/", " "))
+        if feature_norm and len(feature_norm) >= 4 and path_norm and feature_norm in path_norm:
+            feature_hits.append(label)
+            continue
+        for english, chinese_hints in _API_FEATURE_HINTS:
+            if english not in path_key:
+                continue
+            if any(_normalize(hint) in haystack for hint in chinese_hints if len(hint) >= 2):
+                action_hits.append(label)
+                break
+        if scene_name and related_scene == scene_name:
+            scene_hits.append(label)
+    ordered = _join_api_labels(text_hits + feature_hits + action_hits).split("; ") if (text_hits or feature_hits or action_hits) else []
+    ordered = [item for item in ordered if item]
+    if ordered:
+        return ordered
+    if allow_scene_fallback and 1 <= len(scene_hits) <= 3:
+        return scene_hits
+    return text_hits
 
 
 def _match_apis(searchable: str, candidates: list[dict[str, Any]]) -> list[str]:
@@ -1531,9 +1995,17 @@ def _confirmed(values: list[str], extracted: list[dict[str, Any]]) -> list[dict[
             unique.append(text)
     result = []
     for value in unique:
-        original = next((item.get("source") for item in extracted if item.get("text") == value), "")
-        source = "人工确认" if not original else "人工确认·" + original
-        result.append({"text": value, "source": source, "confidence": 100})
+        original = next((item for item in extracted if item.get("text") == value), None)
+        source = "人工确认" if not original else "人工确认·" + (original.get("source") or "")
+        payload = {"text": value, "source": source, "confidence": 100}
+        if original:
+            if original.get("relatedScene"):
+                payload["relatedScene"] = original["relatedScene"]
+            if original.get("relatedFeature"):
+                payload["relatedFeature"] = original["relatedFeature"]
+            if original.get("implHint"):
+                payload["implHint"] = original["implHint"]
+        result.append(payload)
     return result
 
 
