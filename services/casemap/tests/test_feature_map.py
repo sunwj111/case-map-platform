@@ -19,6 +19,7 @@ def test_known_feature_returns_complete_map(map_query):
     assert result["spine"]["featureName"] == "数量价汇总"
     assert len(result["businessView"]["cases"]) == 3
     assert result["techView"]["apis"]
+    assert all(api["path"] == "/quotation/offer" for api in result["techView"]["apis"])
     assert result["summary"]["linkedCaseCount"] == 3
     assert result["meta"]["synthetic"] is False
 
@@ -86,4 +87,5 @@ def test_assembler_fills_scripts_and_risk(hierarchy_store, case_store):
     assert result["summary"]["priorityDistribution"]["P1"] == 1
     assert any(rule["id"] == "R002" for rule in result["riskView"]["rules"])
     assert "quotations_record" in result["techView"]["tables"]
+    assert all(api["relation"] == "用例关联" for api in result["techView"]["apis"])
     assert "executions:unavailable" in result["meta"]["dataSources"]

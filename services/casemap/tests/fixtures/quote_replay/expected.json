@@ -4,7 +4,7 @@
     "autoMounted": 8,
     "reviewRequired": 0,
     "manualRequired": 3,
-    "gapCount": 4
+    "gapCount": 63
   },
   "labeledAutoMounted": ["TC-001", "TC-002", "TC-003", "TC-004", "TC-101", "TC-102", "TC-201", "TC-202"],
   "cases": [
